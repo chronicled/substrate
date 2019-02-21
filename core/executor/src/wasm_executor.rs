@@ -17,6 +17,7 @@
 //! Rust implementation of Substrate contracts.
 
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 use tiny_keccak;
 use secp256k1;
 
@@ -679,6 +680,8 @@ impl WasmExecutor {
 		method: &str,
 		data: &[u8],
 	) -> Result<Vec<u8>> {
+		let start = Instant::now();
+
 		// extract a reference to a linear memory, optional reference to a table
 		// and then initialize FunctionExecutor.
 		let memory = Self::get_mem_instance(module_instance)?;
@@ -722,6 +725,9 @@ impl WasmExecutor {
 			memory.reset_lowest_used(low);
 		}
 		memory.with_direct_access_mut(|buf| buf.resize(used_mem.0, 0));
+
+		let duration = start.elapsed();
+		eprintln!("duration for {:?}: {:?}µs", method, duration.as_micros());
 		result
 	}
 
