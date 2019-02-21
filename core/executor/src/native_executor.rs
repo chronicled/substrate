@@ -21,6 +21,7 @@ use crate::wasm_executor::WasmExecutor;
 use wasmi::{Module as WasmModule, ModuleRef as WasmModuleInstanceRef};
 use runtime_version::{NativeVersion, RuntimeVersion};
 use std::{collections::HashMap, panic::UnwindSafe};
+use std::time::Instant;
 use parity_codec::{Decode, Encode};
 use crate::RuntimeInfo;
 use primitives::{Blake2Hasher, NativeOrEncoded};
@@ -48,6 +49,7 @@ thread_local! {
 /// the runtime version entry for `code`, determines whether `Compatibility::IsCompatible`
 /// can be used by comparing returned RuntimeVersion to `ref_version`
 fn fetch_cached_runtime_version<'a, E: Externalities<Blake2Hasher>>(
+	ret: Result<NativeOrEncoded<RuntimeVersion>>,
 	wasm_executor: &WasmExecutor,
 	cache: &'a mut RefMut<CacheType>,
 	ext: &mut E,
@@ -94,6 +96,7 @@ fn fetch_cached_runtime_version<'a, E: Externalities<Blake2Hasher>>(
 		}
 	}
 }
+
 
 fn safe_call<F, U>(f: F) -> Result<U>
 	where F: UnwindSafe + FnOnce() -> U
@@ -175,10 +178,15 @@ impl<D: NativeExecutionDispatch> RuntimeInfo for NativeExecutor<D> {
 		&self,
 		ext: &mut E,
 	) -> Option<RuntimeVersion> {
-		RUNTIMES_CACHE.with(|c|
-			fetch_cached_runtime_version(&self.fallback, &mut c.borrow_mut(), ext, self.default_heap_pages)
+		RUNTIMES_CACHE.with(|c| {
+			let start = Instant::now();
+			let ret = D::dispatch(ext, "Core_version", &[]).map(NativeOrEncoded::Encoded);
+			let duration = start.elapsed();
+			eprintln!("duration for Core_version {:?}µs", duration.as_micros());
+
+			fetch_cached_runtime_version(ret, &self.fallback, &mut c.borrow_mut(), ext, self.default_heap_pages)
 				.ok()?.1.clone()
-		)
+		})
 	}
 }
 
@@ -200,7 +208,14 @@ impl<D: NativeExecutionDispatch> CodeExecutor<Blake2Hasher> for NativeExecutor<D
 	) -> (Result<NativeOrEncoded<R>>, bool) {
 		RUNTIMES_CACHE.with(|c| {
 			let mut c = c.borrow_mut();
+
+			let start = Instant::now();
+			let ret: Result<NativeOrEncoded<RuntimeVersion>> = D::dispatch(ext, "Core_version", &[]).map(NativeOrEncoded::Encoded);
+			let duration = start.elapsed();
+			eprintln!("duration for Core_version: {:?}µs", duration.as_micros());
+
 			let (module, onchain_version) = match fetch_cached_runtime_version(
+				ret,
 				&self.fallback, &mut c, ext, self.default_heap_pages) {
 					Ok((module, onchain_version)) => (module, onchain_version),
 					Err(e) => return (Err(e), false),
@@ -212,7 +227,7 @@ impl<D: NativeExecutionDispatch> CodeExecutor<Blake2Hasher> for NativeExecutor<D
 					.map_or(false, |v| v.can_call_with(&self.native_version.runtime_version)),
 				native_call,
 			) {
-				(_, false, _) => {
+				(_, false, Some(call)) => {
 					trace!(
 						target: "executor",
 						"Request for native execution failed (native: {}, chain: {})",
@@ -222,18 +237,28 @@ impl<D: NativeExecutionDispatch> CodeExecutor<Blake2Hasher> for NativeExecutor<D
 							.map_or_else(||"<None>".into(), |v| format!("{}", v))
 					);
 					(
-						self.fallback
-							.call_in_wasm_module(ext, module, method, data)
-							.map(NativeOrEncoded::Encoded),
-						false
+					with_native_environment(ext, move || {
+							let start = Instant::now();
+							let ret = (call)();
+							let duration = start.elapsed();
+							eprintln!("duration for {:?}: {:?}µs", method, duration.as_micros());
+							ret
+						})
+						.and_then(|r| r.map(NativeOrEncoded::Native).map_err(Into::into)),
+					true
 					)
 				}
-				(false, _, _) => {
+				(false, _, Some(call)) => {
 					(
-						self.fallback
-							.call_in_wasm_module(ext, module, method, data)
-							.map(NativeOrEncoded::Encoded),
-						false
+					with_native_environment(ext, move || {
+							let start = Instant::now();
+							let ret = (call)();
+							let duration = start.elapsed();
+							eprintln!("duration for {:?}: {:?}µs", method, duration.as_micros());
+							ret
+						})
+						.and_then(|r| r.map(NativeOrEncoded::Native).map_err(Into::into)),
+					true
 					)
 				}
 				(true, true, Some(call)) => {
@@ -246,19 +271,34 @@ impl<D: NativeExecutionDispatch> CodeExecutor<Blake2Hasher> for NativeExecutor<D
 							.map_or_else(||"<None>".into(), |v| format!("{}", v))
 					);
 					(
-						with_native_environment(ext, move || (call)())
-							.and_then(|r| r.map(NativeOrEncoded::Native).map_err(Into::into)),
-						true
+					with_native_environment(ext, move || {
+							let start = Instant::now();
+							let ret = (call)();
+							let duration = start.elapsed();
+							eprintln!("duration for {:?}: {:?}µs", method, duration.as_micros());
+							ret
+						})
+						.and_then(|r| r.map(NativeOrEncoded::Native).map_err(Into::into)),
+					true
 					)
 				}
 				_ => {
+					eprintln!(
+						"Request for native execution succeeded (native: {}, chain: {})",
+						self.native_version.runtime_version,
+						onchain_version.as_ref().map_or_else(||"<None>".into(), |v| format!("{}", v))
+					);
 					trace!(
 						target: "executor",
 						"Request for native execution succeeded (native: {}, chain: {})",
 						self.native_version.runtime_version,
 						onchain_version.as_ref().map_or_else(||"<None>".into(), |v| format!("{}", v))
 					);
-					(D::dispatch(ext, method, data).map(NativeOrEncoded::Encoded), true)
+					let start = Instant::now();
+					let ret = D::dispatch(ext, method, data).map(NativeOrEncoded::Encoded);
+					let duration = start.elapsed();
+					eprintln!("duration for {:?}: {:?}µs", method, duration.as_micros());
+					(ret , true)
 				}
 			}
 		})

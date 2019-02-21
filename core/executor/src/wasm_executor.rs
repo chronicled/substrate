@@ -17,6 +17,7 @@
 //! Rust implementation of Substrate contracts.
 
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 use tiny_keccak;
 use secp256k1;
 
