@@ -680,8 +680,6 @@ impl WasmExecutor {
 		method: &str,
 		data: &[u8],
 	) -> Result<Vec<u8>> {
-		let start = Instant::now();
-
 		// extract a reference to a linear memory, optional reference to a table
 		// and then initialize FunctionExecutor.
 		let memory = Self::get_mem_instance(module_instance)?;
@@ -696,6 +694,7 @@ impl WasmExecutor {
 		let offset = fec.heap.allocate(size).map_err(|_| ErrorKind::Runtime)?;
 		memory.set(offset, &data)?;
 
+		let start = Instant::now();
 		let result = module_instance.invoke_export(
 			method,
 			&[
@@ -704,6 +703,9 @@ impl WasmExecutor {
 			],
 			&mut fec
 		);
+		let duration = start.elapsed();
+		eprintln!("duration for {:?}: {:?}µs", method, duration.as_micros());
+
 		let result = match result {
 			Ok(Some(I64(r))) => {
 				let offset = r as u32;
@@ -726,8 +728,6 @@ impl WasmExecutor {
 		}
 		memory.with_direct_access_mut(|buf| buf.resize(used_mem.0, 0));
 
-		let duration = start.elapsed();
-		eprintln!("duration for {:?}: {:?}µs", method, duration.as_micros());
 		result
 	}
 
