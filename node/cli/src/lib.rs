@@ -16,6 +16,7 @@
 
 //! Substrate CLI library.
 
+#![feature(async_await, await_macro, futures_api)]
 #![warn(missing_docs)]
 #![warn(unused_extern_crates)]
 
@@ -29,6 +30,27 @@ pub use cli::{VersionInfo, IntoExit, NoCustom};
 use substrate_service::{ServiceFactory, Roles as ServiceRoles};
 use std::ops::Deref;
 use log::info;
+
+use ipfs::{Ipfs, IpfsOptions, IpfsService, Types, serve, tokio_spawn};
+
+fn run_ipfs() {
+
+    let options = IpfsOptions::<Types>::default();
+    let mut ipfs = Ipfs::<Types>::new(options);
+
+    tokio_spawn(async move {
+        let fut = ipfs.start_daemon().unwrap();
+        tokio_spawn(fut);
+        await!(ipfs.init_repo()).unwrap();
+        await!(ipfs.open_repo()).unwrap();
+        // Set the address to run our socket on.
+
+        let ipfs_service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
+
+        let addr = ([0, 0, 0, 0], 8081);
+        println!("Listening on {:?}", addr);
+        await!(serve(ipfs_service, addr)).unwrap();
+}
 
 /// The chain specification option.
 #[derive(Clone, Debug)]
@@ -90,6 +112,7 @@ pub fn run<I, T, E>(args: I, exit: E, version: cli::VersionInfo) -> error::Resul
 			let runtime = RuntimeBuilder::new().name_prefix("main-tokio-").build()
 				.map_err(|e| format!("{:?}", e))?;
 			let executor = runtime.executor();
+			run_ipfs();
 			match config.roles {
 				ServiceRoles::LIGHT => run_until_exit(
 					runtime,
