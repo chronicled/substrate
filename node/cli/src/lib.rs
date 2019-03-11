@@ -25,31 +25,40 @@ pub mod chain_spec;
 mod service;
 
 use tokio::prelude::Future;
-use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
+use tokio::runtime::{Builder as RuntimeBuilder, Runtime, TaskExecutor};
 pub use cli::{VersionInfo, IntoExit, NoCustom};
 use substrate_service::{ServiceFactory, Roles as ServiceRoles};
 use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 use log::info;
 
-use ipfs::{Ipfs, IpfsOptions, IpfsService, Types, serve, tokio_spawn};
+use ipfs::{Ipfs, IpfsOptions, IpfsService, Types, serve, Compat, Future as Future3, FutureExt};
 
-fn run_ipfs() {
+fn spawner<F: Future3<Output=()> + Send + 'static>(handle: TaskExecutor, future: F) {
+	handle.spawn(Compat::new(Box::pin(
+		future.map(|()| -> Result<(), ()> { Ok(()) })
+	)));
+}
+
+fn run_ipfs(handle: TaskExecutor) {
 
     let options = IpfsOptions::<Types>::default();
     let mut ipfs = Ipfs::<Types>::new(options);
 
-    tokio_spawn(async move {
-        let fut = ipfs.start_daemon().unwrap();
-        tokio_spawn(fut);
-        await!(ipfs.init_repo()).unwrap();
-        await!(ipfs.open_repo()).unwrap();
+	let fut = ipfs.start_daemon().expect("can start ipfs");
+	spawner(handle.clone(), fut);
+
+    spawner(handle, async move {
+        await!(ipfs.init_repo()).expect("can init repo");
+        await!(ipfs.open_repo()).expect("can open repi");
         // Set the address to run our socket on.
 
         let ipfs_service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
 
         let addr = ([0, 0, 0, 0], 8081);
         println!("Listening on {:?}", addr);
-        await!(serve(ipfs_service, addr)).unwrap();
+        await!(serve(ipfs_service, addr)).expect("can wait");
+	});
 }
 
 /// The chain specification option.
@@ -112,7 +121,6 @@ pub fn run<I, T, E>(args: I, exit: E, version: cli::VersionInfo) -> error::Resul
 			let runtime = RuntimeBuilder::new().name_prefix("main-tokio-").build()
 				.map_err(|e| format!("{:?}", e))?;
 			let executor = runtime.executor();
-			run_ipfs();
 			match config.roles {
 				ServiceRoles::LIGHT => run_until_exit(
 					runtime,
@@ -142,6 +150,7 @@ fn run_until_exit<T, C, E>(
 	let (exit_send, exit) = exit_future::signal();
 
 	let executor = runtime.executor();
+	run_ipfs(executor.clone());
 	cli::informant::start(&service, exit.clone(), executor.clone());
 
 	let _ = runtime.block_on(e.into_exit());
