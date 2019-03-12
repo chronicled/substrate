@@ -28,11 +28,16 @@ use tokio::prelude::Future;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime, TaskExecutor};
 pub use cli::{VersionInfo, IntoExit, NoCustom};
 use substrate_service::{ServiceFactory, Roles as ServiceRoles};
+// use state_machine::Externalities;
+use primitives::Blake2Hasher;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use log::info;
 
-use ipfs::{Ipfs, IpfsOptions, IpfsService, Types, serve, Compat, Future as Future3, FutureExt};
+use ipfs::{Ipfs, IpfsOptions, IpfsService, Types, server::serve_ipfs,
+	server::moved, Compat, Compat01As03, Future as Future3, FutureExt};
+use cid::ToCid;
+use warp::Filter;
 
 fn spawner<F: Future3<Output=()> + Send + 'static>(handle: TaskExecutor, future: F) {
 	handle.spawn(Compat::new(Box::pin(
@@ -53,11 +58,20 @@ fn run_ipfs(handle: TaskExecutor) {
         await!(ipfs.open_repo()).expect("can open repi");
         // Set the address to run our socket on.
 
-        let ipfs_service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
+        let service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
 
         let addr = ([0, 0, 0, 0], 8081);
         println!("Listening on {:?}", addr);
-        await!(serve(ipfs_service, addr)).expect("can wait");
+
+		let index = warp::path::end()
+			.map(|| 
+				moved(&"QmR7tiySn6vFHcEjBeZNtYGAFh735PJHfEMdVEycj9jAPy".to_cid().unwrap())
+			);
+		let ipfs = warp::path("ipfs").and(serve_ipfs(service));
+
+		let routes = warp::get2().and(index.or(ipfs));
+		let serve = Compat01As03::new(warp::serve(routes).bind(addr));
+        await!(serve).expect("can wait");
 	});
 }
 
