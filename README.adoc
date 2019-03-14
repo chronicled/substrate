@@ -1,12 +1,34 @@
-= Substrate
-:Author: Substrate developers
+= Substrate IPFS Prototype
+:Author: Substrate developers, Benjamin Kampmann
 :Revision: 0.2.0
 :toc:
 :sectnums:
 
 == Intro in one sentence
 
-Substrate is a next-generation framework for blockchain innovation.
+This is a prototype combining IPFS and Substrate, the next-generation framework for blockchain innovation.
+
+== MVP Outline
+
+This MVP attempt to achieve the following:
+
+ - [x] connect to IPFS from within the Substrate Process
+ - [x] ability to fetch IPFS content from within substrate
+ - [x] store IPFS-link (`Cid`) on chain
+  - [x] store IPFS-link to web-app on chain
+  - [x] on request lookup on-chain `Cid`
+  - [x] forward `/` to the current IPFS-`Cid`
+  - [ ] serve the App to the browser under `/`
+
+=== Usage
+
+0. _ensure you have a go-ipfs or js-ipfs running and discoverable in your local network (it is by default) - rust-ipfs currently only discovers local nodes_
+
+1. run with `cargo +nightly-2019-03-01 run -- --dev`
+
+2. Using https://polkadot.js.org/apps/next/#/settings[polkadot.js.org] you can store any `Cid` (it's `Bytes` representation) on-chain. Just navigate to `Extrinsics` and `sudo` a `Consensus::setApp`-proposal. This will set the given bytes as the value for the key `:app`. 
+
+3. Now, when navigating to `localhost:8081` (where our IPFS is currently hosted), it will look up the latest chain state on every request, read the `:app`-stored `Cid` and attempt to serve that IPFS entry.
 
 == Description
 
