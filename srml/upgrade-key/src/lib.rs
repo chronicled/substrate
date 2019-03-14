@@ -42,6 +42,15 @@ decl_module! {
 			Self::deposit_event(RawEvent::Upgraded);
 		}
 
+		fn set_app(origin, app: Vec<u8>) {
+			// This is a public call, so we ensure that the origin is some signed account.
+			let _sender = ensure_signed(origin)?;
+			ensure!(_sender == Self::key(), "only the current upgrade key can use the upgrade_key module");
+
+			<consensus::Module<T>>::set_app(app)?;
+			Self::deposit_event(RawEvent::Upgraded);
+		}
+
 		fn set_key(origin, new: <T::Lookup as StaticLookup>::Source) {
 			// This is a public call, so we ensure that the origin is some signed account.
 			let _sender = ensure_signed(origin)?;

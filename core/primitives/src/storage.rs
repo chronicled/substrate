@@ -82,6 +82,10 @@ pub mod well_known_keys {
 	/// Prefix of child storage keys.
 	pub const CHILD_STORAGE_KEY_PREFIX: &'static [u8] = b":child_storage:";
 
+	/// Reference to the app to run. 
+	/// encoded Cid.
+	pub const APP: &'static [u8] = b":app";
+
 	/// Whether a key is a child storage key.
 	pub fn is_child_storage_key(key: &[u8]) -> bool {
 		key.starts_with(CHILD_STORAGE_KEY_PREFIX)

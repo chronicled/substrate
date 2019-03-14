@@ -209,6 +209,11 @@ decl_module! {
 			storage::unhashed::put_raw(well_known_keys::CODE, &new);
 		}
 
+		/// Set the app reference.
+		pub fn set_app(app: Vec<u8>) {
+			storage::unhashed::put_raw(well_known_keys::APP, &app);
+		}
+
 		/// Set some items of storage.
 		fn set_storage(items: Vec<KeyValue>) {
 			for i in &items {

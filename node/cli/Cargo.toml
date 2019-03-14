@@ -31,10 +31,10 @@ sr-primitives = { path = "../../core/sr-primitives" }
 node-executor = { path = "../executor" }
 substrate-keystore = { path = "../../core/keystore" }
 substrate-telemetry = { package = "substrate-telemetry", path = "../../core/telemetry" }
-# ipfs = { git = "https://github.com/gnunicorn/rust-ipfs",  branch = "ben-server" }
+ipfs = { git = "https://github.com/gnunicorn/rust-ipfs",  branch = "ben-server" }
 warp = "0.1.13"
 cid = { git = "https://github.com/gnunicorn/rust-cid", branch = "implement-from-str" }
-ipfs = { path = "../../../rust-ipfs" }
+# ipfs = { path = "../../../rust-ipfs" }
 
 [dev-dependencies]
 service-test = { package = "substrate-service-test", path = "../../core/service/test" }

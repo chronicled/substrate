@@ -27,11 +27,17 @@ mod service;
 use tokio::prelude::Future;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime, TaskExecutor};
 pub use cli::{VersionInfo, IntoExit, NoCustom};
-use substrate_service::{ServiceFactory, Roles as ServiceRoles};
+use substrate_service::{ServiceFactory, Roles as ServiceRoles, Components, ComponentClient};
 // use state_machine::Externalities;
+use primitives::storage::StorageKey;
+use primitives::storage::well_known_keys;
+use sr_primitives::generic::BlockId;
+use sr_primitives::traits::Header;
+
 use primitives::Blake2Hasher;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
+use std::net::SocketAddr;
 use log::info;
 
 use ipfs::{Ipfs, IpfsOptions, IpfsService, Types, server::serve_ipfs,
@@ -45,33 +51,46 @@ fn spawner<F: Future3<Output=()> + Send + 'static>(handle: TaskExecutor, future:
 	)));
 }
 
-fn run_ipfs(handle: TaskExecutor) {
+fn run_ipfs<C: Components + 'static>(handle: TaskExecutor, client: Arc<ComponentClient<C>>) {
 
     let options = IpfsOptions::<Types>::default();
     let mut ipfs = Ipfs::<Types>::new(options);
 
 	let fut = ipfs.start_daemon().expect("can start ipfs");
+	let addr : SocketAddr = "0.0.0.0:8081".parse().unwrap();
+
+	let index = warp::path::end()
+		.and_then(move || {
+			if let Ok(best_header) = client.best_block_header() {
+				if let Ok(Some(app_cid)) = client.storage(
+					&BlockId::hash(best_header.hash()),
+					&StorageKey(well_known_keys::APP.to_vec())
+				){
+					if let Ok(cid) = &app_cid.0.to_cid() {
+						return Ok(moved(&cid));
+					}
+				}
+			}
+			Err(warp::reject::not_found())
+		});
+
 	spawner(handle.clone(), fut);
 
     spawner(handle, async move {
         await!(ipfs.init_repo()).expect("can init repo");
-        await!(ipfs.open_repo()).expect("can open repi");
-        // Set the address to run our socket on.
+        await!(ipfs.open_repo()).expect("can open repo");
 
-        let service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
+		let service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
+		let ipfs_path = warp::path("ipfs").and(serve_ipfs(service));
+	
+		let routes = warp::get2().and(index.or(ipfs_path));
 
-        let addr = ([0, 0, 0, 0], 8081);
-        println!("Listening on {:?}", addr);
-
-		let index = warp::path::end()
-			.map(|| 
-				moved(&"QmR7tiySn6vFHcEjBeZNtYGAFh735PJHfEMdVEycj9jAPy".to_cid().unwrap())
-			);
-		let ipfs = warp::path("ipfs").and(serve_ipfs(service));
-
-		let routes = warp::get2().and(index.or(ipfs));
-		let serve = Compat01As03::new(warp::serve(routes).bind(addr));
-        await!(serve).expect("can wait");
+		println!("Listening on {:?}", addr);
+        await!(Compat01As03::new(
+				warp::serve(routes)
+					.bind(addr)
+			)
+		).expect("can wait");
 	});
 }
 
@@ -164,7 +183,8 @@ fn run_until_exit<T, C, E>(
 	let (exit_send, exit) = exit_future::signal();
 
 	let executor = runtime.executor();
-	run_ipfs(executor.clone());
+	let client = (&service.client()).clone();
+	run_ipfs::<C>(executor.clone(), client);
 	cli::informant::start(&service, exit.clone(), executor.clone());
 
 	let _ = runtime.block_on(e.into_exit());
