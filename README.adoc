@@ -26,7 +26,7 @@ This MVP attempt to achieve the following:
 
 1. run with `cargo +nightly-2019-03-01 run -- --dev`
 
-2. Using https://polkadot.js.org/apps/next/#/settings[polkadot.js.org] you can store any `Cid` (it's `Bytes` representation) on-chain. Just navigate to `Extrinsics` and `sudo` a `Consensus::setApp`-proposal. This will set the given bytes as the value for the key `:app`. 
+2. Using https://polkadot.js.org/apps/next/#/settings[polkadot.js.org] you can store any `Cid` (it's `Bytes` representation) on-chain. Just navigate to `Extrinsics` and `sudo` a `Consensus::setApp`-proposal. This will set the given bytes as the value for the key `:app`. e.g. `0x1220294E5B65B30D636E11C7BA89E85435178E91BFE5C899C72C69F78FF551F60688` to serve the https://gateway.ipfs.io/ipfs/QmR7tiySn6vFHcEjBeZNtYGAFh735PJHfEMdVEycj9jAPy/[example IPFS app info website]
 
 3. Now, when navigating to `localhost:8081` (where our IPFS is currently hosted), it will look up the latest chain state on every request, read the `:app`-stored `Cid` and attempt to serve that IPFS entry.
 
