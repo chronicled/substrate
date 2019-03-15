@@ -75,6 +75,7 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
 			code: include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/node_runtime.compact.wasm").to_vec(),    // FIXME change once we have #1252
+			app: vec![18, 32, 41, 78, 91, 101, 179, 13, 99, 110, 17, 199, 186, 137, 232, 84, 53, 23, 142, 145, 191, 229, 200, 153, 199, 44, 105, 247, 143, 245, 81, 246, 6, 136], // IPFS hello world QmR7tiySn6vFHcEjBeZNtYGAFh735PJHfEMdVEycj9jAPy
 			authorities: initial_authorities.iter().map(|x| x.2.clone()).collect(),
 		}),
 		system: None,
@@ -225,6 +226,7 @@ pub fn testnet_genesis(
 	GenesisConfig {
 		consensus: Some(ConsensusConfig {
 			code: include_bytes!("../../runtime/wasm/target/wasm32-unknown-unknown/release/node_runtime.compact.wasm").to_vec(),
+			app: vec![18, 32, 41, 78, 91, 101, 179, 13, 99, 110, 17, 199, 186, 137, 232, 84, 53, 23, 142, 145, 191, 229, 200, 153, 199, 44, 105, 247, 143, 245, 81, 246, 6, 136], // IPFS hello world QmR7tiySn6vFHcEjBeZNtYGAFh735PJHfEMdVEycj9jAPy
 			authorities: initial_authorities.iter().map(|x| x.2.clone()).collect(),
 		}),
 		system: None,

@@ -166,6 +166,8 @@ decl_storage! {
 		config(authorities): Vec<T::SessionKey>;
 		#[serde(with = "substrate_primitives::bytes")]
 		config(code): Vec<u8>;
+		#[serde(with = "substrate_primitives::bytes")]
+		config(app): Vec<u8>;
 
 		build(|storage: &mut primitives::StorageOverlay, _: &mut primitives::ChildrenStorageOverlay, config: &GenesisConfig<T>| {
 			use codec::{Encode, KeyedVec};
@@ -176,6 +178,7 @@ decl_storage! {
 			});
 			storage.insert(well_known_keys::AUTHORITY_COUNT.to_vec(), auth_count.encode());
 			storage.insert(well_known_keys::CODE.to_vec(), config.code.clone());
+			storage.insert(well_known_keys::APP.to_vec(), config.app.clone());
 		});
 	}
 }

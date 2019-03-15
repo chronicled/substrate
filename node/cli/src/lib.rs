@@ -34,16 +34,15 @@ use primitives::storage::well_known_keys;
 use sr_primitives::generic::BlockId;
 use sr_primitives::traits::Header;
 
-use primitives::Blake2Hasher;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use std::net::SocketAddr;
 use log::info;
 
 use ipfs::{Ipfs, IpfsOptions, IpfsService, Types, server::serve_ipfs,
-	server::moved, Compat, Compat01As03, Future as Future3, FutureExt};
-use cid::ToCid;
-use warp::Filter;
+	server::ipfs_responder, Compat, Future as Future3, FutureExt};
+use cid::{Cid, ToCid};
+use warp::{Filter, http::HeaderMap};
 
 fn spawner<F: Future3<Output=()> + Send + 'static>(handle: TaskExecutor, future: F) {
 	handle.spawn(Compat::new(Box::pin(
@@ -51,47 +50,70 @@ fn spawner<F: Future3<Output=()> + Send + 'static>(handle: TaskExecutor, future:
 	)));
 }
 
-fn run_ipfs<C: Components + 'static>(handle: TaskExecutor, client: Arc<ComponentClient<C>>) {
+fn run_ipfs<C>(handle: TaskExecutor, client: Arc<ComponentClient<C>>)
+where
+	C: Components + 'static,
+	ComponentClient<C> : 'static
+{
 
     let options = IpfsOptions::<Types>::default();
     let mut ipfs = Ipfs::<Types>::new(options);
 
-	let fut = ipfs.start_daemon().expect("can start ipfs");
 	let addr : SocketAddr = "0.0.0.0:8081".parse().unwrap();
 
-	let index = warp::path::end()
-		.and_then(move || {
-			if let Ok(best_header) = client.best_block_header() {
-				if let Ok(Some(app_cid)) = client.storage(
-					&BlockId::hash(best_header.hash()),
-					&StorageKey(well_known_keys::APP.to_vec())
-				){
-					if let Ok(cid) = &app_cid.0.to_cid() {
-						return Ok(moved(&cid));
-					}
+	let find_cid = | ext: (IpfsService<Types>, Arc<ComponentClient<C>>), t, h| {
+		let (service, client) = ext;
+		// attempt to lookup the default app IPFS Cid on-chain
+		// at `well_known_keys::APP`
+		if let Ok(best_header) = client.best_block_header() {
+			if let Ok(Some(app_cid)) = client.storage(
+				&BlockId::hash(best_header.hash()),
+				&StorageKey(well_known_keys::APP.to_vec())
+			) {
+				if let Ok(cid) = &app_cid.0.to_cid() {
+					// continue if found and valid
+					return Ok((service, t, h, cid.clone()))
 				}
 			}
-			Err(warp::reject::not_found())
-		});
+		}
+		// 404 if this fails
+		Err(warp::reject::not_found())
+	};
 
-	spawner(handle.clone(), fut);
+	let map_to_ipfs = | res: (IpfsService<Types>, warp::path::Tail, HeaderMap, Cid) | {
+		let (service, tail, header, cid) = res;
+		ipfs_responder(service, cid, tail, header)
+	};
 
-    spawner(handle, async move {
-        await!(ipfs.init_repo()).expect("can init repo");
-        await!(ipfs.open_repo()).expect("can open repo");
+	let f1 = ipfs.start_daemon().expect("can start ipfs");
+	let f2 = ipfs.init_repo();
+	let f3 = ipfs.open_repo();
 
-		let service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
-		let ipfs_path = warp::path("ipfs").and(serve_ipfs(service));
-	
-		let routes = warp::get2().and(index.or(ipfs_path));
-
-		println!("Listening on {:?}", addr);
-        await!(Compat01As03::new(
-				warp::serve(routes)
-					.bind(addr)
-			)
-		).expect("can wait");
+	// fire up ipfs background process
+	spawner(handle.clone(), async {
+		await!(f1);
+        await!(f2).expect("can init repo");
+        await!(f3).expect("can open repo");
 	});
+
+
+	let service : IpfsService<Types> = Arc::new(Mutex::new(ipfs));
+	let service2  = service.clone();
+
+	let main = warp::any() // on `/`
+		.map(move || (service.clone(), client.clone()))
+		.and(warp::path::tail())
+		.and(warp::header::headers_cloned())
+		.and_then(find_cid) // lookup on-chain CiD
+		.and_then(map_to_ipfs) // and serve via ipfs_responder
+		.boxed();
+
+	let ipfs_path = warp::path("ipfs").and(serve_ipfs(service2));
+	let routes = warp::get2().and(ipfs_path.or(main));
+
+	println!("Serving IPFS App at http://localhost:{:?}", addr.port());
+
+    handle.spawn(warp::serve(routes).bind(addr));
 }
 
 /// The chain specification option.
