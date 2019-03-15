@@ -14,8 +14,76 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
-//! An index is a short form of an address. This module handles allocation
-//! of indices for a newly created accounts.
+//! # Indices Module
+//!
+//! To use the indices module, you need to implement the
+//! [indices Trait](https://crates.parity.io/srml_indices/trait.Trait.html).
+//!
+//! ## Overview
+//!
+//! An index is a short form of an address. This module handles allocation of indices for newly created accounts.
+//!
+//! ### Terminology
+//!
+//! - **Account Index:** The short form of an address.
+//! - **Reclaim:** The act of claiming a formerly-used index for a new account.
+//!
+//! ### Implementations
+//! 
+//! The indices module provides implementations for the following traits. If these traits provide the functionality that
+//! you need, then you can avoid coupling with the indices module.
+//!
+//! - [`OnNewAccount`](https://crates.parity.io/srml_system/trait.OnNewAccount.html): Provides the function to find the
+//! first available index and assign a newly-created account to it.
+//! - [`StaticLookup`](https://crates.parity.io/sr_primitives/traits/trait.StaticLookup.html): Means of changing one
+//! type into another in a manner dependent on the source type.
+//!
+//! ## Interface
+//!
+//! ### Dispatchable Functions
+//!
+//! The indices module does not implement any dispatchable functions.
+//!
+//! ### Public Functions
+//!
+//! See the [`Module`](https://crates.parity.io/srml_indices/struct.Module.html) for details on publicly available
+//! functions.
+//!
+//! **Note:** When using the publicly exposed functions, you (the runtime developer) are responsible for implementing
+//! any necessary checks before calling a function that will affect storage.
+//!
+//! ## Usage
+//!
+//! The following examples show how to use the indices module in your custom module.
+//!
+//! ### Import
+//!
+//! Import the `indices` module and derive your module configuration trait with the indices trait. You can now call
+//! functions from the module.
+//!
+//! ```rust,ignore
+//!
+//! ```
+//!
+//! ### Real Use Example
+//!
+//! Use in the `contract` module (gas.rs):
+//!
+//! ```rust,ignore
+//!
+//! ```
+//!
+//! ## Genesis config
+//!
+//! The module uses the following storage items in the genesis config:
+//! 
+//! - [`NextEnumSet`](https://crates.parity.io/srml_indices/struct.NextEnumSet.html): The next free enumeration set.
+//!
+//! ## Related Modules
+//!
+//! The indices module depends on the [`system`](https://crates.parity.io/srml_system/index.html) and
+//! [`srml_support`](https://crates.parity.io/srml_support/index.html) modules as well as Substrate Core libraries
+//! and the Rust standard library.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -112,7 +180,7 @@ decl_storage! {
 impl<T: Trait> Module<T> {
 	// PUBLIC IMMUTABLES
 
-	/// Lookup an T::AccountIndex to get an Id, if there's one there.
+	/// Look up an T::AccountIndex to get an Id, if there's one there.
 	pub fn lookup_index(index: T::AccountIndex) -> Option<T::AccountId> {
 		let enum_set_size = Self::enum_set_size();
 		let set = Self::enum_set(index / enum_set_size);
@@ -128,7 +196,7 @@ impl<T: Trait> Module<T> {
 		i < try_set.len() && T::IsDeadAccount::is_dead_account(&try_set[i])
 	}
 
-	/// Lookup an address to get an Id, if there's one there.
+	/// Look up an address to get an Id, if there's one there.
 	pub fn lookup_address(a: address::Address<T::AccountId, T::AccountIndex>) -> Option<T::AccountId> {
 		match a {
 			address::Address::Id(i) => Some(i),
@@ -136,8 +204,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	// PUBLIC MUTABLES (DANGEROUS)
-
+	/// Return `ENUM_SET_SIZE` as an `AccountIndex`
 	fn enum_set_size() -> T::AccountIndex {
 		T::AccountIndex::sa(ENUM_SET_SIZE)
 	}
