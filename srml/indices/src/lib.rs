@@ -21,22 +21,25 @@
 //!
 //! ## Overview
 //!
-//! An index is a short form of an address. This module handles allocation of indices for newly created accounts.
+//! An index is a short form of an address. This module handles the allocation of indices for newly-created accounts
+//! and provides lookup functions for matching an index with an account ID. When implemented with modules that handle
+//! balance transfer, this will make remembering and entering addresses easier and less error-prone. 
 //!
 //! ### Terminology
 //!
 //! - **Account Index:** The short form of an address.
+//! - **Account Id:** The public key of an address.
 //! - **Reclaim:** The act of claiming a formerly-used index for a new account.
 //!
 //! ### Implementations
-//! 
+//!
 //! The indices module provides implementations for the following traits. If these traits provide the functionality that
 //! you need, then you can avoid coupling with the indices module.
 //!
 //! - [`OnNewAccount`](https://crates.parity.io/srml_system/trait.OnNewAccount.html): Provides the function to find the
 //! first available index and assign a newly-created account to it.
 //! - [`StaticLookup`](https://crates.parity.io/sr_primitives/traits/trait.StaticLookup.html): Means of changing one
-//! type into another in a manner dependent on the source type.
+//! type into another in a manner dependent on the source type. Does not (and cannot) require any context.
 //!
 //! ## Interface
 //!
@@ -54,29 +57,12 @@
 //!
 //! ## Usage
 //!
-//! The following examples show how to use the indices module in your custom module.
-//!
-//! ### Import
-//!
-//! Import the `indices` module and derive your module configuration trait with the indices trait. You can now call
-//! functions from the module.
-//!
-//! ```rust,ignore
-//!
-//! ```
-//!
-//! ### Real Use Example
-//!
-//! Use in the `contract` module (gas.rs):
-//!
-//! ```rust,ignore
-//!
-//! ```
+//! <!-- TODO -->
 //!
 //! ## Genesis config
 //!
 //! The module uses the following storage items in the genesis config:
-//! 
+//!
 //! - [`NextEnumSet`](https://crates.parity.io/srml_indices/struct.NextEnumSet.html): The next free enumeration set.
 //!
 //! ## Related Modules
@@ -204,7 +190,6 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	/// Return `ENUM_SET_SIZE` as an `AccountIndex`
 	fn enum_set_size() -> T::AccountIndex {
 		T::AccountIndex::sa(ENUM_SET_SIZE)
 	}
