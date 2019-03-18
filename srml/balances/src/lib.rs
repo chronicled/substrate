@@ -200,6 +200,17 @@ decl_module! {
 			#[compact] reserved: T::Balance
 		) {
 			let who = T::Lookup::lookup(who)?;
+			let who_balance = Self::free_balance(&who) + Self::reserved_balance(&who);
+
+			// Check for a difference in total issuance
+			if free + reserved > who_balance {
+				let diff = free + reserved - who_balance;
+				let _ = Self::increase_total_stake_by(diff);
+			} else if free + reserved < who_balance {
+				let diff = who_balance - free - reserved;
+				let _ = Self::decrease_total_stake_by(diff);
+			}
+
 			Self::set_free_balance(&who, free);
 			Self::set_reserved_balance(&who, reserved);
 		}
@@ -375,7 +386,7 @@ impl<T: Trait<I>, I: Instance> Module<T, I> {
 
 	/// Returns `Ok` iff the account is able to make a withdrawal of the given amount
 	/// for the given reason.
-	/// 
+	///
 	/// `Err(...)` with the reason why not otherwise.
 	pub fn ensure_account_can_withdraw(
 		who: &T::AccountId,
@@ -464,6 +475,7 @@ where
 	}
 
 	fn increase_free_balance_creating(who: &T::AccountId, value: Self::Balance) -> UpdateBalanceOutcome {
+		let _ = increase_total_stake_by(&value)?;
 		Self::set_free_balance_creating(who, Self::free_balance(who) + value)
 	}
 
@@ -610,14 +622,25 @@ impl<T: Trait<I>, I: Instance> TransferAsset<T::AccountId> for Module<T, I> {
 		ensure!(b >= value, "account has too few funds");
 		let new_balance = b - value;
 		Self::ensure_account_can_withdraw(who, value, reason, new_balance)?;
-		Self::decrease_total_stake_by(value)?;
+		Self::burn(value)?;
 		Self::set_free_balance(who, new_balance);
 		Ok(())
 	}
 
 	fn deposit(who: &T::AccountId, value: T::Balance) -> Result {
+		let new_balance = Self::free_balance(who) + value;
+		Self::mint(value)?;
+		Self::set_free_balance_creating(who, new_balance);
+		Ok(())
+	}
+
+	fn mint(value: T::Balance) -> Result {
 		Self::increase_total_stake_by(value)?;
-		Self::set_free_balance_creating(who, Self::free_balance(who) + value);
+		Ok(())
+	}
+
+	fn burn(value: T::Balance) -> Result {
+		Self::decrease_total_stake_by(value)?;
 		Ok(())
 	}
 }

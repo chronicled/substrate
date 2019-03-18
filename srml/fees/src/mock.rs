@@ -53,6 +53,8 @@ impl<AccountId> TransferAsset<AccountId> for TransferAssetMock {
 	fn transfer(_: &AccountId, _: &AccountId, _: Self::Amount) -> Result<(), &'static str> { Ok(()) }
 	fn withdraw(_: &AccountId, _: Self::Amount, _: WithdrawReason) -> Result<(), &'static str> { Ok(()) }
 	fn deposit(_: &AccountId, _: Self::Amount) -> Result<(), &'static str> { Ok(()) }
+	fn mint(_: Self::Amount) -> Result<(), &'static str> { Ok(()) }
+	fn burn(_: Self::Amount) -> Result<(), &'static str> { Ok(()) }
 }
 
 impl ArithmeticType for TransferAssetMock {

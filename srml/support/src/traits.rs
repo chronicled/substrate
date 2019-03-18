@@ -256,6 +256,12 @@ pub trait TransferAsset<AccountId> {
 
 	/// Add asset to `who` account by increasing `amount` in the account balances.
 	fn deposit(who: &AccountId, amount: Self::Amount) -> Result<(), &'static str>;
+
+	/// Create new assets and add to total issuance
+	fn mint(value: Self::Amount) -> Result<(), &'static str>;
+
+	/// Delete new assets and remove from total issuance
+	fn burn(value: Self::Amount) -> Result<(), &'static str>;
 }
 
 impl<T> ChargeBytesFee<T> for () {
@@ -275,4 +281,6 @@ impl<T> TransferAsset<T> for () {
 	fn transfer(_: &T, _: &T, _: Self::Amount) -> Result<(), &'static str> { Ok(()) }
 	fn withdraw(_: &T, _: Self::Amount, _: WithdrawReason) -> Result<(), &'static str> { Ok(()) }
 	fn deposit(_: &T, _: Self::Amount) -> Result<(), &'static str> { Ok(()) }
+	fn mint(_: Self::Amount) -> Result<(), &'static str> { Ok(()) }
+	fn burn(_: Self::Amount) -> Result<(), &'static str> { Ok(()) }
 }
