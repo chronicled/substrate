@@ -67,12 +67,13 @@ pub use srml_support_procedural::decl_storage;
 pub mod lazy {
 	use spin::Once;
 
-	pub struct Lazy<T: Sync>(Once<T>);
+	pub struct Lazy<T>(Once<T>);
 
-	impl <T: Sync> Lazy<T> {
-		pub const INIT: Self = Lazy(Once::INIT);
+	impl <T> Lazy<T> {
+		pub const fn new() -> Self {
+			Lazy(Once::new())
+		}
 
-		#[inline(always)]
 		pub fn get<F>(&'static self, builder: F) -> &T where F: FnOnce() -> T {
 			self.0.call_once(builder)
 		}

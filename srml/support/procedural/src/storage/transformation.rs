@@ -477,33 +477,44 @@ fn decl_storage_items(
 
 			let method_name = syn::Ident::new(&format!("build_prefix_once_for_{}", name.to_string()), proc_macro2::Span::call_site());
 
+			let prefix = format!("{} {}", cratename, name);
 			method_defs.extend(quote!{ fn #method_name(prefix: &'static [u8]) -> &'static [u8]; });
 			method_impls.extend(quote!{
 				fn #method_name(prefix: &'static [u8]) -> &'static [u8] {
-					static LAZY: #scrate::lazy::Lazy<#scrate::rstd::vec::Vec<u8>> = #scrate::lazy::Lazy::INIT;
-					LAZY.get(|| {
+					static LAZY: #scrate::lazy::Lazy<#scrate::rstd::vec::Vec<u8>> = #scrate::lazy::Lazy::new();
+					let key: &'static [u8] = LAZY.get(|| {
 						let mut final_prefix = #scrate::rstd::vec::Vec::new();
 						final_prefix.extend_from_slice(prefix);
 						final_prefix.extend_from_slice(Self::INSTANCE_PREFIX.as_bytes());
 						final_prefix
-					})
+					});
+					#scrate::print(key);
+					#scrate::print("vs".as_bytes());
+					#scrate::print(#prefix.as_bytes());
+					key
 				}
 			});
 
 			if let DeclStorageTypeInfosKind::Map { is_linked: true, .. } = type_infos.kind {
 				let method_name = syn::Ident::new(&format!("build_head_key_once_for_{}", name.to_string()), proc_macro2::Span::call_site());
+				let prefix = format!("head of {} {}", cratename, name);
 
 				method_defs.extend(quote!{ fn #method_name(prefix: &'static [u8]) -> &'static [u8]; });
 				method_impls.extend(quote!{
 					fn #method_name(prefix: &'static [u8]) -> &'static [u8] {
-						static LAZY: #scrate::lazy::Lazy<#scrate::rstd::vec::Vec<u8>> = #scrate::lazy::Lazy::INIT;
-						LAZY.get(|| {
+						// #prefix.as_bytes()
+						static LAZY: #scrate::lazy::Lazy<#scrate::rstd::vec::Vec<u8>> = #scrate::lazy::Lazy::new();
+						let key: &'static [u8] = LAZY.get(|| {
 							let mut final_prefix = #scrate::rstd::vec::Vec::new();
 							final_prefix.extend_from_slice("head of ".as_bytes());
 							final_prefix.extend_from_slice(prefix);
 							final_prefix.extend_from_slice(Self::INSTANCE_PREFIX.as_bytes());
 							final_prefix
-						})
+						});
+						#scrate::print(key);
+						#scrate::print("vsvs".as_bytes());
+						#scrate::print(#prefix.as_bytes());
+						key
 					}
 				});
 			}
