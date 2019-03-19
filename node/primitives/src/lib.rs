@@ -29,7 +29,7 @@ use runtime_primitives::{
 pub type BlockNumber = u64;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = primitives::sr25519::Signature;
+pub type Signature = primitives::ed25519::Signature;
 
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
@@ -59,7 +59,7 @@ pub type Hash = primitives::H256;
 pub type Timestamp = u64;
 
 /// Header type.
-/// 
+///
 pub type Header = generic::Header<BlockNumber, BlakeTwo256, generic::DigestItem<Hash, AuthorityId, AuthoritySignature>>;
 /// Block type.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;

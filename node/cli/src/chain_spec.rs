@@ -187,8 +187,8 @@ pub fn staging_testnet_config() -> ChainSpec {
 
 /// Helper function to generate AccountId from seed
 pub fn get_account_id_from_seed(seed: &str) -> AccountId {
-	sr25519::Pair::from_string(&format!("//{}", seed), None)
-		.expect("static values are valid; qed")
+	ed25519::Pair::from_legacy_string(seed, None)
+		// .expect("static values are valid; qed")
 		.public()
 }
 
