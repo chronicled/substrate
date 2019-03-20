@@ -58,6 +58,7 @@ fn fetch_cached_runtime_version<'a, E: Externalities<Blake2Hasher>>(
 		Some(code_hash) => code_hash,
 		None => return Err(ErrorKind::InvalidCode(vec![]).into()),
 	};
+	cache.borrow_mut().remove(&code_hash[..]);
 	let maybe_runtime_preproc = cache.borrow_mut().entry(code_hash.into())
 		.or_insert_with(|| {
 			let code = match ext.storage(well_known_keys::CODE) {
