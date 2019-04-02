@@ -112,9 +112,9 @@ impl Consolidate for Vec<(Option<Vec<u8>>, Vec<u8>, Option<Vec<u8>>)> {
 	}
 }
 
-impl<H: Hasher, KF: trie::KeyFunction<H>> Consolidate for trie::GenericMemoryDB<H, KF> {
+impl<H: Hasher> Consolidate for MemoryDB<H> {
 	fn consolidate(&mut self, other: Self) {
-		trie::GenericMemoryDB::consolidate(self, other)
+		MemoryDB::consolidate(self, other)
 	}
 }
 

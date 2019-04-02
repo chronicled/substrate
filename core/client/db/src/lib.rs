@@ -41,7 +41,7 @@ use client::ExecutionStrategies;
 use parity_codec::{Decode, Encode};
 use hash_db::Hasher;
 use kvdb::{KeyValueDB, DBTransaction};
-use trie::{MemoryDB, PrefixedMemoryDB, prefixed_key};
+use trie::MemoryDB;
 use parking_lot::RwLock;
 use primitives::{H256, Blake2Hasher, ChangesTrieConfiguration, convert_hash};
 use primitives::storage::well_known_keys;
@@ -267,7 +267,7 @@ impl<Block: BlockT> client::blockchain::ProvideCache<Block> for BlockchainDb<Blo
 /// Database transaction
 pub struct BlockImportOperation<Block: BlockT, H: Hasher> {
 	old_state: CachingState<Blake2Hasher, DbState, Block>,
-	db_updates: PrefixedMemoryDB<H>,
+	db_updates: MemoryDB<H>,
 	storage_updates: Vec<(Vec<u8>, Option<Vec<u8>>)>,
 	changes_trie_updates: MemoryDB<H>,
 	pending_block: Option<PendingBlock<Block>>,
@@ -318,7 +318,7 @@ where Block: BlockT<Hash=H256>,
 		// Currently cache isn't implemented on full nodes.
 	}
 
-	fn update_db_storage(&mut self, update: PrefixedMemoryDB<Blake2Hasher>) -> Result<(), client::error::Error> {
+	fn update_db_storage(&mut self, update: MemoryDB<Blake2Hasher>) -> Result<(), client::error::Error> {
 		self.db_updates = update;
 		Ok(())
 	}
@@ -329,7 +329,7 @@ where Block: BlockT<Hash=H256>,
 			return Err(client::error::ErrorKind::GenesisInvalid.into());
 		}
 
-		let mut transaction: PrefixedMemoryDB<Blake2Hasher> = Default::default();
+		let mut transaction: MemoryDB<Blake2Hasher> = Default::default();
 
 		for (child_key, child_map) in children {
 			if !well_known_keys::is_child_storage_key(&child_key) {
@@ -382,23 +382,22 @@ where Block: BlockT<Hash=H256>,
 
 struct StorageDb<Block: BlockT> {
 	pub db: Arc<KeyValueDB>,
-	pub state_db: StateDb<Block::Hash, Vec<u8>>,
+	pub state_db: StateDb<Block::Hash, H256>,
 }
 
 impl<Block: BlockT> state_machine::Storage<Blake2Hasher> for StorageDb<Block> {
-	fn get(&self, key: &H256, prefix: &[u8]) -> Result<Option<DBValue>, String> {
-		let key = prefixed_key::<Blake2Hasher>(key, prefix);
-		self.state_db.get(&key, self).map(|r| r.map(|v| DBValue::from_slice(&v)))
+	fn get(&self, key: &H256) -> Result<Option<DBValue>, String> {
+		self.state_db.get(key, self).map(|r| r.map(|v| DBValue::from_slice(&v)))
 			.map_err(|e| format!("Database backend error: {:?}", e))
 	}
 }
 
-impl<Block: BlockT> state_db::NodeDb for StorageDb<Block> {
+impl<Block: BlockT> state_db::HashDb for StorageDb<Block> {
 	type Error = io::Error;
-	type Key = [u8];
+	type Hash = H256;
 
-	fn get(&self, key: &[u8]) -> Result<Option<Vec<u8>>, Self::Error> {
-		self.db.get(columns::STATE, key).map(|r| r.map(|v| v.to_vec()))
+	fn get(&self, key: &H256) -> Result<Option<Vec<u8>>, Self::Error> {
+		self.db.get(columns::STATE, key.as_bytes()).map(|r| r.map(|v| v.to_vec()))
 	}
 }
 
@@ -414,7 +413,7 @@ impl DbGenesisStorage {
 }
 
 impl state_machine::Storage<Blake2Hasher> for DbGenesisStorage {
-	fn get(&self, _key: &H256, _prefix: &[u8]) -> Result<Option<DBValue>, String> {
+	fn get(&self, _key: &H256) -> Result<Option<DBValue>, String> {
 		Ok(None)
 	}
 }
@@ -524,7 +523,7 @@ impl<Block: BlockT> state_machine::ChangesTrieRootsStorage<Blake2Hasher> for DbC
 }
 
 impl<Block: BlockT> state_machine::ChangesTrieStorage<Blake2Hasher> for DbChangesTrieStorage<Block> {
-	fn get(&self, key: &H256, _prefix: &[u8]) -> Result<Option<DBValue>, String> {
+	fn get(&self, key: &H256) -> Result<Option<DBValue>, String> {
 		self.db.get(columns::CHANGES_TRIE, &key[..])
 			.map_err(|err| format!("{}", err))
 	}
@@ -568,7 +567,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 		let blockchain = BlockchainDb::new(db.clone())?;
 		let meta = blockchain.meta.clone();
 		let map_e = |e: state_db::Error<io::Error>| ::client::error::Error::from(format!("State database error: {:?}", e));
-		let state_db: StateDb<_, _> = StateDb::new(pruning, &StateMetaDb(&*db)).map_err(map_e)?;
+		let state_db: StateDb<Block::Hash, H256> = StateDb::new(pruning, &StateMetaDb(&*db)).map_err(map_e)?;
 		let storage_db = StorageDb {
 			db: db.clone(),
 			state_db,
@@ -841,7 +840,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 				transaction.put(columns::META, meta_keys::GENESIS_HASH, hash.as_ref());
 			}
 
-			let mut changeset: state_db::ChangeSet<Vec<u8>> = state_db::ChangeSet::default();
+			let mut changeset: state_db::ChangeSet<H256> = state_db::ChangeSet::default();
 			for (key, (val, rc)) in operation.db_updates.drain() {
 				if rc > 0 {
 					changeset.inserted.push((key, val.to_vec()));
@@ -990,7 +989,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	}
 }
 
-fn apply_state_commit(transaction: &mut DBTransaction, commit: state_db::CommitSet<Vec<u8>>) {
+fn apply_state_commit(transaction: &mut DBTransaction, commit: state_db::CommitSet<H256>) {
 	for (key, val) in commit.data.inserted.into_iter() {
 		transaction.put(columns::STATE, &key[..], &val);
 	}
@@ -1040,7 +1039,7 @@ impl<Block> client::backend::Backend<Block, Blake2Hasher> for Backend<Block> whe
 		Ok(BlockImportOperation {
 			pending_block: None,
 			old_state,
-			db_updates: PrefixedMemoryDB::default(),
+			db_updates: MemoryDB::default(),
 			storage_updates: Default::default(),
 			changes_trie_updates: MemoryDB::default(),
 			aux_ops: Vec::new(),
@@ -1423,7 +1422,7 @@ mod tests {
 
 			op.reset_storage(storage.iter().cloned().collect(), Default::default()).unwrap();
 
-			key = op.db_updates.insert(&[], b"hello");
+			key = op.db_updates.insert(b"hello");
 			op.set_block_data(
 				header,
 				Some(vec![]),
@@ -1457,8 +1456,8 @@ mod tests {
 			).0.into();
 			let hash = header.hash();
 
-			op.db_updates.insert(&[], b"hello");
-			op.db_updates.remove(&key, &[]);
+			op.db_updates.insert(b"hello");
+			op.db_updates.remove(&key);
 			op.set_block_data(
 				header,
 				Some(vec![]),
@@ -1492,7 +1491,7 @@ mod tests {
 			).0.into();
 			let hash = header.hash();
 
-			op.db_updates.remove(&key, &[]);
+			op.db_updates.remove(&key);
 			op.set_block_data(
 				header,
 				Some(vec![]),
@@ -1558,7 +1557,7 @@ mod tests {
 			assert_eq!(backend.changes_tries_storage.root(&anchor, block), Ok(Some(changes_root)));
 
 			for (key, (val, _)) in changes_trie_update.drain() {
-				assert_eq!(backend.changes_trie_storage().unwrap().get(&key, &[]), Ok(Some(val)));
+				assert_eq!(backend.changes_trie_storage().unwrap().get(&key), Ok(Some(val)));
 			}
 		};
 
@@ -1684,23 +1683,23 @@ mod tests {
 		let mut tx = DBTransaction::new();
 		backend.changes_tries_storage.prune(Some(config.clone()), &mut tx, Default::default(), 12);
 		backend.storage.db.write(tx).unwrap();
-		assert!(backend.changes_tries_storage.get(&root1, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root2, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root3, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root4, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root5, &[]).unwrap().is_some());
-		assert!(backend.changes_tries_storage.get(&root6, &[]).unwrap().is_some());
-		assert!(backend.changes_tries_storage.get(&root7, &[]).unwrap().is_some());
-		assert!(backend.changes_tries_storage.get(&root8, &[]).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root1).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root2).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root3).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root4).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root5).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root6).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root7).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root8).unwrap().is_some());
 
 		// now simulate finalization of block#16, causing prune of tries at #5..#8
 		let mut tx = DBTransaction::new();
 		backend.changes_tries_storage.prune(Some(config.clone()), &mut tx, Default::default(), 16);
 		backend.storage.db.write(tx).unwrap();
-		assert!(backend.changes_tries_storage.get(&root5, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root6, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root7, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root8, &[]).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root5).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root6).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root7).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root8).unwrap().is_none());
 
 		// now "change" pruning mode to archive && simulate finalization of block#20
 		// => no changes tries are pruned, because we never prune in archive mode
@@ -1708,10 +1707,10 @@ mod tests {
 		let mut tx = DBTransaction::new();
 		backend.changes_tries_storage.prune(Some(config), &mut tx, Default::default(), 20);
 		backend.storage.db.write(tx).unwrap();
-		assert!(backend.changes_tries_storage.get(&root9, &[]).unwrap().is_some());
-		assert!(backend.changes_tries_storage.get(&root10, &[]).unwrap().is_some());
-		assert!(backend.changes_tries_storage.get(&root11, &[]).unwrap().is_some());
-		assert!(backend.changes_tries_storage.get(&root12, &[]).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root9).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root10).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root11).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root12).unwrap().is_some());
 	}
 
 	#[test]
@@ -1750,15 +1749,15 @@ mod tests {
 		let mut tx = DBTransaction::new();
 		backend.changes_tries_storage.prune(Some(config.clone()), &mut tx, block5, 5);
 		backend.storage.db.write(tx).unwrap();
-		assert!(backend.changes_tries_storage.get(&root1, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root2, &[]).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root1).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root2).unwrap().is_some());
 
 		// now simulate finalization of block#6, causing prune of tries at #2
 		let mut tx = DBTransaction::new();
 		backend.changes_tries_storage.prune(Some(config.clone()), &mut tx, block6, 6);
 		backend.storage.db.write(tx).unwrap();
-		assert!(backend.changes_tries_storage.get(&root2, &[]).unwrap().is_none());
-		assert!(backend.changes_tries_storage.get(&root3, &[]).unwrap().is_some());
+		assert!(backend.changes_tries_storage.get(&root2).unwrap().is_none());
+		assert!(backend.changes_tries_storage.get(&root3).unwrap().is_some());
 	}
 
 	#[test]

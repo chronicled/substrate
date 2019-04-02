@@ -18,7 +18,7 @@
 
 use std::collections::HashMap;
 use primitives::H256;
-use crate::{DBValue, ChangeSet, CommitSet, MetaDb, NodeDb};
+use crate::{DBValue, ChangeSet, CommitSet, MetaDb, HashDb};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct TestDb {
@@ -34,9 +34,9 @@ impl MetaDb for TestDb {
 	}
 }
 
-impl NodeDb for TestDb {
+impl HashDb for TestDb {
 	type Error = ();
-	type Key = H256;
+	type Hash = H256;
 
 	fn get(&self, key: &H256) -> Result<Option<DBValue>, ()> {
 		Ok(self.data.get(key).cloned())
