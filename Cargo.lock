@@ -1979,6 +1979,7 @@ dependencies = [
  "substrate-keyring 1.0.0",
  "substrate-offchain-primitives 0.1.0",
  "substrate-primitives 1.0.0",
+ "substrate-test-client 1.0.0",
 ]
 
 [[package]]

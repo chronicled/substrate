@@ -376,7 +376,7 @@ where
 
 		let (change_set, events, calls) = {
 			let mut overlay = OverlayAccountDb::new(&self.overlay);
-				
+
 			overlay.set_code(&dest, Some(code_hash.clone()));
 			let mut nested = self.nested(overlay, dest.clone());
 
@@ -560,13 +560,16 @@ where
 	type T = T;
 
 	fn get_storage(&self, key: &StorageKey) -> Option<Vec<u8>> {
-		self.ctx.overlay.get_storage(&self.ctx.self_account, self.ctx.self_trie_id.as_ref(), key)
+		let v = self.ctx.overlay.get_storage(&self.ctx.self_account, self.ctx.self_trie_id.as_ref(), key);
+		dbg!(key);
+		dbg!(&v);
+		v
 	}
 
 	fn set_storage(&mut self, key: StorageKey, value: Option<Vec<u8>>) {
 		self.ctx
 			.overlay
-			.set_storage(&self.ctx.self_account, key, value)
+			.set_storage(&self.ctx.self_account, dbg!(key), dbg!(value))
 	}
 
 	fn instantiate(

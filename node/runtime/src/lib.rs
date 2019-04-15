@@ -44,6 +44,7 @@ use council::seats as council_seats;
 #[cfg(any(feature = "std", test))]
 use version::NativeVersion;
 use substrate_primitives::OpaqueMetadata;
+use contract::m;
 
 #[cfg(any(feature = "std", test))]
 pub use runtime_primitives::BuildStorage;
@@ -238,6 +239,19 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Index, Call>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = executive::Executive<Runtime, Block, system::ChainContext<Runtime>, Balances, AllModules>;
 
+decl_runtime_apis! {
+	pub trait ContractsApi {
+		/// Provides additional entrypoints to the runtime
+		fn call(
+			origin: T::AccountId,
+			dest: T::AccountId,
+			value: BalanceOf<T>,
+			gas_limit: T::Gas,
+			data: Vec<u8>,
+		) -> Option<Vec<u8>>;
+	}
+}
+
 impl_runtime_apis! {
 	impl client_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
@@ -343,3 +357,5 @@ impl_runtime_apis! {
 		}
 	}
 }
+
+m!(contract_call, Runtime);
