@@ -26,6 +26,7 @@ pub mod error;
 pub mod informant;
 
 use client::ExecutionStrategies;
+use client::block_builder::api::BlockBuilder;
 use runtime_primitives::traits::As;
 use service::{
 	ServiceFactory, FactoryFullConfiguration, RuntimeGenesis,
@@ -42,6 +43,9 @@ use std::{
 	io::{Write, Read, stdin, stdout, ErrorKind}, iter, fs::{self, File}, net::{Ipv4Addr, SocketAddr},
 	path::{Path, PathBuf}, str::FromStr,
 };
+use client::runtime_api::ConstructRuntimeApi;
+use service::FactoryBlock;
+use service::FullClient;
 
 use names::{Generator, Name};
 use regex::Regex;
@@ -51,7 +55,7 @@ pub use structopt::clap::App;
 use params::{
 	RunCmd, PurgeChainCmd, RevertCmd, ImportBlocksCmd, ExportBlocksCmd, BuildSpecCmd,
 	NetworkConfigurationParams, SharedParams, MergeParameters, TransactionPoolParams,
-	NodeKeyParams, NodeKeyType
+	NodeKeyParams, NodeKeyType, FactoryCmd,
 };
 pub use params::{NoCustom, CoreParams};
 pub use traits::{GetLogFilter, AugmentClap};
@@ -197,6 +201,7 @@ pub fn parse_and_execute<'a, F, CC, RP, S, RS, E, I, T>(
 ) -> error::Result<Option<CC>>
 where
 	F: ServiceFactory,
+	F::RuntimeApi: ConstructRuntimeApi<FactoryBlock<F>, FullClient<F>>,
 	S: FnOnce(&str) -> Result<Option<ChainSpec<FactoryGenesis<F>>>, String>,
 	CC: StructOpt + Clone + GetLogFilter,
 	RP: StructOpt + Clone + AugmentClap,
@@ -240,6 +245,9 @@ where
 			purge_chain::<F, _>(params, spec_factory, version).map(|_| None),
 		params::CoreParams::Revert(params) =>
 			revert_chain::<F, _>(params, spec_factory, version).map(|_| None),
+		params::CoreParams::Factory(params) => {
+			factory::<F, _>(params, spec_factory, version).map(|_| None)
+		},
 		params::CoreParams::Custom(params) => Ok(Some(params)),
 	}
 }
@@ -694,6 +702,21 @@ where
 		},
 		Result::Err(err) => Result::Err(err.into())
 	}
+}
+
+fn factory<F, S>(
+	cli: FactoryCmd,
+	spec_factory: S,
+	version: &VersionInfo,
+) -> error::Result<()>
+	where
+		F: ServiceFactory,
+		S: FnOnce(&str) -> Result<Option<ChainSpec<FactoryGenesis<F>>>, String>,
+		F::RuntimeApi: ConstructRuntimeApi<FactoryBlock<F>, FullClient<F>>,
+{
+	let config = create_config_with_db_path::<F, _>(spec_factory, &cli.shared_params, version)?;
+	let blocks = cli.num;
+	Ok(service::chain_ops::factory::<F>(config, As::sa(blocks))?)
 }
 
 fn parse_address(

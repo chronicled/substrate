@@ -21,16 +21,32 @@ use futures::Future;
 use log::{info, warn};
 
 use runtime_primitives::generic::{SignedBlock, BlockId};
-use runtime_primitives::traits::{As, Block, Header, NumberFor};
+use runtime_primitives::generic::Era;
+use runtime_primitives::traits::{As, Block, Header, NumberFor, ProvideRuntimeApi, BlockNumberToHash};
+use primitives::{ed25519, sr25519};
 use consensus_common::import_queue::{ImportQueue, IncomingBlock, Link};
 use network::message;
+use node_runtime::{Call, Runtime, Balances, UncheckedExtrinsic};
+use primitives::crypto::Pair;
+use client::block_builder::api::BlockBuilder;
+use keyring::ed25519::Keyring;
+use balances::Call as BalancesCall;
+use runtime_primitives::OpaqueExtrinsic;
+use indices;
 
 use consensus_common::BlockOrigin;
-use crate::components::{self, Components, ServiceFactory, FactoryFullConfiguration, FactoryBlockNumber, RuntimeGenesis};
-use crate::new_client;
+use crate::components::{self, Components, ServiceFactory, FactoryFullConfiguration, FactoryBlockNumber, RuntimeGenesis, FullClient};
+use crate::{new_client, FactoryBlock};
 use parity_codec::{Decode, Encode};
 use crate::error;
 use crate::chain_spec::ChainSpec;
+use client::runtime_api::ConstructRuntimeApi;
+use std::sync::Arc;
+
+use client::Client;
+use client::LocalCallExecutor;
+use substrate_executor::NativeExecutor;
+use client::blockchain::Backend;
 
 /// Export a range of blocks to a binary stream.
 pub fn export_blocks<F, E, W>(
@@ -206,6 +222,23 @@ pub fn revert_chain<F>(
 	} else {
 		info!("Reverted {} blocks. Best: #{} ({})", reverted, info.best_number, info.best_hash);
 	}
+	Ok(())
+}
+
+/// Factory
+pub fn factory<F>(
+	config: FactoryFullConfiguration<F>,
+	blocks: FactoryBlockNumber<F>
+) -> error::Result<()>
+	where
+		F: ServiceFactory,
+		F::RuntimeApi: ConstructRuntimeApi<FactoryBlock<F>, FullClient<F>>,
+{
+	let client = new_client::<F>(&config)?;
+
+	let ra = client.runtime_api();
+	let block = client.new_block();
+
 	Ok(())
 }
 

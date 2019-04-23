@@ -31,6 +31,10 @@ transaction_pool = { package = "substrate-transaction-pool", path = "../../core/
 rpc = { package = "substrate-rpc-servers", path = "../../core/rpc-servers" }
 tel = { package = "substrate-telemetry", path = "../../core/telemetry" }
 offchain = { package = "substrate-offchain", path = "../../core/offchain" }
+keyring = { package = "substrate-keyring", path = "../../core/keyring" }
+balances = { package = "srml-balances", path = "../../srml/balances", default-features = false }
+node-runtime = { path = "../../node/runtime" }
+indices = { package = "srml-indices", path = "../../srml/indices" }
 
 [dev-dependencies]
 substrate-test-client = { path = "../test-client" }

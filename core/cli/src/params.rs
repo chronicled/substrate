@@ -20,7 +20,7 @@ use std::path::PathBuf;
 use structopt::{StructOpt, clap::{arg_enum, _clap_count_exprs, App, AppSettings, SubCommand, Arg}};
 use client;
 
-/// Auxialary macro to implement `GetLogFilter` for all types that have the `shared_params` field.
+/// Auxiliary macro to implement `GetLogFilter` for all types that have the `shared_params` field.
 macro_rules! impl_get_log_filter {
 	( $type:ident ) => {
 		impl $crate::GetLogFilter for $type {
@@ -76,6 +76,11 @@ pub struct SharedParams {
 	#[structopt(long = "dev")]
 	pub dev: bool,
 
+	/// TODO
+	#[structopt(long = "factory")]
+	pub factory: bool,
+
+	/// Specify custom base path.
 	/// Specify custom base path.
 	#[structopt(long = "base-path", short = "d", value_name = "PATH", parse(from_os_str))]
 	pub base_path: Option<PathBuf>,
@@ -564,7 +569,7 @@ pub struct ImportBlocksCmd {
 
 impl_get_log_filter!(ImportBlocksCmd);
 
-/// The `revert` command used revert the chain to a previos state.
+/// The `revert` command used to revert the chain to a previos state.
 #[derive(Debug, StructOpt, Clone)]
 pub struct RevertCmd {
 	/// Number of blocks to revert.
@@ -592,6 +597,20 @@ pub struct PurgeChainCmd {
 
 impl_get_log_filter!(PurgeChainCmd);
 
+/// The `factory` command used to generate transactions.
+#[derive(Debug, StructOpt, Clone)]
+pub struct FactoryCmd {
+	/// Number of transactions to generate.
+	#[structopt(default_value = "256")]
+	pub num: u64,
+
+	#[allow(missing_docs)]
+	#[structopt(flatten)]
+	pub shared_params: SharedParams,
+}
+
+impl_get_log_filter!(FactoryCmd);
+
 /// All core commands that are provided by default.
 ///
 /// The core commands are split into multiple subcommands and `Run` is the default subcommand. From
@@ -616,6 +635,9 @@ pub enum CoreParams<CC, RP> {
 
 	/// Remove the whole chain data.
 	PurgeChain(PurgeChainCmd),
+
+	/// Todo
+	Factory(FactoryCmd),
 
 	/// Further custom subcommands.
 	Custom(CC),
@@ -650,6 +672,10 @@ impl<CC, RP> StructOpt for CoreParams<CC, RP> where
 			PurgeChainCmd::augment_clap(SubCommand::with_name("purge-chain"))
 				.about("Remove the whole chain data.")
 		)
+		.subcommand(
+			FactoryCmd::augment_clap(SubCommand::with_name("factory"))
+				.about("TODO")
+		)
 	}
 
 	fn from_clap(matches: &::structopt::clap::ArgMatches) -> Self {
@@ -663,6 +689,8 @@ impl<CC, RP> StructOpt for CoreParams<CC, RP> where
 			("revert", Some(matches)) => CoreParams::Revert(RevertCmd::from_clap(matches)),
 			("purge-chain", Some(matches)) =>
 				CoreParams::PurgeChain(PurgeChainCmd::from_clap(matches)),
+			("factory", Some(matches)) =>
+				CoreParams::Factory(FactoryCmd::from_clap(matches)),
 			(_, None) => CoreParams::Run(MergeParameters::from_clap(matches)),
 			_ => CoreParams::Custom(CC::from_clap(matches)),
 		}
@@ -678,6 +706,7 @@ impl<CC, RP> GetLogFilter for CoreParams<CC, RP> where CC: GetLogFilter {
 			CoreParams::ImportBlocks(c) => c.get_log_filter(),
 			CoreParams::PurgeChain(c) => c.get_log_filter(),
 			CoreParams::Revert(c) => c.get_log_filter(),
+			CoreParams::Factory(c) => c.get_log_filter(),
 			CoreParams::Custom(c) => c.get_log_filter(),
 		}
 	}
