@@ -232,7 +232,8 @@ pub fn factory<F>(
 ) -> error::Result<()>
 	where
 		F: ServiceFactory,
-		F::RuntimeApi: ConstructRuntimeApi<FactoryBlock<F>, FullClient<F>>,
+		FullClient<F>: ProvideRuntimeApi,
+		<FullClient<F> as ProvideRuntimeApi>::Api: BlockBuilder<FactoryBlock<F>>
 {
 	let client = new_client::<F>(&config)?;
 

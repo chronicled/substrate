@@ -27,7 +27,7 @@ pub mod informant;
 
 use client::ExecutionStrategies;
 use client::block_builder::api::BlockBuilder;
-use runtime_primitives::traits::As;
+use runtime_primitives::traits::{As, ProvideRuntimeApi};
 use service::{
 	ServiceFactory, FactoryFullConfiguration, RuntimeGenesis,
 	FactoryGenesis, PruningMode, ChainSpec,
@@ -209,6 +209,8 @@ where
 	RS: FnOnce(E, RP, FactoryFullConfiguration<F>) -> Result<(), String>,
 	I: IntoIterator<Item = T>,
 	T: Into<std::ffi::OsString> + Clone,
+	FullClient<F>: ProvideRuntimeApi,
+	<FullClient<F> as ProvideRuntimeApi>::Api: BlockBuilder<FactoryBlock<F>>
 {
 	panic_handler::set(version.support_url);
 
@@ -712,7 +714,8 @@ fn factory<F, S>(
 	where
 		F: ServiceFactory,
 		S: FnOnce(&str) -> Result<Option<ChainSpec<FactoryGenesis<F>>>, String>,
-		F::RuntimeApi: ConstructRuntimeApi<FactoryBlock<F>, FullClient<F>>,
+		FullClient<F>: ProvideRuntimeApi,
+		<FullClient<F> as ProvideRuntimeApi>::Api: BlockBuilder<FactoryBlock<F>>
 {
 	let config = create_config_with_db_path::<F, _>(spec_factory, &cli.shared_params, version)?;
 	let blocks = cli.num;
