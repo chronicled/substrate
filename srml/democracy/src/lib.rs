@@ -602,7 +602,7 @@ mod tests {
 
 	#[test]
 	fn params_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			assert_eq!(Democracy::launch_period(), 1);
 			assert_eq!(Democracy::voting_period(), 1);
 			assert_eq!(Democracy::minimum_deposit(), 1);
@@ -632,7 +632,7 @@ mod tests {
 
 	#[test]
 	fn invalid_vote_strength_should_not_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_noop!(Democracy::vote(Origin::signed(1), r, Vote::new(true, 7)), "vote has too great a strength");
@@ -650,7 +650,7 @@ mod tests {
 
 	#[test]
 	fn locked_for_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_ok!(propose_set_balance(1, 2, 2));
 			assert_ok!(propose_set_balance(1, 4, 4));
@@ -663,7 +663,7 @@ mod tests {
 
 	#[test]
 	fn single_proposal_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_ok!(propose_set_balance(1, 2, 1));
 			assert_eq!(Democracy::end_block(System::block_number()), Ok(()));
@@ -684,7 +684,7 @@ mod tests {
 
 	#[test]
 	fn proxy_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			assert_eq!(Democracy::proxy(10), None);
 			assert_ok!(Democracy::set_proxy(Origin::signed(1), 10));
 			assert_eq!(Democracy::proxy(10), Some(1));
@@ -714,7 +714,7 @@ mod tests {
 
 	#[test]
 	fn single_proposal_should_work_with_proxy() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_ok!(propose_set_balance(1, 2, 1));
 			assert_eq!(Democracy::end_block(System::block_number()), Ok(()));
@@ -736,7 +736,7 @@ mod tests {
 
 	#[test]
 	fn single_proposal_should_work_with_delegation() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(propose_set_balance(1, 2, 1));
@@ -765,7 +765,7 @@ mod tests {
 
 	#[test]
 	fn single_proposal_should_work_with_cyclic_delegation() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(propose_set_balance(1, 2, 1));
@@ -795,7 +795,7 @@ mod tests {
 	#[test]
 	/// If transactor already voted, delegated vote is overwriten.
 	fn single_proposal_should_work_with_vote_and_delegation() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(propose_set_balance(1, 2, 1));
@@ -827,7 +827,7 @@ mod tests {
 
 	#[test]
 	fn single_proposal_should_work_with_undelegation() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(propose_set_balance(1, 2, 1));
@@ -857,7 +857,7 @@ mod tests {
 	#[test]
 	/// If transactor voted, delegated vote is overwriten.
 	fn single_proposal_should_work_with_delegation_and_vote() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(propose_set_balance(1, 2, 1));
@@ -889,7 +889,7 @@ mod tests {
 
 	#[test]
 	fn deposit_for_proposals_should_be_taken() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_ok!(propose_set_balance(1, 2, 5));
 			assert_ok!(Democracy::second(Origin::signed(2), 0));
@@ -904,7 +904,7 @@ mod tests {
 
 	#[test]
 	fn deposit_for_proposals_should_be_returned() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_ok!(propose_set_balance(1, 2, 5));
 			assert_ok!(Democracy::second(Origin::signed(2), 0));
@@ -920,7 +920,7 @@ mod tests {
 
 	#[test]
 	fn proposal_with_deposit_below_minimum_should_not_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_noop!(propose_set_balance(1, 2, 0), "value too low");
 		});
@@ -928,7 +928,7 @@ mod tests {
 
 	#[test]
 	fn poor_proposer_should_not_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_noop!(propose_set_balance(1, 2, 11), "proposer\'s balance too low");
 		});
@@ -936,7 +936,7 @@ mod tests {
 
 	#[test]
 	fn poor_seconder_should_not_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			assert_ok!(propose_set_balance(2, 2, 11));
 			assert_noop!(Democracy::second(Origin::signed(1), 0), "seconder\'s balance too low");
@@ -945,7 +945,7 @@ mod tests {
 
 	#[test]
 	fn runners_up_should_come_after() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(0);
 			assert_ok!(propose_set_balance(1, 2, 2));
 			assert_ok!(propose_set_balance(1, 4, 4));
@@ -970,7 +970,7 @@ mod tests {
 
 	#[test]
 	fn simple_passing_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(1), r, AYE));
@@ -987,7 +987,7 @@ mod tests {
 
 	#[test]
 	fn cancel_referendum_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(1), r, AYE));
@@ -1001,7 +1001,7 @@ mod tests {
 
 	#[test]
 	fn simple_failing_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(1), r, NAY));
@@ -1018,7 +1018,7 @@ mod tests {
 
 	#[test]
 	fn controversial_voting_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(1), r, AYE));
@@ -1038,7 +1038,7 @@ mod tests {
 
 	#[test]
 	fn delayed_enactment_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 1).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(1), r, AYE));
@@ -1062,7 +1062,7 @@ mod tests {
 
 	#[test]
 	fn lock_voting_should_work() {
-		with_externalities(&mut new_test_ext_with_public_delay(1), || {
+		with_externalities(&mut new_test_ext_with_public_delay(1).ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(1), r, Vote::new(false, 6)));
@@ -1092,7 +1092,7 @@ mod tests {
 
 	#[test]
 	fn lock_voting_should_work_with_delegation() {
-		with_externalities(&mut new_test_ext_with_public_delay(1), || {
+		with_externalities(&mut new_test_ext_with_public_delay(1).ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(1), r, Vote::new(false, 6)));
@@ -1115,7 +1115,7 @@ mod tests {
 
 	#[test]
 	fn controversial_low_turnout_voting_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::set_block_number(1);
 			let r = Democracy::inject_referendum(1, set_balance_proposal(2), VoteThreshold::SuperMajorityApprove, 0).unwrap();
 			assert_ok!(Democracy::vote(Origin::signed(5), r, NAY));
@@ -1131,7 +1131,7 @@ mod tests {
 
 	#[test]
 	fn passing_low_turnout_voting_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			assert_eq!(Balances::free_balance(&42), 0);
 			assert_eq!(Balances::total_issuance(), 210);
 

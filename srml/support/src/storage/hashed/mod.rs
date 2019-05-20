@@ -163,13 +163,13 @@ mod tests {
 	#[test]
 	fn integers_can_be_stored() {
 		let mut t = TestExternalities::default();
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			let x = 69u32;
 			put(&twox_128, b":test", &x);
 			let y: u32 = get(&twox_128, b":test").unwrap();
 			assert_eq!(x, y);
 		});
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			let x = 69426942i64;
 			put(&twox_128, b":test", &x);
 			let y: i64 = get(&twox_128, b":test").unwrap();
@@ -180,14 +180,14 @@ mod tests {
 	#[test]
 	fn bools_can_be_stored() {
 		let mut t = TestExternalities::default();
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			let x = true;
 			put(&twox_128, b":test", &x);
 			let y: bool = get(&twox_128, b":test").unwrap();
 			assert_eq!(x, y);
 		});
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			let x = false;
 			put(&twox_128, b":test", &x);
 			let y: bool = get(&twox_128, b":test").unwrap();
@@ -198,7 +198,7 @@ mod tests {
 	#[test]
 	fn vecs_can_be_retrieved() {
 		let mut t = TestExternalities::default();
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			runtime_io::set_storage(&twox_128(b":test"), b"\x2cHello world");
 			let x = b"Hello world".to_vec();
 			let y = get::<Vec<u8>, _, _>(&twox_128, b":test").unwrap();
@@ -211,11 +211,11 @@ mod tests {
 		let mut t = TestExternalities::default();
 		let x = b"Hello world".to_vec();
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			put(&twox_128, b":test", &x);
 		});
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			let y: Vec<u8> = get(&twox_128, b":test").unwrap();
 			assert_eq!(x, y);
 		});

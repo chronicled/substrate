@@ -56,7 +56,7 @@ fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
 #[test]
 fn final_keys() {
-	with_externalities(&mut new_test_ext(), || {
+	with_externalities(&mut new_test_ext().ext(), || {
 		<Value<Test>>::put(1);
 		assert_eq!(unhashed::get::<u32>(&runtime_io::twox_128(b"Module Value")), Some(1u32));
 

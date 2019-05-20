@@ -721,7 +721,7 @@ mod tests {
 
 	#[test]
 	fn deposit_event_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			System::initialize(&1, &[0u8; 32].into(), &[0u8; 32].into());
 			System::note_finished_extrinsics();
 			System::deposit_event(1u16);
@@ -755,7 +755,7 @@ mod tests {
 
 	#[test]
 	fn deposit_event_topics() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			const BLOCK_NUMBER: u64 = 1;
 
 			System::initialize(&BLOCK_NUMBER, &[0u8; 32].into(), &[0u8; 32].into());

@@ -367,7 +367,7 @@ mod tests {
 			minimum_period: 5,
 		}.build_storage().unwrap().0);
 
-		with_externalities(&mut TestExternalities::new(t), || {
+		with_externalities(&mut TestExternalities::new(t).ext(), || {
 			Timestamp::set_timestamp(42);
 			assert_ok!(Timestamp::dispatch(Call::set(69), Origin::NONE));
 			assert_eq!(Timestamp::now(), 69);
@@ -382,7 +382,7 @@ mod tests {
 			minimum_period: 5,
 		}.build_storage().unwrap().0);
 
-		with_externalities(&mut TestExternalities::new(t), || {
+		with_externalities(&mut TestExternalities::new(t).ext(), || {
 			Timestamp::set_timestamp(42);
 			assert_ok!(Timestamp::dispatch(Call::set(69), Origin::NONE));
 			let _ = Timestamp::dispatch(Call::set(70), Origin::NONE);
@@ -397,7 +397,7 @@ mod tests {
 			minimum_period: 5,
 		}.build_storage().unwrap().0);
 
-		with_externalities(&mut TestExternalities::new(t), || {
+		with_externalities(&mut TestExternalities::new(t).ext(), || {
 			Timestamp::set_timestamp(42);
 			let _ = Timestamp::dispatch(Call::set(46), Origin::NONE);
 		});

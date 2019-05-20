@@ -21,6 +21,7 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use hash_db::Hasher;
 use crate::backend::{InMemory, Backend};
+use crate::{NeverOffchainExt, Ext};
 use primitives::storage::well_known_keys::is_child_storage_key;
 use crate::changes_trie::{
 	compute_changes_trie_root, InMemoryStorage as ChangesTrieInMemoryStorage, AnchorBlockId
@@ -83,6 +84,13 @@ impl<H: Hasher> TestExternalities<H> {
 	}
 }
 
+impl<H: Hasher> TestExternalities<H> where H::Out: Ord {
+	/// Return externalities
+	pub fn ext(&mut self) -> Ext<H, InMemory<H>, ChangesTrieInMemoryStorage<H>, NeverOffchainExt> {
+		Ext::new(&mut self.overlay, &self.backend, Some(&self.changes_trie_storage), None)
+	}
+}
+
 impl<H: Hasher> ::std::fmt::Debug for TestExternalities<H> {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
 		write!(f, "overlay: {:?}\nbackend: {:?}", self.overlay, self.backend.pairs())
@@ -115,111 +123,9 @@ impl<H: Hasher> From<TestExternalities<H>> for HashMap<Vec<u8>, Vec<u8>> {
 	}
 }
 
-impl<H: Hasher> From< HashMap<Vec<u8>, Vec<u8>> > for TestExternalities<H> {
+impl<H: Hasher> From<HashMap<Vec<u8>, Vec<u8>>> for TestExternalities<H> {
 	fn from(hashmap: HashMap<Vec<u8>, Vec<u8>>) -> Self {
 		Self::from_iter(hashmap)
-	}
-}
-
-impl<H: Hasher> Externalities<H> for TestExternalities<H> where H::Out: Ord {
-	fn storage(&self, key: &[u8]) -> Option<Vec<u8>> {
-		self.overlay.storage(key).map(|x| x.map(|x| x.to_vec())).unwrap_or_else(||
-			self.backend.storage(key).expect(EXT_NOT_ALLOWED_TO_FAIL))
-	}
-
-	fn original_storage(&self, key: &[u8]) -> Option<Vec<u8>> {
-		self.backend.storage(key).expect(EXT_NOT_ALLOWED_TO_FAIL)
-	}
-
-	fn child_storage(&self, storage_key: ChildStorageKey<H>, key: &[u8]) -> Option<Vec<u8>> {
-		self.overlay
-			.child_storage(storage_key.as_ref(), key)
-			.map(|x| x.map(|x| x.to_vec()))
-			.unwrap_or_else(|| self.backend
-				.child_storage(storage_key.as_ref(), key)
-				.expect(EXT_NOT_ALLOWED_TO_FAIL)
-			)
-	}
-
-	fn place_storage(&mut self, key: Vec<u8>, maybe_value: Option<Vec<u8>>) {
-		if is_child_storage_key(&key) {
-			panic!("Refuse to directly set child storage key");
-		}
-
-		self.overlay.set_storage(key, maybe_value);
-	}
-
-	fn place_child_storage(
-		&mut self,
-		storage_key: ChildStorageKey<H>,
-		key: Vec<u8>,
-		value: Option<Vec<u8>>
-	) {
-		self.overlay.set_child_storage(storage_key.into_owned(), key, value);
-	}
-
-	fn kill_child_storage(&mut self, storage_key: ChildStorageKey<H>) {
-		let backend = &self.backend;
-		let overlay = &mut self.overlay;
-
-		overlay.clear_child_storage(storage_key.as_ref());
-		backend.for_keys_in_child_storage(storage_key.as_ref(), |key| {
-			overlay.set_child_storage(storage_key.as_ref().to_vec(), key.to_vec(), None);
-		});
-	}
-
-	fn clear_prefix(&mut self, prefix: &[u8]) {
-		if is_child_storage_key(prefix) {
-			panic!("Refuse to directly clear prefix that is part of child storage key");
-		}
-
-		self.overlay.clear_prefix(prefix);
-
-		let backend = &self.backend;
-		let overlay = &mut self.overlay;
-		backend.for_keys_with_prefix(prefix, |key| {
-			overlay.set_storage(key.to_vec(), None);
-		});
-	}
-
-	fn chain_id(&self) -> u64 { 42 }
-
-	fn storage_root(&mut self) -> H::Out {
-		// compute and memoize
-		let delta = self.overlay.committed.top.iter().map(|(k, v)| (k.clone(), v.value.clone()))
-			.chain(self.overlay.prospective.top.iter().map(|(k, v)| (k.clone(), v.value.clone())));
-
-		self.backend.storage_root(delta).0
-	}
-
-	fn child_storage_root(&mut self, storage_key: ChildStorageKey<H>) -> Vec<u8> {
-		let storage_key = storage_key.as_ref();
-
-		let (root, _, _) = {
-			let delta = self.overlay.committed.children.get(storage_key)
-				.into_iter()
-				.flat_map(|map| map.1.iter().map(|(k, v)| (k.clone(), v.clone())))
-				.chain(self.overlay.prospective.children.get(storage_key)
-						.into_iter()
-						.flat_map(|map| map.1.clone().into_iter()));
-
-			self.backend.child_storage_root(storage_key, delta)
-		};
-		self.overlay.set_storage(storage_key.into(), Some(root.clone()));
-		root
-	}
-
-	fn storage_changes_root(&mut self, parent: H::Out, parent_num: u64) -> Option<H::Out> {
-		compute_changes_trie_root::<_, ChangesTrieInMemoryStorage<H>, H>(
-			&self.backend,
-			Some(&self.changes_trie_storage),
-			&self.overlay,
-			&AnchorBlockId { hash: parent, number: parent_num },
-		).map(|(root, _)| root.clone())
-	}
-
-	fn submit_extrinsic(&mut self, _extrinsic: Vec<u8>) -> Result<(), ()> {
-		unimplemented!()
 	}
 }
 
@@ -231,7 +137,8 @@ mod tests {
 
 	#[test]
 	fn commit_should_work() {
-		let mut ext = TestExternalities::<Blake2Hasher>::default();
+		let mut test_ext = TestExternalities::<Blake2Hasher>::default();
+		let mut ext = test_ext.ext();
 		ext.set_storage(b"doe".to_vec(), b"reindeer".to_vec());
 		ext.set_storage(b"dog".to_vec(), b"puppy".to_vec());
 		ext.set_storage(b"dogglesworth".to_vec(), b"cat".to_vec());
@@ -241,7 +148,8 @@ mod tests {
 
 	#[test]
 	fn set_and_retrieve_code() {
-		let mut ext = TestExternalities::<Blake2Hasher>::default();
+		let mut test_ext = TestExternalities::<Blake2Hasher>::default();
+		let mut ext = test_ext.ext();
 
 		let code = vec![1, 2, 3];
 		ext.set_storage(CODE.to_vec(), code.clone());

@@ -575,7 +575,7 @@ mod tests {
 
 	#[test]
 	fn params_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::next_vote_from(1), 4);
 			assert_eq!(Council::next_vote_from(4), 4);
@@ -608,7 +608,7 @@ mod tests {
 
 	#[test]
 	fn simple_candidate_submission_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::candidates(), Vec::<u64>::new());
 			assert_eq!(Council::candidate_reg_info(1), None);
@@ -634,7 +634,7 @@ mod tests {
 
 	fn new_test_ext_with_candidate_holes() -> runtime_io::TestExternalities<Blake2Hasher> {
 		let mut t = new_test_ext(false);
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			<Candidates<Test>>::put(vec![0, 0, 1]);
 			<CandidateCount<Test>>::put(1);
 			<RegisterInfoOf<Test>>::insert(1, (0, 2));
@@ -646,7 +646,7 @@ mod tests {
 	fn candidate_submission_using_free_slot_should_work() {
 		let mut t = new_test_ext_with_candidate_holes();
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::candidates(), vec![0, 0, 1]);
 
@@ -662,7 +662,7 @@ mod tests {
 	fn candidate_submission_using_alternative_free_slot_should_work() {
 		let mut t = new_test_ext_with_candidate_holes();
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::candidates(), vec![0, 0, 1]);
 
@@ -676,7 +676,7 @@ mod tests {
 
 	#[test]
 	fn candidate_submission_not_using_free_slot_should_not_work() {
-		with_externalities(&mut new_test_ext_with_candidate_holes(), || {
+		with_externalities(&mut new_test_ext_with_candidate_holes().ext(), || {
 			System::set_block_number(1);
 			assert_noop!(Council::submit_candidacy(Origin::signed(4), 3), "invalid candidate slot");
 		});
@@ -684,7 +684,7 @@ mod tests {
 
 	#[test]
 	fn bad_candidate_slot_submission_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::candidates(), Vec::<u64>::new());
 			assert_noop!(Council::submit_candidacy(Origin::signed(1), 1), "invalid candidate slot");
@@ -693,7 +693,7 @@ mod tests {
 
 	#[test]
 	fn non_free_candidate_slot_submission_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::candidates(), Vec::<u64>::new());
 			assert_ok!(Council::submit_candidacy(Origin::signed(1), 0));
@@ -704,7 +704,7 @@ mod tests {
 
 	#[test]
 	fn dupe_candidate_submission_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::candidates(), Vec::<u64>::new());
 			assert_ok!(Council::submit_candidacy(Origin::signed(1), 0));
@@ -715,7 +715,7 @@ mod tests {
 
 	#[test]
 	fn poor_candidate_submission_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_eq!(Council::candidates(), Vec::<u64>::new());
 			assert_noop!(Council::submit_candidacy(Origin::signed(7), 0), "candidate has not enough funds");
@@ -724,7 +724,7 @@ mod tests {
 
 	#[test]
 	fn voting_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(Council::submit_candidacy(Origin::signed(5), 0));
@@ -753,7 +753,7 @@ mod tests {
 
 	#[test]
 	fn proxy_voting_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(Council::submit_candidacy(Origin::signed(5), 0));
@@ -787,7 +787,7 @@ mod tests {
 
 	#[test]
 	fn setting_any_approval_vote_count_without_any_candidate_count_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 
 			assert_eq!(Council::candidates().len(), 0);
@@ -798,7 +798,7 @@ mod tests {
 
 	#[test]
 	fn setting_an_approval_vote_count_more_than_candidate_count_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(Council::submit_candidacy(Origin::signed(5), 0));
@@ -810,7 +810,7 @@ mod tests {
 
 	#[test]
 	fn resubmitting_voting_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(Council::submit_candidacy(Origin::signed(5), 0));
@@ -829,7 +829,7 @@ mod tests {
 
 	#[test]
 	fn retracting_voter_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 
 			assert_ok!(Council::submit_candidacy(Origin::signed(5), 0));
@@ -876,7 +876,7 @@ mod tests {
 
 	#[test]
 	fn invalid_retraction_index_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_ok!(Council::submit_candidacy(Origin::signed(3), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(1), vec![true], 0));
@@ -888,7 +888,7 @@ mod tests {
 
 	#[test]
 	fn overflow_retraction_index_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_ok!(Council::submit_candidacy(Origin::signed(3), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(1), vec![true], 0));
@@ -898,7 +898,7 @@ mod tests {
 
 	#[test]
 	fn non_voter_retraction_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(1);
 			assert_ok!(Council::submit_candidacy(Origin::signed(3), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(1), vec![true], 0));
@@ -908,7 +908,7 @@ mod tests {
 
 	#[test]
 	fn simple_tally_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert!(!Council::presentation_active());
 
@@ -942,7 +942,7 @@ mod tests {
 
 	#[test]
 	fn presentations_with_zero_staked_deposit_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(2), vec![true], 0));
@@ -955,7 +955,7 @@ mod tests {
 
 	#[test]
 	fn double_presentations_should_be_punished() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			assert!(Balances::can_slash(&4, 10));
 
 			System::set_block_number(4);
@@ -978,7 +978,7 @@ mod tests {
 
 	#[test]
 	fn retracting_inactive_voter_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(2), vec![true], 0));
@@ -1012,7 +1012,7 @@ mod tests {
 
 	#[test]
 	fn presenting_for_double_election_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_eq!(Council::submit_candidacy(Origin::signed(2), 0), Ok(()));
 			assert_ok!(Council::set_approvals(Origin::signed(2), vec![true], 0));
@@ -1034,7 +1034,7 @@ mod tests {
 
 	#[test]
 	fn retracting_inactive_voter_with_other_candidates_in_slots_should_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(2), vec![true], 0));
@@ -1071,7 +1071,7 @@ mod tests {
 
 	#[test]
 	fn retracting_inactive_voter_with_bad_reporter_index_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(2), vec![true], 0));
@@ -1100,7 +1100,7 @@ mod tests {
 
 	#[test]
 	fn retracting_inactive_voter_with_bad_target_index_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(2), vec![true], 0));
@@ -1129,7 +1129,7 @@ mod tests {
 
 	#[test]
 	fn attempting_to_retract_active_voter_should_slash_reporter() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::submit_candidacy(Origin::signed(3), 1));
@@ -1177,7 +1177,7 @@ mod tests {
 
 	#[test]
 	fn attempting_to_retract_inactive_voter_by_nonvoter_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(2), vec![true], 0));
@@ -1206,7 +1206,7 @@ mod tests {
 
 	#[test]
 	fn presenting_loser_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(1), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(6), vec![true], 0));
@@ -1239,7 +1239,7 @@ mod tests {
 
 	#[test]
 	fn presenting_loser_first_should_not_matter() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(1), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(6), vec![true], 0));
@@ -1271,7 +1271,7 @@ mod tests {
 
 	#[test]
 	fn present_outside_of_presentation_period_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert!(!Council::presentation_active());
 			assert_noop!(Council::present_winner(Origin::signed(5), 5, 1, 0), "cannot present outside of presentation period");
@@ -1280,7 +1280,7 @@ mod tests {
 
 	#[test]
 	fn present_with_invalid_vote_index_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(2), 0));
 			assert_ok!(Council::submit_candidacy(Origin::signed(5), 1));
@@ -1295,7 +1295,7 @@ mod tests {
 
 	#[test]
 	fn present_when_presenter_is_poor_should_not_work() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert!(!Council::presentation_active());
 
@@ -1314,7 +1314,7 @@ mod tests {
 
 	#[test]
 	fn invalid_present_tally_should_slash() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert!(!Council::presentation_active());
 			assert_eq!(Balances::total_balance(&4), 40);
@@ -1334,7 +1334,7 @@ mod tests {
 
 	#[test]
 	fn runners_up_should_be_kept() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert!(!Council::presentation_active());
 
@@ -1395,7 +1395,7 @@ mod tests {
 
 	#[test]
 	fn second_tally_should_use_runners_up() {
-		with_externalities(&mut new_test_ext(false), || {
+		with_externalities(&mut new_test_ext(false).ext(), || {
 			System::set_block_number(4);
 			assert_ok!(Council::submit_candidacy(Origin::signed(1), 0));
 			assert_ok!(Council::set_approvals(Origin::signed(6), vec![true], 0));

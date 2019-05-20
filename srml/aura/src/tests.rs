@@ -72,7 +72,7 @@ fn aura_reports_offline() {
 		}
 	}
 
-	with_externalities(&mut new_test_ext(vec![0, 1, 2, 3]), || {
+	with_externalities(&mut new_test_ext(vec![0, 1, 2, 3]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		let slot_duration = Aura::slot_duration();
 

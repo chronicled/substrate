@@ -546,7 +546,7 @@ mod tests {
 
 	#[test]
 	fn it_works_for_optional_value() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			// Check that GenesisBuilder works properly.
 			assert_eq!(Example::dummy(), Some(42));
 
@@ -567,7 +567,7 @@ mod tests {
 
 	#[test]
 	fn it_works_for_default_value() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			assert_eq!(Example::foo(), 24);
 			assert_ok!(Example::accumulate_foo(Origin::signed(1), 1));
 			assert_eq!(Example::foo(), 25);

@@ -129,6 +129,7 @@ mod tests {
 			twox_128(<balances::TransactionBaseFee<Runtime>>::key()).to_vec() => vec![70u8; 16],
 			twox_128(<balances::TransactionByteFee<Runtime>>::key()).to_vec() => vec![0u8; 16]
 		]);
+		let mut t = t.ext();
 
 		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
 			&mut t,
@@ -162,6 +163,7 @@ mod tests {
 			twox_128(<balances::TransactionBaseFee<Runtime>>::key()).to_vec() => vec![70u8; 16],
 			twox_128(<balances::TransactionByteFee<Runtime>>::key()).to_vec() => vec![0u8; 16]
 		]);
+		let mut t = t.ext();
 
 		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
 			&mut t,
@@ -195,6 +197,7 @@ mod tests {
 			twox_128(<balances::TransactionBaseFee<Runtime>>::key()).to_vec() => vec![0u8; 16],
 			twox_128(<balances::TransactionByteFee<Runtime>>::key()).to_vec() => vec![0u8; 16]
 		]);
+		let mut t = t.ext();
 
 		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
 			&mut t,
@@ -232,6 +235,7 @@ mod tests {
 			twox_128(<balances::TransactionBaseFee<Runtime>>::key()).to_vec() => vec![0u8; 16],
 			twox_128(<balances::TransactionByteFee<Runtime>>::key()).to_vec() => vec![0u8; 16]
 		]);
+		let mut t = t.ext();
 
 		let r = executor().call::<_, NeverNativeValue, fn() -> _>(
 			&mut t,
@@ -332,6 +336,8 @@ mod tests {
 		extrinsics: Vec<CheckedExtrinsic>,
 	) -> (Vec<u8>, Hash) {
 		use trie::ordered_trie_root;
+
+		let env = &mut env.ext();
 
 		// sign extrinsics.
 		let extrinsics = extrinsics.into_iter().map(sign).collect::<Vec<_>>();
@@ -471,6 +477,7 @@ mod tests {
 	#[test]
 	fn full_native_block_import_works() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
+		let mut t = t.ext();
 
 		let (block1, block2) = blocks();
 
@@ -607,6 +614,7 @@ mod tests {
 	#[test]
 	fn full_wasm_block_import_works() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
+		let mut t = t.ext();
 
 		let (block1, block2) = blocks();
 
@@ -757,6 +765,7 @@ mod tests {
 		);
 
 		let mut t = new_test_ext(COMPACT_CODE, false);
+		let mut t = t.ext();
 
 		WasmExecutor::new().call(&mut t, 8, COMPACT_CODE,"Core_execute_block", &b.0).unwrap();
 
@@ -775,6 +784,7 @@ mod tests {
 	#[test]
 	fn wasm_big_block_import_fails() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
+		let mut t = t.ext();
 
 		assert!(
 			WasmExecutor::new().call(
@@ -790,6 +800,7 @@ mod tests {
 	#[test]
 	fn native_big_block_import_succeeds() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
+		let mut t = t.ext();
 
 		Executor::new(None).call::<_, NeverNativeValue, fn() -> _>(
 			&mut t,
@@ -803,6 +814,7 @@ mod tests {
 	#[test]
 	fn native_big_block_import_fails_on_fallback() {
 		let mut t = new_test_ext(COMPACT_CODE, false);
+		let mut t = t.ext();
 
 		assert!(
 			Executor::new(None).call::<_, NeverNativeValue, fn() -> _>(
@@ -829,6 +841,7 @@ mod tests {
 			twox_128(<balances::TransactionBaseFee<Runtime>>::key()).to_vec() => vec![70u8; 16],
 			twox_128(<balances::TransactionByteFee<Runtime>>::key()).to_vec() => vec![0u8; 16]
 		]);
+		let mut t = t.ext();
 
 		let r = WasmExecutor::new().call(&mut t, 8, COMPACT_CODE, "Core_initialize_block", &vec![].and(&from_block_number(1u64)));
 		assert!(r.is_ok());
@@ -851,6 +864,7 @@ mod tests {
 			twox_128(<balances::TransactionBaseFee<Runtime>>::key()).to_vec() => vec![0u8; 16],
 			twox_128(<balances::TransactionByteFee<Runtime>>::key()).to_vec() => vec![0u8; 16]
 		]);
+		let mut t = t.ext();
 
 		let r = WasmExecutor::new().call(&mut t, 8, COMPACT_CODE, "Core_initialize_block", &vec![].and(&from_block_number(1u64)));
 		assert!(r.is_ok());
@@ -871,6 +885,7 @@ mod tests {
 		let block = Block::decode(&mut &block_data[..]).unwrap();
 
 		let mut t = new_test_ext(COMPACT_CODE, true);
+		let mut t = t.ext();
 		Executor::new(None).call::<_, NeverNativeValue, fn() -> _>(
 			&mut t,
 			"Core_execute_block",
@@ -887,6 +902,7 @@ mod tests {
 		let block1 = changes_trie_block();
 
 		let mut t = new_test_ext(COMPACT_CODE, true);
+		let mut t = t.ext();
 		WasmExecutor::new().call(&mut t, 8, COMPACT_CODE, "Core_execute_block", &block1.0).unwrap();
 
 		assert!(t.storage_changes_root(Default::default(), 0).is_some());

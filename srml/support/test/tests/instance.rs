@@ -386,7 +386,7 @@ fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
 
 #[test]
 fn storage_instance_independance() {
-	with_externalities(&mut new_test_ext(), || {
+	with_externalities(&mut new_test_ext().ext(), || {
 		let mut map = rstd::collections::btree_map::BTreeMap::new();
 		for key in [
 			module2::Value::<Runtime>::key().to_vec(),
@@ -437,7 +437,7 @@ fn storage_instance_independance() {
 
 #[test]
 fn storage_with_instance_basic_operation() {
-	with_externalities(&mut new_test_ext(), || {
+	with_externalities(&mut new_test_ext().ext(), || {
 		type Value = module2::Value<Runtime, module2::Instance1>;
 		type Map = module2::Map<Runtime, module2::Instance1>;
 		type LinkedMap = module2::LinkedMap<Runtime, module2::Instance1>;

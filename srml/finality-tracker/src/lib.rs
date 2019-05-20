@@ -325,7 +325,7 @@ mod tests {
 		make_test_context!();
 		let t = system::GenesisConfig::<Test>::default().build_storage().unwrap().0;
 
-		with_externalities(&mut TestExternalities::new(t), || {
+		with_externalities(&mut TestExternalities::new(t).ext(), || {
 			FinalityTracker::update_hint(Some(500));
 			assert_eq!(FinalityTracker::median(), 250);
 			assert!(NOTIFICATIONS.lock().is_empty());
@@ -341,7 +341,7 @@ mod tests {
 			report_latency: 100
 		}.build_storage().unwrap().0);
 
-		with_externalities(&mut TestExternalities::new(t), || {
+		with_externalities(&mut TestExternalities::new(t).ext(), || {
 			let mut parent_hash = System::parent_hash();
 			for i in 2..106 {
 				System::initialize(&i, &parent_hash, &Default::default());
@@ -366,7 +366,7 @@ mod tests {
 			report_latency: 100
 		}.build_storage().unwrap().0);
 
-		with_externalities(&mut TestExternalities::new(t), || {
+		with_externalities(&mut TestExternalities::new(t).ext(), || {
 			let mut parent_hash = System::parent_hash();
 			for i in 2..106 {
 				System::initialize(&i, &parent_hash, &Default::default());

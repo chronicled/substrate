@@ -25,7 +25,7 @@ use runtime_io::with_externalities;
 #[test]
 fn indexing_lookup_should_work() {
 	with_externalities(
-		&mut new_test_ext(),
+		&mut new_test_ext().ext(),
 		|| {
 			assert_eq!(Indices::lookup_index(0), Some(1));
 			assert_eq!(Indices::lookup_index(1), Some(2));
@@ -39,7 +39,7 @@ fn indexing_lookup_should_work() {
 #[test]
 fn default_indexing_on_new_accounts_should_work() {
 	with_externalities(
-		&mut new_test_ext(),
+		&mut new_test_ext().ext(),
 		|| {
 			assert_eq!(Indices::lookup_index(4), None);
 			make_account(5);
@@ -51,7 +51,7 @@ fn default_indexing_on_new_accounts_should_work() {
 #[test]
 fn reclaim_indexing_on_new_accounts_should_work() {
 	with_externalities(
-		&mut new_test_ext(),
+		&mut new_test_ext().ext(),
 		|| {
 			assert_eq!(Indices::lookup_index(1), Some(2));
 			assert_eq!(Indices::lookup_index(4), None);
@@ -67,7 +67,7 @@ fn reclaim_indexing_on_new_accounts_should_work() {
 #[test]
 fn alive_account_should_prevent_reclaim() {
 	with_externalities(
-		&mut new_test_ext(),
+		&mut new_test_ext().ext(),
 		|| {
 			assert!(!TestIsDeadAccount::is_dead_account(&2));
 			assert_eq!(Indices::lookup_index(1), Some(2));

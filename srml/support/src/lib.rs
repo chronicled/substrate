@@ -256,7 +256,7 @@ mod tests {
 
 	#[test]
 	fn linked_map_basic_insert_remove_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			// initialized during genesis
 			assert_eq!(Map::get(&15u32), 42u64);
 
@@ -282,7 +282,7 @@ mod tests {
 
 	#[test]
 	fn linked_map_enumeration_and_head_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			assert_eq!(Map::head(), Some(15));
 			assert_eq!(Map::enumerate().collect::<Vec<_>>(), vec![(15, 42)]);
 			// insert / remove
@@ -334,7 +334,7 @@ mod tests {
 
 	#[test]
 	fn double_map_basic_insert_remove_remove_prefix_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			type DoubleMap = DataDM<Test>;
 			// initialized during genesis
 			assert_eq!(DoubleMap::get(&15u32, &16u32), 42u64);
@@ -374,7 +374,7 @@ mod tests {
 
 	#[test]
 	fn double_map_append_should_work() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			type DoubleMap = AppendableDM<Test>;
 
 			let key1 = 17u32;

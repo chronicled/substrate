@@ -25,7 +25,7 @@ use inherents::{InherentData, ProvideInherent};
 
 #[test]
 fn authorities_change_logged() {
-	with_externalities(&mut new_test_ext(vec![1, 2, 3]), || {
+	with_externalities(&mut new_test_ext(vec![1, 2, 3]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		Consensus::set_authorities(&[UintAuthorityId(4), UintAuthorityId(5), UintAuthorityId(6)]);
 		Consensus::on_finalize(1);
@@ -46,7 +46,7 @@ fn authorities_change_logged() {
 
 #[test]
 fn partial_authorities_change_logged() {
-	with_externalities(&mut new_test_ext(vec![1, 2, 3]), || {
+	with_externalities(&mut new_test_ext(vec![1, 2, 3]).ext(), || {
 		System::initialize(&2, &Default::default(), &Default::default());
 		Consensus::set_authorities(&[UintAuthorityId(2), UintAuthorityId(4), UintAuthorityId(5)]);
 		Consensus::on_finalize(2);
@@ -67,7 +67,7 @@ fn partial_authorities_change_logged() {
 
 #[test]
 fn authorities_change_is_not_logged_when_not_changed() {
-	with_externalities(&mut new_test_ext(vec![1, 2, 3]), || {
+	with_externalities(&mut new_test_ext(vec![1, 2, 3]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		Consensus::on_finalize(1);
 		let header = System::finalize();
@@ -79,7 +79,7 @@ fn authorities_change_is_not_logged_when_not_changed() {
 
 #[test]
 fn authorities_change_is_not_logged_when_changed_back_to_original() {
-	with_externalities(&mut new_test_ext(vec![1, 2, 3]), || {
+	with_externalities(&mut new_test_ext(vec![1, 2, 3]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		Consensus::set_authorities(&[UintAuthorityId(4), UintAuthorityId(5), UintAuthorityId(6)]);
 		Consensus::set_authorities(&[UintAuthorityId(1), UintAuthorityId(2), UintAuthorityId(3)]);
@@ -93,7 +93,7 @@ fn authorities_change_is_not_logged_when_changed_back_to_original() {
 
 #[test]
 fn offline_report_can_be_excluded() {
-	with_externalities(&mut new_test_ext(vec![1, 2, 3]), || {
+	with_externalities(&mut new_test_ext(vec![1, 2, 3]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		assert!(Consensus::create_inherent(&InherentData::new()).is_none());
 
@@ -109,7 +109,7 @@ fn offline_report_can_be_excluded() {
 fn set_and_kill_storage_work() {
 	use srml_support::storage;
 
-	with_externalities(&mut new_test_ext(vec![1, 2, 3]), || {
+	with_externalities(&mut new_test_ext(vec![1, 2, 3]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 
 		let item = (vec![42u8], vec![42u8]);

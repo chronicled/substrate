@@ -29,7 +29,7 @@ use super::*;
 
 #[test]
 fn authorities_change_logged() {
-	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]), || {
+	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		Grandpa::schedule_change(vec![(4, 1), (5, 1), (6, 1)], 0, None).unwrap();
 
@@ -55,7 +55,7 @@ fn authorities_change_logged() {
 
 #[test]
 fn authorities_change_logged_after_delay() {
-	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]), || {
+	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		Grandpa::schedule_change(vec![(4, 1), (5, 1), (6, 1)], 1, None).unwrap();
 		Grandpa::on_finalize(1);
@@ -86,7 +86,7 @@ fn authorities_change_logged_after_delay() {
 
 #[test]
 fn cannot_schedule_change_when_one_pending() {
-	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]), || {
+	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		Grandpa::schedule_change(vec![(4, 1), (5, 1), (6, 1)], 1, None).unwrap();
 		assert!(Grandpa::pending_change().is_some());
@@ -129,7 +129,7 @@ fn new_decodes_from_old() {
 
 #[test]
 fn dispatch_forced_change() {
-	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]), || {
+	with_externalities(&mut new_test_ext(vec![(1, 1), (2, 1), (3, 1)]).ext(), || {
 		System::initialize(&1, &Default::default(), &Default::default());
 		Grandpa::schedule_change(
 			vec![(4, 1), (5, 1), (6, 1)],

@@ -240,7 +240,7 @@ impl ExtBuilder {
 
 #[test]
 fn refunds_unused_gas() {
-	with_externalities(&mut ExtBuilder::default().build(), || {
+	with_externalities(&mut ExtBuilder::default().build().ext(), || {
 		Balances::deposit_creating(&0, 100_000_000);
 
 		assert_ok!(Contract::call(Origin::signed(0), 1, 0, 100_000, Vec::new()));
@@ -252,7 +252,7 @@ fn refunds_unused_gas() {
 #[test]
 fn account_removal_removes_storage() {
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(100).build(),
+		&mut ExtBuilder::default().existential_deposit(100).build().ext(),
 		|| {
 			let trie_id1 = <Test as Trait>::TrieIdGenerator::trie_id(&1);
 			let trie_id2 = <Test as Trait>::TrieIdGenerator::trie_id(&2);
@@ -351,7 +351,7 @@ fn instantiate_and_call_and_deposit_event() {
 	let wasm = wabt::wat2wasm(CODE_RETURN_FROM_START_FN).unwrap();
 
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(100).build(),
+		&mut ExtBuilder::default().existential_deposit(100).build().ext(),
 		|| {
 			Balances::deposit_creating(&ALICE, 1_000_000);
 
@@ -435,7 +435,7 @@ fn dispatch_call() {
 	let wasm = wabt::wat2wasm(CODE_DISPATCH_CALL).unwrap();
 
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			Balances::deposit_creating(&ALICE, 1_000_000);
 
@@ -659,7 +659,7 @@ fn test_set_rent_code_and_hash() {
 	let wasm = wabt::wat2wasm(CODE_SET_RENT).unwrap();
 
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			Balances::deposit_creating(&ALICE, 1_000_000);
 			assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, wasm));
@@ -688,7 +688,7 @@ fn storage_size() {
 
 	// Storage size
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			// Create
 			Balances::deposit_creating(&ALICE, 1_000_000);
@@ -718,7 +718,7 @@ fn deduct_blocks() {
 	let wasm = wabt::wat2wasm(CODE_SET_RENT).unwrap();
 
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			// Create
 			Balances::deposit_creating(&ALICE, 1_000_000);
@@ -811,7 +811,7 @@ fn claim_surcharge(blocks: u64, trigger_call: impl Fn() -> bool, removes: bool) 
 	let wasm = wabt::wat2wasm(CODE_SET_RENT).unwrap();
 
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			// Create
 			Balances::deposit_creating(&ALICE, 1_000_000);
@@ -847,7 +847,7 @@ fn removals(trigger_call: impl Fn() -> bool) {
 
 	// Balance reached and superior to subsistence threshold
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			// Create
 			Balances::deposit_creating(&ALICE, 1_000_000);
@@ -881,7 +881,7 @@ fn removals(trigger_call: impl Fn() -> bool) {
 
 	// Allowance exceeded
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			// Create
 			Balances::deposit_creating(&ALICE, 1_000_000);
@@ -915,7 +915,7 @@ fn removals(trigger_call: impl Fn() -> bool) {
 
 	// Balance reached and inferior to subsistence threshold
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			// Create
 			Balances::deposit_creating(&ALICE, 1_000_000);
@@ -1008,7 +1008,7 @@ fn default_rent_allowance_on_create() {
 	let wasm = wabt::wat2wasm(CODE_CHECK_DEFAULT_RENT_ALLOWANCE).unwrap();
 
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			// Create
 			Balances::deposit_creating(&ALICE, 1_000_000);
@@ -1132,7 +1132,7 @@ fn restoration(test_different_storage: bool, test_restore_to_with_dirty_storage:
 	let set_rent_wasm = wabt::wat2wasm(CODE_SET_RENT).unwrap();
 
 	with_externalities(
-		&mut ExtBuilder::default().existential_deposit(50).build(),
+		&mut ExtBuilder::default().existential_deposit(50).build().ext(),
 		|| {
 			Balances::deposit_creating(&ALICE, 1_000_000);
 			assert_ok!(Contract::put_code(Origin::signed(ALICE), 100_000, restoration_wasm));

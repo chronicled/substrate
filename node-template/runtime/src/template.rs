@@ -113,7 +113,7 @@ mod tests {
 
 	#[test]
 	fn it_works_for_default_value() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			// Just a dummy test for the dummy funtion `do_something`
 			// calling the `do_something` function with a value 42
 			assert_ok!(TemplateModule::do_something(Origin::signed(1), 42));

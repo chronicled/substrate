@@ -452,7 +452,7 @@ mod tests {
 		}.build_storage().unwrap().0);
 		let xt = primitives::testing::TestXt(Some(1), 0, Call::transfer(2, 69));
 		let mut t = runtime_io::TestExternalities::<Blake2Hasher>::new(t);
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			Executive::initialize_block(&Header::new(1, H256::default(), H256::default(),
 				[69u8; 32].into(), Digest::default()));
 			Executive::apply_extrinsic(xt).unwrap();
@@ -469,7 +469,7 @@ mod tests {
 
 	#[test]
 	fn block_import_works() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			Executive::execute_block(Block {
 				header: Header {
 					parent_hash: [69u8; 32].into(),
@@ -486,7 +486,7 @@ mod tests {
 	#[test]
 	#[should_panic]
 	fn block_import_of_bad_state_root_fails() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			Executive::execute_block(Block {
 				header: Header {
 					parent_hash: [69u8; 32].into(),
@@ -503,7 +503,7 @@ mod tests {
 	#[test]
 	#[should_panic]
 	fn block_import_of_bad_extrinsic_root_fails() {
-		with_externalities(&mut new_test_ext(), || {
+		with_externalities(&mut new_test_ext().ext(), || {
 			Executive::execute_block(Block {
 				header: Header {
 					parent_hash: [69u8; 32].into(),
@@ -521,7 +521,7 @@ mod tests {
 	fn bad_extrinsic_not_inserted() {
 		let mut t = new_test_ext();
 		let xt = primitives::testing::TestXt(Some(1), 42, Call::transfer(33, 69));
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			Executive::initialize_block(&Header::new(1, H256::default(), H256::default(), [69u8; 32].into(), Digest::default()));
 			assert!(Executive::apply_extrinsic(xt).is_err());
 			assert_eq!(<system::Module<Runtime>>::extrinsic_index(), Some(0));
@@ -536,7 +536,7 @@ mod tests {
 			let xt2 = primitives::testing::TestXt(Some(1), 1, Call::transfer(33, 69));
 			let encoded = xt2.encode();
 			let len = if should_fail { (internal::MAX_TRANSACTIONS_SIZE - 1) as usize } else { encoded.len() };
-			with_externalities(&mut t, || {
+			with_externalities(&mut t.ext(), || {
 				Executive::initialize_block(&Header::new(1, H256::default(), H256::default(), [69u8; 32].into(), Digest::default()));
 				assert_eq!(<system::Module<Runtime>>::all_extrinsics_len(), 0);
 
@@ -570,7 +570,7 @@ mod tests {
 		};
 		let mut t = new_test_ext();
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			assert_eq!(Executive::validate_transaction(xt.clone()), valid);
 			assert_eq!(Executive::apply_extrinsic(xt), Ok(ApplyOutcome::Fail));
 		});

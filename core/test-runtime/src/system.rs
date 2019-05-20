@@ -340,7 +340,7 @@ mod tests {
 			extrinsics: vec![],
 		};
 
-		with_externalities(&mut new_test_ext(), || polish_block(&mut b));
+		with_externalities(&mut new_test_ext().ext(), || polish_block(&mut b));
 
 		block_executor(b, &mut new_test_ext());
 	}
@@ -348,7 +348,7 @@ mod tests {
 	#[test]
 	fn block_import_works_native() {
 		block_import_works(|b, ext| {
-			with_externalities(ext, || {
+			with_externalities(&mut ext.ext(), || {
 				execute_block(b);
 			});
 		});
@@ -357,7 +357,7 @@ mod tests {
 	#[test]
 	fn block_import_works_wasm() {
 		block_import_works(|b, ext| {
-			WasmExecutor::new().call(ext, 8, &WASM_CODE, "Core_execute_block", &b.encode()).unwrap();
+			WasmExecutor::new().call(&mut ext.ext(), 8, &WASM_CODE, "Core_execute_block", &b.encode()).unwrap();
 		})
 	}
 
@@ -381,7 +381,7 @@ mod tests {
 		};
 
 		let mut dummy_ext = new_test_ext();
-		with_externalities(&mut dummy_ext, || polish_block(&mut b1));
+		with_externalities(&mut dummy_ext.ext(), || polish_block(&mut b1));
 
 		let mut b2 = Block {
 			header: Header {
@@ -407,26 +407,26 @@ mod tests {
 			],
 		};
 
-		with_externalities(&mut dummy_ext, || polish_block(&mut b2));
+		with_externalities(&mut dummy_ext.ext(), || polish_block(&mut b2));
 		drop(dummy_ext);
 
 		let mut t = new_test_ext();
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			assert_eq!(balance_of(AccountKeyring::Alice.into()), 111);
 			assert_eq!(balance_of(AccountKeyring::Bob.into()), 0);
 		});
 
 		block_executor(b1, &mut t);
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			assert_eq!(balance_of(AccountKeyring::Alice.into()), 42);
 			assert_eq!(balance_of(AccountKeyring::Bob.into()), 69);
 		});
 
 		block_executor(b2, &mut t);
 
-		with_externalities(&mut t, || {
+		with_externalities(&mut t.ext(), || {
 			assert_eq!(balance_of(AccountKeyring::Alice.into()), 0);
 			assert_eq!(balance_of(AccountKeyring::Bob.into()), 42);
 			assert_eq!(balance_of(AccountKeyring::Charlie.into()), 69);
@@ -436,7 +436,7 @@ mod tests {
 	#[test]
 	fn block_import_with_transaction_works_native() {
 		block_import_with_transaction_works(|b, ext| {
-			with_externalities(ext, || {
+			with_externalities(&mut ext.ext(), || {
 				execute_block(b);
 			});
 		});
@@ -445,7 +445,7 @@ mod tests {
 	#[test]
 	fn block_import_with_transaction_works_wasm() {
 		block_import_with_transaction_works(|b, ext| {
-			WasmExecutor::new().call(ext, 8, &WASM_CODE, "Core_execute_block", &b.encode()).unwrap();
+			WasmExecutor::new().call(&mut ext.ext(), 8, &WASM_CODE, "Core_execute_block", &b.encode()).unwrap();
 		})
 	}
 }

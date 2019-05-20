@@ -64,7 +64,7 @@ fn bond_nominator(acc: u64, val: u64, target: Vec<u64>) {
 fn basic_setup_works() {
 	// Verifies initial conditions of mock
 	with_externalities(&mut ExtBuilder::default()
-		.build(),
+		.build().ext(),
 	|| {
 		assert_eq!(Staking::bonded(&11), Some(10)); // Account 11 is stashed and locked, and account 10 is the controller
 		assert_eq!(Staking::bonded(&21), Some(20)); // Account 21 is stashed and locked, and account 20 is the controller
@@ -118,7 +118,7 @@ fn basic_setup_works() {
 #[test]
 fn no_offline_should_work() {
 	// Test the staking module works when no validators are offline
-	with_externalities(&mut ExtBuilder::default().build(),
+	with_externalities(&mut ExtBuilder::default().build().ext(),
 	|| {
 		// Slashing begins for validators immediately if found offline
 		assert_eq!(Staking::offline_slash_grace(), 0);
@@ -136,7 +136,7 @@ fn no_offline_should_work() {
 
 #[test]
 fn change_controller_works() {
-	with_externalities(&mut ExtBuilder::default().build(),
+	with_externalities(&mut ExtBuilder::default().build().ext(),
 	|| {
 		assert_eq!(Staking::bonded(&11), Some(10));
 
@@ -162,7 +162,7 @@ fn change_controller_works() {
 #[test]
 fn invulnerability_should_work() {
 	// Test that users can be invulnerable from slashing and being kicked
-	with_externalities(&mut ExtBuilder::default().build(),
+	with_externalities(&mut ExtBuilder::default().build().ext(),
 	|| {
 		// Make account 11 invulnerable
 		assert_ok!(Staking::set_invulnerables(vec![11]));
@@ -194,7 +194,7 @@ fn invulnerability_should_work() {
 #[test]
 fn offline_should_slash_and_kick() {
 	// Test that an offline validator gets slashed and kicked
-	with_externalities(&mut ExtBuilder::default().build(), || {
+	with_externalities(&mut ExtBuilder::default().build().ext(), || {
 		// Give account 10 some balance
 		let _ = Balances::make_free_balance_be(&11, 1000);
 		// Confirm account 10 is a validator
@@ -224,7 +224,7 @@ fn offline_should_slash_and_kick() {
 #[test]
 fn offline_grace_should_delay_slashing() {
 	// Tests that with grace, slashing is delayed
-	with_externalities(&mut ExtBuilder::default().build(), || {
+	with_externalities(&mut ExtBuilder::default().build().ext(), || {
 		// Initialize account 10 with balance
 		let _ = Balances::make_free_balance_be(&11, 70);
 		// Verify account 11 has balance
@@ -264,7 +264,7 @@ fn offline_grace_should_delay_slashing() {
 #[test]
 fn max_unstake_threshold_works() {
 	// Tests that max_unstake_threshold gets used when prefs.unstake_threshold is large
-	with_externalities(&mut ExtBuilder::default().build(), || {
+	with_externalities(&mut ExtBuilder::default().build().ext(), || {
 		const MAX_UNSTAKE_THRESHOLD: u32 = 10;
 		// Two users with maximum possible balance
 		let _ = Balances::make_free_balance_be(&11, u64::max_value());
@@ -311,7 +311,7 @@ fn max_unstake_threshold_works() {
 #[test]
 fn slashing_does_not_cause_underflow() {
 	// Tests that slashing more than a user has does not underflow
-	with_externalities(&mut ExtBuilder::default().build(), || {
+	with_externalities(&mut ExtBuilder::default().build().ext(), || {
 		// Verify initial conditions
 		assert_eq!(Balances::free_balance(&11), 1000);
 		assert_eq!(Staking::offline_slash_grace(), 0);
@@ -342,7 +342,7 @@ fn rewards_should_work() {
 	with_externalities(&mut ExtBuilder::default()
 		.session_length(3)
 		.sessions_per_era(3)
-	.build(),
+	.build().ext(),
 	|| {
 		let delay = 1;
 		// this test is only in the scope of one era. Since this variable changes
@@ -421,7 +421,8 @@ fn multi_era_reward_should_work() {
 		.session_length(3)
 		.sessions_per_era(3)
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		let delay = 1;
 		let session_reward = 10;
@@ -497,7 +498,8 @@ fn staking_should_work() {
 		.sessions_per_era(3)
 		.nominate(false)
 		.fair(false) // to give 20 more staked value
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// remember + compare this along with the test.
 		assert_eq_uvec!(Session::validators(), vec![20, 10]);
@@ -579,7 +581,8 @@ fn less_than_needed_candidates_works() {
 		.minimum_validator_count(1)
 		.validator_count(4)
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		assert_eq!(Staking::validator_count(), 4);
 		assert_eq!(Staking::minimum_validator_count(), 1);
@@ -609,7 +612,8 @@ fn no_candidate_emergency_condition() {
 		.validator_count(15)
 		.validator_pool(true)
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		assert_eq!(Staking::era_length(), 1);
 		assert_eq!(Staking::validator_count(), 15);
@@ -671,7 +675,8 @@ fn nominating_and_rewards_should_work() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
 		.validator_pool(true)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// initial validators -- everyone is actually even.
 		assert_eq_uvec!(Session::validators(), vec![40, 30]);
@@ -755,7 +760,7 @@ fn nominating_and_rewards_should_work() {
 #[test]
 fn nominators_also_get_slashed() {
 	// A nominator should be slashed if the validator they nominated is slashed
-	with_externalities(&mut ExtBuilder::default().nominate(false).build(), || {
+	with_externalities(&mut ExtBuilder::default().nominate(false).build().ext(), || {
 		assert_eq!(Staking::era_length(), 1);
 		assert_eq!(Staking::validator_count(), 2);
 		// slash happens immediately.
@@ -810,7 +815,8 @@ fn double_staking_should_fail() {
 	// * an account already bonded as controller can nominate.
 	with_externalities(&mut ExtBuilder::default()
 		.sessions_per_era(2)
-		.build(),
+		.build()
+		.ext(),
 		|| {
 			let arbitrary_value = 5;
 			// 2 = controller, 1 stashed => ok
@@ -830,7 +836,8 @@ fn double_controlling_should_fail() {
 	// * an account already bonded as controller CANNOT be reused as the controller of another account.
 	with_externalities(&mut ExtBuilder::default()
 		.sessions_per_era(2)
-		.build(),
+		.build()
+		.ext(),
 		|| {
 			let arbitrary_value = 5;
 			// 2 = controller, 1 stashed => ok
@@ -844,7 +851,8 @@ fn double_controlling_should_fail() {
 fn session_and_eras_work() {
 	with_externalities(&mut ExtBuilder::default()
 		.sessions_per_era(2)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		assert_eq!(Staking::era_length(), 2);
 		assert_eq!(Staking::sessions_per_era(), 2);
@@ -914,7 +922,7 @@ fn session_and_eras_work() {
 #[test]
 fn cannot_transfer_staked_balance() {
 	// Tests that a stash account cannot transfer funds
-	with_externalities(&mut ExtBuilder::default().nominate(false).build(), || {
+	with_externalities(&mut ExtBuilder::default().nominate(false).build().ext(), || {
 		// Confirm account 11 is stashed
 		assert_eq!(Staking::bonded(&11), Some(10));
 		// Confirm account 11 has some free balance
@@ -939,7 +947,8 @@ fn cannot_transfer_staked_balance_2() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
 		.fair(true)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// Confirm account 21 is stashed
 		assert_eq!(Staking::bonded(&21), Some(20));
@@ -956,7 +965,7 @@ fn cannot_transfer_staked_balance_2() {
 #[test]
 fn cannot_reserve_staked_balance() {
 	// Checks that a bonded account cannot reserve balance from free balance
-	with_externalities(&mut ExtBuilder::default().build(), || {
+	with_externalities(&mut ExtBuilder::default().build().ext(), || {
 		// Confirm account 11 is stashed
 		assert_eq!(Staking::bonded(&11), Some(10));
 		// Confirm account 11 has some free balance
@@ -976,7 +985,7 @@ fn cannot_reserve_staked_balance() {
 #[test]
 fn reward_destination_works() {
 	// Rewards go to the correct destination as determined in Payee
-	with_externalities(&mut ExtBuilder::default().nominate(false).build(), || {
+	with_externalities(&mut ExtBuilder::default().nominate(false).build().ext(), || {
 		// Check that account 11 is a validator
 		assert!(Staking::current_elected().contains(&11));
 		// Check the balance of the validator account
@@ -1050,7 +1059,8 @@ fn validator_payment_prefs_work() {
 	with_externalities(&mut ExtBuilder::default()
 		.session_length(3)
 		.sessions_per_era(3)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// Initial config
 		let session_reward = 10;
@@ -1123,7 +1133,7 @@ fn bond_extra_works() {
 	// Tests that extra `free_balance` in the stash can be added to stake
 	// NOTE: this tests only verifies `StakingLedger` for correct updates
 	// See `bond_extra_and_withdraw_unbonded_works` for more details and updates on `Exposure`.
-	with_externalities(&mut ExtBuilder::default().build(),
+	with_externalities(&mut ExtBuilder::default().build().ext(),
 	|| {
 		// Check that account 10 is a validator
 		assert!(<Validators<Test>>::exists(11));
@@ -1156,7 +1166,8 @@ fn bond_extra_and_withdraw_unbonded_works() {
 	// * Once the unbonding period is done, it can actually take the funds out of the stash.
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// Set payee to controller. avoids confusion
 		assert_ok!(Staking::set_payee(Origin::signed(10), RewardDestination::Controller));
@@ -1244,7 +1255,8 @@ fn slot_stake_is_least_staked_validator_and_exposure_defines_maximum_punishment(
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
 		.fair(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// Confirm validator count is 2
 		assert_eq!(Staking::validator_count(), 2);
@@ -1295,7 +1307,8 @@ fn on_free_balance_zero_stash_removes_validator() {
 	// Tests that storage items are untouched when controller is empty
 	with_externalities(&mut ExtBuilder::default()
 		.existential_deposit(10)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// Check the balance of the validator account
 		assert_eq!(Balances::free_balance(&10), 256);
@@ -1353,7 +1366,8 @@ fn on_free_balance_zero_stash_removes_nominator() {
 	// Tests that storage items are untouched when controller is empty
 	with_externalities(&mut ExtBuilder::default()
 		.existential_deposit(10)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// Make 10 a nominator
 		assert_ok!(Staking::nominate(Origin::signed(10), vec![20]));
@@ -1454,7 +1468,8 @@ fn phragmen_poc_works() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
 		.validator_pool(true)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// We don't really care about this. At this point everything is even.
 		assert_eq_uvec!(Session::validators(), vec![40, 30]);
@@ -1515,7 +1530,7 @@ fn phragmen_poc_2_works() {
 	// Sequential Phragmén gives
 	// 10  is elected with stake  1705.7377049180327 and score  0.0004878048780487805
 	// 30  is elected with stake  1344.2622950819673 and score  0.0007439024390243903
-	with_externalities(&mut ExtBuilder::default().nominate(false).build(), || {
+	with_externalities(&mut ExtBuilder::default().nominate(false).build().ext(), || {
 		// initial setup of 10 and 20, both validators
 		assert_eq_uvec!(Session::validators(), vec![20, 10]);
 
@@ -1558,7 +1573,8 @@ fn switching_roles() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
 		.sessions_per_era(3)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		// Reset reward destination
 		for i in &[10, 20] { assert_ok!(Staking::set_payee(Origin::signed(*i), RewardDestination::Controller)); }
@@ -1630,7 +1646,7 @@ fn wrong_vote_is_null() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
 		.validator_pool(true)
-	.build(),
+	.build().ext(),
 	|| {
 		assert_eq_uvec!(Session::validators(), vec![40, 30]);
 
@@ -1660,7 +1676,7 @@ fn bond_with_no_staked_value() {
 	.validator_count(3)
 	.nominate(false)
 	.minimum_validator_count(1)
-	.build(), || {
+	.build().ext(), || {
 		// setup
 		assert_ok!(Staking::set_payee(Origin::signed(10), RewardDestination::Controller));
 		let _ = Balances::deposit_creating(&3, 1000);
@@ -1720,7 +1736,8 @@ fn bond_with_little_staked_value_bounded_by_slot_stake() {
 		.validator_count(3)
 		.nominate(false)
 		.minimum_validator_count(1)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 
 		// setup
@@ -1769,7 +1786,8 @@ fn phragmen_linear_worse_case_equalize() {
 		.nominate(false)
 		.validator_pool(true)
 		.fair(true)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		for i in &[10, 20, 30, 40] { assert_ok!(Staking::set_payee(Origin::signed(*i), RewardDestination::Controller)); }
 
@@ -1821,7 +1839,8 @@ fn phragmen_chooses_correct_number_of_validators() {
 		.validator_pool(true)
 		.fair(true)
 		.validator_count(1)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		assert_eq!(Staking::validator_count(), 1);
 		assert_eq!(Session::validators().len(), 1);
@@ -1839,7 +1858,8 @@ fn phragmen_chooses_correct_number_of_validators() {
 fn phragmen_score_should_be_accurate_on_large_stakes() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		bond_validator(2, u64::max_value());
 		bond_validator(4, u64::max_value());
@@ -1858,7 +1878,8 @@ fn phragmen_score_should_be_accurate_on_large_stakes() {
 fn phragmen_should_not_overflow_validators() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		let _ = Staking::chill(Origin::signed(10));
 		let _ = Staking::chill(Origin::signed(20));
@@ -1885,7 +1906,8 @@ fn phragmen_should_not_overflow_validators() {
 fn phragmen_should_not_overflow_nominators() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		let _ = Staking::chill(Origin::signed(10));
 		let _ = Staking::chill(Origin::signed(20));
@@ -1911,7 +1933,8 @@ fn phragmen_should_not_overflow_nominators() {
 fn phragmen_should_not_overflow_ultimate() {
 	with_externalities(&mut ExtBuilder::default()
 		.nominate(false)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		bond_validator(2, u64::max_value());
 		bond_validator(4, u64::max_value());
@@ -1937,7 +1960,8 @@ fn phragmen_large_scale_test() {
 		.nominate(false)
 		.minimum_validator_count(1)
 		.validator_count(20)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		let _ = Staking::chill(Origin::signed(10));
 		let _ = Staking::chill(Origin::signed(20));
@@ -2010,7 +2034,8 @@ fn phragmen_large_scale_test_2() {
 		.nominate(false)
 		.minimum_validator_count(1)
 		.validator_count(2)
-		.build(),
+		.build()
+		.ext(),
 	|| {
 		let _ = Staking::chill(Origin::signed(10));
 		let _ = Staking::chill(Origin::signed(20));
