@@ -613,69 +613,6 @@ macro_rules! impl_outer_config {
 	}
 }
 
-// NOTE [`PreRuntime` and `Consensus` are special]
-//
-// We MUST treat `PreRuntime` and `Consensus` variants specially, as they:
-//
-// * have more parameters (both in `generic::DigestItem` and in runtimes)
-// * have a `PhantomData` parameter in the runtime, but not in `generic::DigestItem`
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __parse_pattern_2 {
-	(PreRuntime $module:ident $internal:ident $v1:ident $v2:ident) => {
-		$internal::$module($module::RawLog::PreRuntime(ref $v1, ref $v2, $crate::rstd::marker::PhantomData))
-	};
-	(Consensus $module:ident $internal:ident $v1:ident $v2:ident) => {
-		$internal::$module($module::RawLog::Consensus(ref $v1, ref $v2, $crate::rstd::marker::PhantomData))
-	};
-	($name:ident $module:ident $internal:ident $v1:ident $v2:ident) => {
-		$internal::$module($module::RawLog::$name(ref $v1))
-	};
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __parse_pattern {
-	(PreRuntime $engine_id:pat, $binder:pat) => {
-		$crate::generic::DigestItem::PreRuntime($engine_id, $binder)
-	};
-	(Consensus $engine_id:pat, $binder:pat) => {
-		$crate::generic::DigestItem::Consensus($engine_id, $binder)
-	};
-	($name:ident $engine_id:pat, $binder:pat) => {
-		$crate::generic::DigestItem::$name($binder)
-	};
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __parse_expr {
-	(PreRuntime $engine_id:expr, $module:ident $internal:ident $binder:expr) => {
-		$internal::$module($module::RawLog::PreRuntime($engine_id, $binder, Default::default()))
-	};
-	(Consensus $engine_id:expr, $module:ident $internal:ident $binder:expr) => {
-		$internal::$module($module::RawLog::Consensus($engine_id, $binder, Default::default()))
-	};
-	($name:ident $engine_id:expr, $module:ident $internal:ident $binder:expr) => {
-		$internal::$module($module::RawLog::$name($binder))
-	};
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! __parse_expr_2 {
-	(PreRuntime $module:ident $internal:ident $v1:ident $v2:ident) => {
-		$crate::generic::DigestItemRef::PreRuntime($v1, $v2)
-	};
-	(Consensus $module:ident $internal:ident $v1:ident $v2:ident) => {
-		$crate::generic::DigestItemRef::Consensus($v1, $v2)
-	};
-	($name:ident $module:ident $internal:ident $v1:ident $v2:ident) => {
-		$crate::generic::DigestItemRef::$name($v1)
-	};
-}
-
 /// Generates enum that contains all possible log entries for the runtime.
 /// Every individual module of the runtime that is mentioned, must
 /// expose a `Log` and `RawLog` enums.
@@ -727,8 +664,8 @@ macro_rules! impl_outer_log {
 			fn dref<'a>(&'a self) -> Option<$crate::generic::DigestItemRef<'a, $($genarg),*>> {
 				match self.0 {
 					$($(
-					$crate::__parse_pattern_2!($sitem $module $internal a b) =>
-						Some($crate::__parse_expr_2!($sitem $module $internal a b)),
+					$internal::$module($module::RawLog::$sitem(ref v)) =>
+						Some($crate::generic::DigestItemRef::$sitem(v)),
 					)*)*
 					_ => None,
 				}
@@ -763,8 +700,8 @@ macro_rules! impl_outer_log {
 			fn from(gen: $crate::generic::DigestItem<$($genarg),*>) -> Self {
 				match gen {
 					$($(
-					$crate::__parse_pattern!($sitem b, a) =>
-						$name($crate::__parse_expr!($sitem b, $module $internal a)),
+					$crate::generic::DigestItem::$sitem(value) =>
+						$name($internal::$module($module::RawLog::$sitem(value))),
 					)*)*
 					_ => {
 						if let Some(s) = gen.as_other()

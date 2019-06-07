@@ -68,8 +68,10 @@ pub type Log<T> = RawLog<T>;
 #[cfg_attr(feature = "std", derive(Serialize, Debug))]
 #[derive(Encode, Decode, PartialEq, Eq, Clone)]
 pub enum RawLog<T> {
+	// TODO TODO: doc
+	_Phantom(PhantomData<T>),
 	/// BABE inherent digests
-	PreRuntime([u8; 4], Vec<u8>, PhantomData<T>),
+	PreRuntime(([u8; 4], Vec<u8>)),
 }
 
 /// Provides the slot duration inherent data for BABE.
