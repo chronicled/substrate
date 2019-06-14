@@ -365,7 +365,13 @@ where
 		debug!(target: "afg", "Finding best chain containing block {:?} with number limit {:?}", block, limit);
 
 		#[allow(deprecated)]
-		match self.select_chain.best_containing(block, None, Some(self.inner.backend().get_import_lock())) {
+		let best_hash = self.select_chain.best_containing(
+			block,
+			None,
+			Some(self.inner.backend().get_import_lock()),
+		);
+
+		match best_hash {
 			Ok(Some(mut best_hash)) => {
 				let base_header = self.inner.header(&BlockId::Hash(block)).ok()?
 					.expect("Header known to exist after `best_containing` call; qed");

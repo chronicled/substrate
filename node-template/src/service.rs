@@ -96,19 +96,22 @@ construct_service_factory! {
 			{ |config| <LightComponents<Factory>>::new(config) },
 		FullImportQueue = AuraImportQueue<
 			Self::Block,
-		>
-			{ |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>, _select_chain: Arc<Self::SelectChain>| {
-					import_queue::<_, _, Pair>(
-						SlotDuration::get_or_compute(&*client)?,
-						client.clone(),
-						None,
-						None,
-						None,
-						client,
-						config.custom.inherent_data_providers.clone(),
-					).map_err(Into::into)
-				}
-			},
+		> {
+			|config: &mut FactoryFullConfiguration<Self>,
+			client: Arc<FullClient<Self>>,
+			select_chain: Arc<Self::SelectChain>| {
+
+				import_queue::<_, _, Pair>(
+					SlotDuration::get_or_compute(&*client)?,
+					client.clone(),
+					None,
+					None,
+					None,
+					client,
+					config.custom.inherent_data_providers.clone(),
+				).map_err(Into::into)
+			}
+		},
 		LightImportQueue = AuraImportQueue<
 			Self::Block,
 		>

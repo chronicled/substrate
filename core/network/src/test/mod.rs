@@ -200,8 +200,10 @@ impl PeersClient {
 		notify: bool,
 	) -> ClientResult<()> {
 		match *self {
-			PeersClient::Full(ref client) => client.finalize_block(id, justification, None, notify),
-			PeersClient::Light(ref client) => client.finalize_block(id, justification, None, notify),
+			PeersClient::Full(ref client) =>
+				client.finalize_block(id, justification, None, notify),
+			PeersClient::Light(ref client) =>
+				client.finalize_block(id, justification, None, notify),
 		}
 	}
 }
