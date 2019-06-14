@@ -1089,7 +1089,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 			let new_best = match select_chain {
 				// find the new best block that is a descendent of the finalized
 				// block
-				Some(select_chain) => select_chain.finality_target(block, None)?
+				Some(select_chain) => select_chain.best_containing(block, None)?
 					.unwrap_or(block),
 				// if no `select_chain` is provided set the finalized block as best
 				None => block,
@@ -1754,7 +1754,7 @@ where
 			.map_err(|e| ConsensusError::ChainLookup(e.to_string()).into())
 	}
 
-	fn finality_target(
+	fn best_containing(
 		&self,
 		target_hash: Block::Hash,
 		maybe_max_number: Option<NumberFor<Block>>
@@ -1996,7 +1996,7 @@ pub(crate) mod tests {
 
 		assert_eq!(
 			genesis_hash.clone(),
-			longest_chain_select.finality_target(genesis_hash.clone(), None).unwrap().unwrap()
+			longest_chain_select.best_containing(genesis_hash.clone(), None).unwrap().unwrap()
 		);
 	}
 
@@ -2011,7 +2011,7 @@ pub(crate) mod tests {
 
 		assert_eq!(
 			None,
-			longest_chain_select.finality_target(uninserted_block.hash().clone(), None).unwrap()
+			longest_chain_select.best_containing(uninserted_block.hash().clone(), None).unwrap()
 		);
 	}
 
@@ -2143,9 +2143,9 @@ pub(crate) mod tests {
 
 		let genesis_hash = client.info().chain.genesis_hash;
 
-		assert_eq!(a2.hash(), longest_chain_select.finality_target(genesis_hash, None).unwrap().unwrap());
-		assert_eq!(a2.hash(), longest_chain_select.finality_target(a1.hash(), None).unwrap().unwrap());
-		assert_eq!(a2.hash(), longest_chain_select.finality_target(a2.hash(), None).unwrap().unwrap());
+		assert_eq!(a2.hash(), longest_chain_select.best_containing(genesis_hash, None).unwrap().unwrap());
+		assert_eq!(a2.hash(), longest_chain_select.best_containing(a1.hash(), None).unwrap().unwrap());
+		assert_eq!(a2.hash(), longest_chain_select.best_containing(a2.hash(), None).unwrap().unwrap());
 	}
 
 	#[test]
@@ -2234,203 +2234,203 @@ pub(crate) mod tests {
 
 		// search without restriction
 
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			genesis_hash, None).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a1.hash(), None).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a2.hash(), None).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a3.hash(), None).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a4.hash(), None).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a5.hash(), None).unwrap().unwrap());
 
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b2.hash(), None).unwrap().unwrap());
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b3.hash(), None).unwrap().unwrap());
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b4.hash(), None).unwrap().unwrap());
 
-		assert_eq!(c3.hash(), longest_chain_select.finality_target(
+		assert_eq!(c3.hash(), longest_chain_select.best_containing(
 			c3.hash(), None).unwrap().unwrap());
 
-		assert_eq!(d2.hash(), longest_chain_select.finality_target(
+		assert_eq!(d2.hash(), longest_chain_select.best_containing(
 			d2.hash(), None).unwrap().unwrap());
 
 
 		// search only blocks with number <= 5. equivalent to without restriction for this scenario
 
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			genesis_hash, Some(5)).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a1.hash(), Some(5)).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a2.hash(), Some(5)).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a3.hash(), Some(5)).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a4.hash(), Some(5)).unwrap().unwrap());
-		assert_eq!(a5.hash(), longest_chain_select.finality_target(
+		assert_eq!(a5.hash(), longest_chain_select.best_containing(
 			a5.hash(), Some(5)).unwrap().unwrap());
 
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b2.hash(), Some(5)).unwrap().unwrap());
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b3.hash(), Some(5)).unwrap().unwrap());
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b4.hash(), Some(5)).unwrap().unwrap());
 
-		assert_eq!(c3.hash(), longest_chain_select.finality_target(
+		assert_eq!(c3.hash(), longest_chain_select.best_containing(
 			c3.hash(), Some(5)).unwrap().unwrap());
 
-		assert_eq!(d2.hash(), longest_chain_select.finality_target(
+		assert_eq!(d2.hash(), longest_chain_select.best_containing(
 			d2.hash(), Some(5)).unwrap().unwrap());
 
 
 		// search only blocks with number <= 4
 
-		assert_eq!(a4.hash(), longest_chain_select.finality_target(
+		assert_eq!(a4.hash(), longest_chain_select.best_containing(
 			genesis_hash, Some(4)).unwrap().unwrap());
-		assert_eq!(a4.hash(), longest_chain_select.finality_target(
+		assert_eq!(a4.hash(), longest_chain_select.best_containing(
 			a1.hash(), Some(4)).unwrap().unwrap());
-		assert_eq!(a4.hash(), longest_chain_select.finality_target(
+		assert_eq!(a4.hash(), longest_chain_select.best_containing(
 			a2.hash(), Some(4)).unwrap().unwrap());
-		assert_eq!(a4.hash(), longest_chain_select.finality_target(
+		assert_eq!(a4.hash(), longest_chain_select.best_containing(
 			a3.hash(), Some(4)).unwrap().unwrap());
-		assert_eq!(a4.hash(), longest_chain_select.finality_target(
+		assert_eq!(a4.hash(), longest_chain_select.best_containing(
 			a4.hash(), Some(4)).unwrap().unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a5.hash(), Some(4)).unwrap());
 
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b2.hash(), Some(4)).unwrap().unwrap());
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b3.hash(), Some(4)).unwrap().unwrap());
-		assert_eq!(b4.hash(), longest_chain_select.finality_target(
+		assert_eq!(b4.hash(), longest_chain_select.best_containing(
 			b4.hash(), Some(4)).unwrap().unwrap());
 
-		assert_eq!(c3.hash(), longest_chain_select.finality_target(
+		assert_eq!(c3.hash(), longest_chain_select.best_containing(
 			c3.hash(), Some(4)).unwrap().unwrap());
 
-		assert_eq!(d2.hash(), longest_chain_select.finality_target(
+		assert_eq!(d2.hash(), longest_chain_select.best_containing(
 			d2.hash(), Some(4)).unwrap().unwrap());
 
 
 		// search only blocks with number <= 3
 
-		assert_eq!(a3.hash(), longest_chain_select.finality_target(
+		assert_eq!(a3.hash(), longest_chain_select.best_containing(
 			genesis_hash, Some(3)).unwrap().unwrap());
-		assert_eq!(a3.hash(), longest_chain_select.finality_target(
+		assert_eq!(a3.hash(), longest_chain_select.best_containing(
 			a1.hash(), Some(3)).unwrap().unwrap());
-		assert_eq!(a3.hash(), longest_chain_select.finality_target(
+		assert_eq!(a3.hash(), longest_chain_select.best_containing(
 			a2.hash(), Some(3)).unwrap().unwrap());
-		assert_eq!(a3.hash(), longest_chain_select.finality_target(
+		assert_eq!(a3.hash(), longest_chain_select.best_containing(
 			a3.hash(), Some(3)).unwrap().unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a4.hash(), Some(3)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a5.hash(), Some(3)).unwrap());
 
-		assert_eq!(b3.hash(), longest_chain_select.finality_target(
+		assert_eq!(b3.hash(), longest_chain_select.best_containing(
 			b2.hash(), Some(3)).unwrap().unwrap());
-		assert_eq!(b3.hash(), longest_chain_select.finality_target(
+		assert_eq!(b3.hash(), longest_chain_select.best_containing(
 			b3.hash(), Some(3)).unwrap().unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b4.hash(), Some(3)).unwrap());
 
-		assert_eq!(c3.hash(), longest_chain_select.finality_target(
+		assert_eq!(c3.hash(), longest_chain_select.best_containing(
 			c3.hash(), Some(3)).unwrap().unwrap());
 
-		assert_eq!(d2.hash(), longest_chain_select.finality_target(
+		assert_eq!(d2.hash(), longest_chain_select.best_containing(
 			d2.hash(), Some(3)).unwrap().unwrap());
 
 
 		// search only blocks with number <= 2
 
-		assert_eq!(a2.hash(), longest_chain_select.finality_target(
+		assert_eq!(a2.hash(), longest_chain_select.best_containing(
 			genesis_hash, Some(2)).unwrap().unwrap());
-		assert_eq!(a2.hash(), longest_chain_select.finality_target(
+		assert_eq!(a2.hash(), longest_chain_select.best_containing(
 			a1.hash(), Some(2)).unwrap().unwrap());
-		assert_eq!(a2.hash(), longest_chain_select.finality_target(
+		assert_eq!(a2.hash(), longest_chain_select.best_containing(
 			a2.hash(), Some(2)).unwrap().unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a3.hash(), Some(2)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a4.hash(), Some(2)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a5.hash(), Some(2)).unwrap());
 
-		assert_eq!(b2.hash(), longest_chain_select.finality_target(
+		assert_eq!(b2.hash(), longest_chain_select.best_containing(
 			b2.hash(), Some(2)).unwrap().unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b3.hash(), Some(2)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b4.hash(), Some(2)).unwrap());
 
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			c3.hash(), Some(2)).unwrap());
 
-		assert_eq!(d2.hash(), longest_chain_select.finality_target(
+		assert_eq!(d2.hash(), longest_chain_select.best_containing(
 			d2.hash(), Some(2)).unwrap().unwrap());
 
 
 		// search only blocks with number <= 1
 
-		assert_eq!(a1.hash(), longest_chain_select.finality_target(
+		assert_eq!(a1.hash(), longest_chain_select.best_containing(
 			genesis_hash, Some(1)).unwrap().unwrap());
-		assert_eq!(a1.hash(), longest_chain_select.finality_target(
+		assert_eq!(a1.hash(), longest_chain_select.best_containing(
 			a1.hash(), Some(1)).unwrap().unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a2.hash(), Some(1)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a3.hash(), Some(1)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a4.hash(), Some(1)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a5.hash(), Some(1)).unwrap());
 
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b2.hash(), Some(1)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b3.hash(), Some(1)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b4.hash(), Some(1)).unwrap());
 
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			c3.hash(), Some(1)).unwrap());
 
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			d2.hash(), Some(1)).unwrap());
 
 		// search only blocks with number <= 0
 
-		assert_eq!(genesis_hash, longest_chain_select.finality_target(
+		assert_eq!(genesis_hash, longest_chain_select.best_containing(
 			genesis_hash, Some(0)).unwrap().unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a1.hash(), Some(0)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a2.hash(), Some(0)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a3.hash(), Some(0)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a4.hash(), Some(0)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			a5.hash(), Some(0)).unwrap());
 
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b2.hash(), Some(0)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b3.hash(), Some(0)).unwrap());
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			b4.hash(), Some(0)).unwrap());
 
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			c3.hash().clone(), Some(0)).unwrap());
 
-		assert_eq!(None, longest_chain_select.finality_target(
+		assert_eq!(None, longest_chain_select.best_containing(
 			d2.hash().clone(), Some(0)).unwrap());
 	}
 
@@ -2451,7 +2451,7 @@ pub(crate) mod tests {
 
 		let genesis_hash = client.info().chain.genesis_hash;
 
-		assert_eq!(a2.hash(), longest_chain_select.finality_target(genesis_hash, Some(10)).unwrap().unwrap());
+		assert_eq!(a2.hash(), longest_chain_select.best_containing(genesis_hash, Some(10)).unwrap().unwrap());
 	}
 
 	#[test]
