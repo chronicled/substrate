@@ -14,9 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate Consensus Common.  If not, see <http://www.gnu.org/licenses/>.
 
+use parking_lot::Mutex;
+
 use crate::error::Error;
 use runtime_primitives::traits::{Block as BlockT, NumberFor};
-
 
 /// The SelectChain trait defines the strategy upon which the head is chosen
 /// if multiple forks are present for an opaque definition of "best" in the
@@ -36,9 +37,10 @@ pub trait SelectChain<Block: BlockT>: Sync + Send {
 	fn best_chain(&self) -> Result<<Block as BlockT>::Header, Error>;
 
 	/// Get the best block in the fork containing `target_hash`, if any.
-	fn best_containing(
+	fn best_containing<'a>(
 		&self,
 		target_hash: <Block as BlockT>::Hash,
-		_maybe_max_number: Option<NumberFor<Block>>
+		maybe_max_number: Option<NumberFor<Block>>,
+		import_lock: Option<&'a Mutex<()>>,
 	) -> Result<Option<<Block as BlockT>::Hash>, Error>;
 }
