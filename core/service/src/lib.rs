@@ -73,7 +73,7 @@ const DEFAULT_PROTOCOL_ID: &str = "sup";
 /// Substrate service.
 pub struct Service<Components: components::Components> {
 	client: Arc<ComponentClient<Components>>,
-	select_chain: Option<<Components as components::Components>::SelectChain>,
+	select_chain: Option<Arc<<Components as components::Components>::SelectChain>>,
 	network: Arc<components::NetworkService<Components>>,
 	/// Sinks to propagate network status updates.
 	network_status_sinks: Arc<Mutex<Vec<mpsc::UnboundedSender<NetworkStatus<ComponentBlock<Components>>>>>>,
@@ -200,7 +200,7 @@ impl<Components: components::Components> Service<Components> {
 		}
 
 		let (client, on_demand) = Components::build_client(&config, executor)?;
-		let select_chain = Components::build_select_chain(&mut config, client.clone())?;
+		let select_chain = Components::build_select_chain(&mut config, client.clone())?.map(Arc::new);
 		let import_queue = Box::new(Components::build_import_queue(
 			&mut config,
 			client.clone(),
@@ -587,7 +587,7 @@ impl<Components: components::Components> Service<Components> {
 	}
 
 	/// Get clone of select chain.
-	pub fn select_chain(&self) -> Option<<Components as components::Components>::SelectChain> {
+	pub fn select_chain(&self) -> Option<Arc<<Components as components::Components>::SelectChain>> {
 		self.select_chain.clone()
 	}
 
@@ -1057,7 +1057,7 @@ macro_rules! construct_service_factory {
 			fn build_full_import_queue(
 				config: &mut $crate::FactoryFullConfiguration<Self>,
 				client: $crate::Arc<$crate::FullClient<Self>>,
-				select_chain: Self::SelectChain
+				select_chain: $crate::Arc<Self::SelectChain>,
 			) -> $crate::Result<Self::FullImportQueue, $crate::Error> {
 				( $( $full_import_queue_init )* ) (config, client, select_chain)
 			}

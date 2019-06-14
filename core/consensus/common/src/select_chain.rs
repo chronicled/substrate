@@ -32,7 +32,7 @@ use runtime_primitives::traits::{Block as BlockT, NumberFor};
 /// some implementations.
 ///
 /// Non-deterministicly finalising chains may only use the `_authoring` functions.
-pub trait SelectChain<Block: BlockT>: Sync + Send + Clone {
+pub trait SelectChain<Block: BlockT>: Sync + Send {
 
 	/// Get all leaves of the chain: block hashes that have no children currently.
 	/// Leaves that can never be finalized will not be returned.

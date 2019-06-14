@@ -155,7 +155,7 @@ construct_service_factory! {
 		LightService = LightComponents<Self>
 			{ |config| <LightComponents<Factory>>::new(config) },
 		FullImportQueue = AuraImportQueue<Self::Block>
-			{ |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>, select_chain: Self::SelectChain| {
+			{ |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>, select_chain: Arc<Self::SelectChain>| {
 				let slot_duration = SlotDuration::get_or_compute(&*client)?;
 				let (block_import, link_half) =
 					grandpa::block_import::<_, _, _, RuntimeApi, FullClient<Self>, _>(

@@ -19,7 +19,7 @@
 use client::{self, Client};
 use consensus::{
 	ImportBlock, BlockImport, BlockOrigin, Error as ConsensusError,
-	ForkChoiceStrategy,
+	ForkChoiceStrategy, SelectChain,
 };
 use hash_db::Hasher;
 use runtime_primitives::Justification;
@@ -47,6 +47,7 @@ pub trait ClientExt<Block: BlockT>: Sized {
 		&self,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
+		select_chain: Option<&dyn SelectChain<Block>>,
 	) -> client::error::Result<()>;
 
 	/// Returns hash of the genesis block.
@@ -103,8 +104,9 @@ impl<B, E, RA, Block> ClientExt<Block> for Client<B, E, Block, RA>
 		&self,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
+		select_chain: Option<&dyn SelectChain<Block>>,
 	) -> client::error::Result<()> {
-		self.finalize_block(id, justification, true)
+		self.finalize_block(id, justification, select_chain, true)
 	}
 
 	fn genesis_hash(&self) -> <Block as BlockT>::Hash {

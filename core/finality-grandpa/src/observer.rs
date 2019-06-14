@@ -57,8 +57,9 @@ impl<'a, Block: BlockT<Hash=H256>, B, E, RA> grandpa::Chain<Block::Hash, NumberF
 	}
 }
 
-fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
+fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, SC, S, F>(
 	client: &Arc<Client<B, E, Block, RA>>,
+	select_chain: &Arc<SC>,
 	authority_set: &SharedAuthoritySet<Block::Hash, NumberFor<Block>>,
 	consensus_changes: &SharedConsensusChanges<Block::Hash, NumberFor<Block>>,
 	voters: &Arc<VoterSet<AuthorityId>>,
@@ -70,6 +71,7 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 	B: Backend<Block, Blake2Hasher>,
 	E: CallExecutor<Block, Blake2Hasher> + Send + Sync,
 	RA: Send + Sync,
+	SC: SelectChain<Block>,
 	S: Stream<
 		Item = CommunicationIn<Block>,
 		Error = CommandOrError<Block::Hash, NumberFor<Block>>,
@@ -79,6 +81,7 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 	let authority_set = authority_set.clone();
 	let consensus_changes = consensus_changes.clone();
 	let client = client.clone();
+	let select_chain = select_chain.clone();
 	let voters = voters.clone();
 
 	let observer = commits.fold(last_finalized_number, move |last_finalized_number, global| {
@@ -115,6 +118,7 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 			// commit is valid, finalize the block it targets
 			match environment::finalize_block(
 				&client,
+				&*select_chain,
 				&authority_set,
 				&consensus_changes,
 				None,
@@ -167,7 +171,7 @@ pub fn run_grandpa_observer<B, E, Block: BlockT<Hash=H256>, N, RA, SC>(
 {
 	let LinkHalf {
 		client,
-		select_chain: _,
+		select_chain,
 		persistent_data,
 		voter_commands_rx,
 	} = link;
@@ -182,6 +186,7 @@ pub fn run_grandpa_observer<B, E, Block: BlockT<Hash=H256>, N, RA, SC>(
 		let set_id = authority_set.set_id();
 		let voters = Arc::new(authority_set.current_authorities());
 		let client = client.clone();
+		let select_chain: Arc<SC> = select_chain.clone();
 
 		// start global communication stream for the current set
 		let (global_in, _) = global_communication(
@@ -212,6 +217,7 @@ pub fn run_grandpa_observer<B, E, Block: BlockT<Hash=H256>, N, RA, SC>(
 		// create observer for the current set
 		let observer = grandpa_observer(
 			&client,
+			&select_chain,
 			&authority_set,
 			&consensus_changes,
 			&voters,

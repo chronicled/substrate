@@ -421,7 +421,9 @@ fn do_finalize_block<B, E, Block: BlockT<Hash=H256>, RA>(
 		NumberFor<Block>: grandpa::BlockNumberOps,
 {
 	// finalize the block
-	client.finalize_block(BlockId::Hash(hash), Some(justification), true).map_err(|e| {
+	// NOTE: we don't track leaves in the light client so in case of a re-org
+	// this block will be set as best.
+	client.finalize_block(BlockId::Hash(hash), Some(justification), None, true).map_err(|e| {
 		warn!(target: "finality", "Error applying finality to block {:?}: {:?}", (hash, number), e);
 		ConsensusError::ClientImport(e.to_string())
 	})?;

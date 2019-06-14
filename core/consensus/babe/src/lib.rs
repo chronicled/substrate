@@ -149,7 +149,7 @@ pub struct BabeParams<C, E, I, SO, SC> {
 	pub client: Arc<C>,
 
 	/// The SelectChain Strategy
-	pub select_chain: SC,
+	pub select_chain: Arc<SC>,
 
 	/// A block importer
 	pub block_import: Arc<I>,
@@ -1022,7 +1022,7 @@ mod tests {
 
 
 			#[allow(deprecated)]
-			let select_chain = LongestChain::new(client.backend().clone());
+			let select_chain = Arc::new(LongestChain::new(client.backend().clone()));
 
 			runtime.spawn(start_babe(BabeParams {
 				config,

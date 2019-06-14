@@ -133,7 +133,7 @@ pub fn start_aura<B, C, SC, E, I, P, SO, Error, H>(
 	slot_duration: SlotDuration,
 	local_key: Arc<P>,
 	client: Arc<C>,
-	select_chain: SC,
+	select_chain: Arc<SC>,
 	block_import: Arc<I>,
 	env: Arc<E>,
 	sync_oracle: SO,
@@ -829,9 +829,9 @@ mod tests {
 		for (peer_id, key) in peers {
 			let client = net.lock().peer(*peer_id).client().as_full().expect("full clients are created").clone();
 			#[allow(deprecated)]
-			let select_chain = LongestChain::new(
+			let select_chain = Arc::new(LongestChain::new(
 				client.backend().clone(),
-			);
+			));
 			let environ = Arc::new(DummyFactory(client.clone()));
 			import_notifications.push(
 				client.import_notification_stream()

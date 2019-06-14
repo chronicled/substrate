@@ -918,7 +918,17 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		// ensure parent block is finalized to maintain invariant that
 		// finality is called sequentially.
 		if finalized {
-			self.apply_finality_with_block_hash(operation, parent_hash, None, last_best, make_notifications)?;
+			// `select_chain` is `None` since there's no need to find a new best
+			// in case of re-org. the new best block must be the block we're
+			// importing.
+			self.apply_finality_with_block_hash(
+				operation,
+				parent_hash,
+				None,
+				last_best,
+				None,
+				make_notifications,
+			)?;
 		}
 
 		// FIXME #1232: correct path logic for when to execute this function
@@ -1043,6 +1053,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		block: Block::Hash,
 		justification: Option<Justification>,
 		best_block: Block::Hash,
+		select_chain: Option<&dyn SelectChain<Block>>,
 		notify: bool,
 	) -> error::Result<()> {
 		// find tree route from last finalized to given block.
@@ -1075,8 +1086,16 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		// if the block is not a direct ancestor of the current best chain,
 		// then some other block is the common ancestor.
 		if route_from_best.common_block().hash != block {
-			// FIXME: #1442 reorganize best block to be the best chain containing
-			// `block`.
+			let new_best = match select_chain {
+				// find the new best block that is a descendent of the finalized
+				// block
+				Some(select_chain) => select_chain.finality_target(block, None)?
+					.unwrap_or(block),
+				// if no `select_chain` is provided set the finalized block as best
+				None => block,
+			};
+
+			operation.op.mark_head(BlockId::Hash(new_best))?;
 		}
 
 		let enacted = route_from_finalized.enacted();
@@ -1193,11 +1212,19 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		operation: &mut ClientImportOperation<Block, Blake2Hasher, B>,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
+		select_chain: Option<&dyn SelectChain<Block>>,
 		notify: bool,
 	) -> error::Result<()> {
 		let last_best = self.backend.blockchain().info().best_hash;
 		let to_finalize_hash = self.backend.blockchain().expect_block_hash_from_id(&id)?;
-		self.apply_finality_with_block_hash(operation, to_finalize_hash, justification, last_best, notify)
+		self.apply_finality_with_block_hash(
+			operation,
+			to_finalize_hash,
+			justification,
+			last_best,
+			select_chain,
+			notify,
+		)
 	}
 
 	/// Finalize a block. This will implicitly finalize all blocks up to it and
@@ -1206,11 +1233,24 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 	/// Pass a flag to indicate whether finality notifications should be propagated.
 	/// This is usually tied to some synchronization state, where we don't send notifications
 	/// while performing major synchronization work.
-	pub fn finalize_block(&self, id: BlockId<Block>, justification: Option<Justification>, notify: bool) -> error::Result<()> {
+	pub fn finalize_block(
+		&self,
+		id: BlockId<Block>,
+		justification: Option<Justification>,
+		select_chain: Option<&dyn SelectChain<Block>>,
+		notify: bool,
+	) -> error::Result<()> {
 		self.lock_import_and_run(|operation| {
 			let last_best = self.backend.blockchain().info().best_hash;
 			let to_finalize_hash = self.backend.blockchain().expect_block_hash_from_id(&id)?;
-			self.apply_finality_with_block_hash(operation, to_finalize_hash, justification, last_best, notify)
+			self.apply_finality_with_block_hash(
+				operation,
+				to_finalize_hash,
+				justification,
+				last_best,
+				select_chain,
+				notify,
+			)
 		})
 	}
 
@@ -2548,10 +2588,6 @@ pub(crate) mod tests {
 		let b1 = b1.bake().unwrap();
 		client.import(BlockOrigin::Own, b1.clone()).unwrap();
 
-		dbg!((a1.header().number(), a1.hash()));
-		dbg!((a2.header().number(), a2.hash()));
-		dbg!((b1.header().number(), b1.hash()));
-
 		#[allow(deprecated)]
 		let blockchain = client.backend().blockchain();
 
@@ -2563,7 +2599,7 @@ pub(crate) mod tests {
 
 		// we finalize block B1 which is on a different branch from current best
 		// which should trigger a re-org.
-		client.finalize_block(BlockId::Hash(b1.hash()), None, false).unwrap();
+		client.finalize_block(BlockId::Hash(b1.hash()), None, None, false).unwrap();
 
 		// B1 should now be the latest finalized
 		assert_eq!(

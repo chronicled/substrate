@@ -122,7 +122,7 @@ impl TestNetFactory for GrandpaTestNet {
 				let (import, link) = block_import(
 					client.clone(),
 					Arc::new(self.test_config.clone()),
-					select_chain,
+					Arc::new(select_chain),
 				).expect("Could not create block import for fresh peer.");
 				let shared_import = Arc::new(import);
 				(shared_import.clone(), Some(shared_import), None, None, Mutex::new(Some(link)))

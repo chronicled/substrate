@@ -306,7 +306,7 @@ impl<Block: BlockT> SharedVoterSetState<Block> {
 /// The environment we run GRANDPA in.
 pub(crate) struct Environment<B, E, Block: BlockT, N: Network<Block>, RA, SC> {
 	pub(crate) inner: Arc<Client<B, E, Block, RA>>,
-	pub(crate) select_chain: SC,
+	pub(crate) select_chain: Arc<SC>,
 	pub(crate) voters: Arc<VoterSet<AuthorityId>>,
 	pub(crate) config: Config,
 	pub(crate) authority_set: SharedAuthoritySet<Block::Hash, NumberFor<Block>>,
@@ -717,6 +717,7 @@ where
 
 		finalize_block(
 			&*self.inner,
+			&*self.select_chain,
 			&self.authority_set,
 			&self.consensus_changes,
 			Some(self.config.justification_period.into()),
@@ -776,8 +777,9 @@ impl<Block: BlockT> From<GrandpaJustification<Block>> for JustificationOrCommit<
 /// authority set change is enacted then a justification is created (if not
 /// given) and stored with the block when finalizing it.
 /// This method assumes that the block being finalized has already been imported.
-pub(crate) fn finalize_block<B, Block: BlockT<Hash=H256>, E, RA>(
+pub(crate) fn finalize_block<B, Block: BlockT<Hash=H256>, E, RA, SC>(
 	client: &Client<B, E, Block, RA>,
+	select_chain: &SC,
 	authority_set: &SharedAuthoritySet<Block::Hash, NumberFor<Block>>,
 	consensus_changes: &SharedConsensusChanges<Block::Hash, NumberFor<Block>>,
 	justification_period: Option<NumberFor<Block>>,
@@ -788,6 +790,7 @@ pub(crate) fn finalize_block<B, Block: BlockT<Hash=H256>, E, RA>(
 	B: Backend<Block, Blake2Hasher>,
 	E: CallExecutor<Block, Blake2Hasher> + Send + Sync,
 	RA: Send + Sync,
+	SC: SelectChain<Block>,
 {
 	// lock must be held through writing to DB to avoid race
 	let mut authority_set = authority_set.inner().write();
@@ -876,10 +879,17 @@ pub(crate) fn finalize_block<B, Block: BlockT<Hash=H256>, E, RA>(
 
 		// ideally some handle to a synchronization oracle would be used
 		// to avoid unconditionally notifying.
-		client.apply_finality(import_op, BlockId::Hash(hash), justification, true).map_err(|e| {
+		client.apply_finality(
+			import_op,
+			BlockId::Hash(hash),
+			justification,
+			Some(select_chain),
+			true,
+		).map_err(|e| {
 			warn!(target: "finality", "Error applying finality to block {:?}: {:?}", (hash, number), e);
 			e
 		})?;
+
 		telemetry!(CONSENSUS_INFO; "afg.finalized_blocks_up_to";
 			"number" => ?number, "hash" => ?hash,
 		);

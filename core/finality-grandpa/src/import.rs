@@ -56,7 +56,7 @@ use crate::justification::GrandpaJustification;
 /// object.
 pub struct GrandpaBlockImport<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC> {
 	inner: Arc<Client<B, E, Block, RA>>,
-	select_chain: SC,
+	select_chain: Arc<SC>,
 	authority_set: SharedAuthoritySet<Block::Hash, NumberFor<Block>>,
 	send_voter_commands: mpsc::UnboundedSender<VoterCommand<Block::Hash, NumberFor<Block>>>,
 	consensus_changes: SharedConsensusChanges<Block::Hash, NumberFor<Block>>,
@@ -387,6 +387,7 @@ impl<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC> BlockImport<Block>
 		RA: Send + Sync,
 		PRA: ProvideRuntimeApi,
 		PRA::Api: GrandpaApi<Block>,
+		SC: SelectChain<Block>,
 {
 	type Error = ConsensusError;
 
@@ -517,7 +518,7 @@ impl<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC>
 {
 	pub(crate) fn new(
 		inner: Arc<Client<B, E, Block, RA>>,
-		select_chain: SC,
+		select_chain: Arc<SC>,
 		authority_set: SharedAuthoritySet<Block::Hash, NumberFor<Block>>,
 		send_voter_commands: mpsc::UnboundedSender<VoterCommand<Block::Hash, NumberFor<Block>>>,
 		consensus_changes: SharedConsensusChanges<Block::Hash, NumberFor<Block>>,
@@ -541,6 +542,7 @@ where
 	B: Backend<Block, Blake2Hasher> + 'static,
 	E: CallExecutor<Block, Blake2Hasher> + 'static + Clone + Send + Sync,
 	RA: Send + Sync,
+	SC: SelectChain<Block>,
 {
 
 	/// Import a block justification and finalize the block.
@@ -568,6 +570,7 @@ where
 
 		let result = finalize_block(
 			&*self.inner,
+			&*self.select_chain,
 			&self.authority_set,
 			&self.consensus_changes,
 			None,

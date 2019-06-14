@@ -338,7 +338,7 @@ pub trait ServiceFactory: 'static + Sized {
 	fn build_full_import_queue(
 		config: &mut FactoryFullConfiguration<Self>,
 		_client: Arc<FullClient<Self>>,
-		_select_chain: Self::SelectChain,
+		_select_chain: Arc<Self::SelectChain>,
 	) -> Result<Self::FullImportQueue, error::Error> {
 		if let Some(name) = config.chain_spec.consensus_engine() {
 			match name {
@@ -409,7 +409,7 @@ pub trait Components: Sized + 'static {
 	fn build_import_queue(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>,
-		select_chain: Option<Self::SelectChain>,
+		select_chain: Option<Arc<Self::SelectChain>>,
 	) -> Result<Self::ImportQueue, error::Error>;
 
 	/// Finality proof provider for serving network requests.
@@ -510,7 +510,7 @@ impl<Factory: ServiceFactory> Components for FullComponents<Factory> {
 	fn build_import_queue(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>,
-		select_chain: Option<Self::SelectChain>,
+		select_chain: Option<Arc<Self::SelectChain>>,
 	) -> Result<Self::ImportQueue, error::Error> {
 		let select_chain = select_chain
 			.ok_or(error::Error::SelectChainRequired)?;
@@ -612,7 +612,7 @@ impl<Factory: ServiceFactory> Components for LightComponents<Factory> {
 	fn build_import_queue(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>,
-		_select_chain: Option<Self::SelectChain>,
+		_select_chain: Option<Arc<Self::SelectChain>>,
 	) -> Result<Self::ImportQueue, error::Error> {
 		Factory::build_light_import_queue(config, client)
 	}

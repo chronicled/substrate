@@ -332,7 +332,7 @@ impl<H, N> fmt::Display for CommandOrError<H, N> {
 
 pub struct LinkHalf<B, E, Block: BlockT<Hash=H256>, RA, SC> {
 	client: Arc<Client<B, E, Block, RA>>,
-	select_chain: SC,
+	select_chain: Arc<SC>,
 	persistent_data: PersistentData<Block>,
 	voter_commands_rx: mpsc::UnboundedReceiver<VoterCommand<Block::Hash, NumberFor<Block>>>,
 }
@@ -342,7 +342,7 @@ pub struct LinkHalf<B, E, Block: BlockT<Hash=H256>, RA, SC> {
 pub fn block_import<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC>(
 	client: Arc<Client<B, E, Block, RA>>,
 	api: Arc<PRA>,
-	select_chain: SC,
+	select_chain: Arc<SC>,
 ) -> Result<(
 		GrandpaBlockImport<B, E, Block, RA, PRA, SC>,
 		LinkHalf<B, E, Block, RA, SC>

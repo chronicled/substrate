@@ -41,6 +41,7 @@ use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::{ApiRef, Block, ProvideRuntimeApi};
 use std::fmt::Debug;
 use std::ops::Deref;
+use std::sync::Arc;
 
 /// A worker that should be invoked at every new slot.
 pub trait SlotWorker<B: Block> {
@@ -71,7 +72,7 @@ pub trait SlotCompatible {
 /// polled until completion, unless we are major syncing.
 pub fn start_slot_worker<B, C, W, T, SO, SC>(
 	slot_duration: SlotDuration<T>,
-	client: C,
+	select_chain: Arc<C>,
 	worker: W,
 	sync_oracle: SO,
 	inherent_data_providers: InherentDataProviders,
@@ -79,7 +80,7 @@ pub fn start_slot_worker<B, C, W, T, SO, SC>(
 ) -> impl Future<Item = (), Error = ()>
 where
 	B: Block,
-	C: SelectChain<B> + Clone,
+	C: SelectChain<B>,
 	W: SlotWorker<B>,
 	SO: SyncOracle + Send + Clone,
 	SC: SlotCompatible,
@@ -101,7 +102,7 @@ where
 			}
 
 			let slot_num = slot_info.number;
-			let chain_head = match client.best_chain() {
+			let chain_head = match select_chain.best_chain() {
 				Ok(x) => x,
 				Err(e) => {
 					warn!(target: "slots", "Unable to author block in slot {}. \

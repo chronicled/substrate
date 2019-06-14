@@ -97,7 +97,7 @@ construct_service_factory! {
 		FullImportQueue = AuraImportQueue<
 			Self::Block,
 		>
-			{ |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>, _select_chain: Self::SelectChain| {
+			{ |config: &mut FactoryFullConfiguration<Self> , client: Arc<FullClient<Self>>, _select_chain: Arc<Self::SelectChain>| {
 					import_queue::<_, _, Pair>(
 						SlotDuration::get_or_compute(&*client)?,
 						client.clone(),

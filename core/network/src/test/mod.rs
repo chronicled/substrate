@@ -197,11 +197,11 @@ impl PeersClient {
 		&self,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
-		notify: bool
+		notify: bool,
 	) -> ClientResult<()> {
 		match *self {
-			PeersClient::Full(ref client) => client.finalize_block(id, justification, notify),
-			PeersClient::Light(ref client) => client.finalize_block(id, justification, notify),
+			PeersClient::Full(ref client) => client.finalize_block(id, justification, None, notify),
+			PeersClient::Light(ref client) => client.finalize_block(id, justification, None, notify),
 		}
 	}
 }
