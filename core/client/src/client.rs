@@ -2566,11 +2566,11 @@ pub(crate) mod tests {
 	fn finalizing_diverged_block_should_trigger_reorg() {
 		use test_client::blockchain::HeaderBackend;
 
-		let client = test_client::new();
+		let (client, select_chain) = TestClientBuilder::new().build_with_longest_chain();
 
 		// G -> A1 -> A2
 		//   \
-		//    -> B1
+		//    -> B1 -> B2
 		let a1 = client.new_block_at(&BlockId::Number(0), Default::default()).unwrap().bake().unwrap();
 		client.import(BlockOrigin::Own, a1.clone()).unwrap();
 
@@ -2588,6 +2588,9 @@ pub(crate) mod tests {
 		let b1 = b1.bake().unwrap();
 		client.import(BlockOrigin::Own, b1.clone()).unwrap();
 
+		let b2 = client.new_block_at(&BlockId::Hash(b1.hash()), Default::default()).unwrap().bake().unwrap();
+		client.import(BlockOrigin::Own, b2.clone()).unwrap();
+
 		#[allow(deprecated)]
 		let blockchain = client.backend().blockchain();
 
@@ -2599,7 +2602,7 @@ pub(crate) mod tests {
 
 		// we finalize block B1 which is on a different branch from current best
 		// which should trigger a re-org.
-		client.finalize_block(BlockId::Hash(b1.hash()), None, None, false).unwrap();
+		client.finalize_block(BlockId::Hash(b1.hash()), None, Some(&select_chain), false).unwrap();
 
 		// B1 should now be the latest finalized
 		assert_eq!(
@@ -2607,10 +2610,10 @@ pub(crate) mod tests {
 			b1.hash(),
 		);
 
-		// and also the new best block
+		// and B2 should be the new best block
 		assert_eq!(
 			blockchain.info().best_hash,
-			b1.hash(),
+			b2.hash(),
 		);
 	}
 }
