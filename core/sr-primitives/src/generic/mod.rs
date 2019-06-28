@@ -22,7 +22,6 @@ mod unchecked_extrinsic;
 mod unchecked_mortal_extrinsic;
 mod unchecked_mortal_compact_extrinsic;
 mod era;
-mod checked_extrinsic;
 mod header;
 mod block;
 mod digest;
@@ -33,7 +32,6 @@ pub use self::unchecked_extrinsic::UncheckedExtrinsic;
 pub use self::unchecked_mortal_extrinsic::UncheckedMortalExtrinsic;
 pub use self::unchecked_mortal_compact_extrinsic::UncheckedMortalCompactExtrinsic;
 pub use self::era::{Era, Phase};
-pub use self::checked_extrinsic::CheckedExtrinsic;
 pub use self::header::Header;
 pub use self::block::{Block, SignedBlock, BlockId};
 pub use self::digest::{
