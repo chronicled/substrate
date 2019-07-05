@@ -24,6 +24,15 @@ use runtime_primitives::traits::{Block as BlockT, NumberFor};
 /// specific chain build.
 ///
 /// The Strategy can be customised for the two use cases of authoring new blocks
+/// upon the best chain or which fork to finalise. Unless implemented differently
+/// by default finalisation methods fall back to use authoring, so as a minimum
+/// `_authoring`-functions must be implemented.
+///
+/// Any particular user must make explicit, however, whether they intend to finalise
+/// or author through the using the right function call, as these might differ in
+/// some implementations.
+///
+/// Non-deterministicly finalising chains may only use the `_authoring` functions.
 /// upon the best chain or finding the best block in a given fork (useful for
 /// voting on, or when re-orging).
 pub trait SelectChain<Block: BlockT>: Sync + Send {
@@ -42,5 +51,22 @@ pub trait SelectChain<Block: BlockT>: Sync + Send {
 		target_hash: <Block as BlockT>::Hash,
 		maybe_max_number: Option<NumberFor<Block>>,
 		import_lock: Option<&'a Mutex<()>>,
-	) -> Result<Option<<Block as BlockT>::Hash>, Error>;
+	) -> Result<Option<<Block as BlockT>::Hash>, Error> {
+		Ok(Some(target_hash))
+	}
+
+	/// Get the best ancestor of `target_hash` that we should attempt
+	/// to finalize next.
+	fn finality_target<'a>(
+		&self,
+		target_hash: <Block as BlockT>::Hash,
+		maybe_max_number: Option<NumberFor<Block>>,
+		import_lock: Option<&'a Mutex<()>>,
+	) -> Result<Option<<Block as BlockT>::Hash>, Error> {
+		self.best_containing(
+			target_hash,
+			maybe_max_number,
+			import_lock,
+		)
+	}
 }

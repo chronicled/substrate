@@ -365,7 +365,7 @@ where
 		debug!(target: "afg", "Finding best chain containing block {:?} with number limit {:?}", block, limit);
 
 		#[allow(deprecated)]
-		let best_hash = self.select_chain.best_containing(
+		let best_hash = self.select_chain.finality_target(
 			block,
 			None,
 			Some(self.inner.backend().get_import_lock()),
