@@ -2821,7 +2821,7 @@ pub(crate) mod tests {
 
 		// we finalize block B1 which is on a different branch from current best
 		// which should trigger a re-org.
-		client.finalize_block(BlockId::Hash(b1.hash()), None, Some(&select_chain), false).unwrap();
+		client.finalize_block(BlockId::Hash(b1.hash()), None, &select_chain, false).unwrap();
 
 		// B1 should now be the latest finalized
 		assert_eq!(

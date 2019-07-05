@@ -49,7 +49,7 @@ pub trait SelectChain<Block: BlockT>: Sync + Send {
 	fn best_containing<'a>(
 		&self,
 		target_hash: Block::Hash,
-		maybe_max_number: Option<NumberFor<Block>>,
+		_maybe_max_number: Option<NumberFor<Block>>,
 		_import_lock: Option<&'a Mutex<()>>,
 	) -> Result<Option<Block::Hash>, Error> {
 		Ok(Some(target_hash))

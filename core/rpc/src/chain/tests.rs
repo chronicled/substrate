@@ -16,6 +16,7 @@
 
 use super::*;
 use assert_matches::assert_matches;
+use client::DummySelectChain;
 use test_client::{
 	prelude::*,
 	consensus::BlockOrigin,
@@ -168,6 +169,10 @@ fn should_return_finalized_hash() {
 		subscriptions: Subscriptions::new(Arc::new(remote)),
 	};
 
+	#[allow(deprecated)]
+	let backend = client.client.backend().clone();
+	let select_chain = DummySelectChain::new(backend);
+
 	assert_matches!(
 		client.finalized_head(),
 		Ok(ref x) if x == &client.client.genesis_hash()
@@ -183,7 +188,7 @@ fn should_return_finalized_hash() {
 	);
 
 	// finalize
-	client.client.finalize_block(BlockId::number(1), None, None, true).unwrap();
+	client.client.finalize_block(BlockId::number(1), None, &select_chain, true).unwrap();
 	assert_matches!(
 		client.finalized_head(),
 		Ok(ref x) if x == &client.client.block_hash(1).unwrap().unwrap()
@@ -233,6 +238,10 @@ fn should_notify_about_finalized_block() {
 			subscriptions: Subscriptions::new(Arc::new(remote)),
 		};
 
+		#[allow(deprecated)]
+		let backend = api.client.backend().clone();
+		let select_chain = DummySelectChain::new(backend);
+
 		api.subscribe_finalized_heads(Default::default(), subscriber);
 
 		// assert id assigned
@@ -240,7 +249,7 @@ fn should_notify_about_finalized_block() {
 
 		let builder = api.client.new_block(Default::default()).unwrap();
 		api.client.import(BlockOrigin::Own, builder.bake().unwrap()).unwrap();
-		api.client.finalize_block(BlockId::number(1), None, None, true).unwrap();
+		api.client.finalize_block(BlockId::number(1), None, &select_chain, true).unwrap();
 	}
 
 	// assert initial head sent.

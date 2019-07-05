@@ -9,7 +9,6 @@ use node_template_runtime::{self, GenesisConfig, opaque::Block, RuntimeApi, WASM
 use substrate_service::{
 	FactoryFullConfiguration, LightComponents, FullComponents, FullBackend,
 	FullClient, LightClient, LightBackend, FullExecutor, LightExecutor,
-	error::{Error as ServiceError},
 };
 use basic_authorship::ProposerFactory;
 use consensus::{import_queue, start_aura, AuraImportQueue, SlotDuration};
@@ -114,7 +113,7 @@ construct_service_factory! {
 		LightImportQueue = AuraImportQueue<
 			Self::Block,
 		>
-			{ |config: &mut FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>| {
+			{ |config: &mut FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>, _| {
 					import_queue::<_, _, Pair>(
 						SlotDuration::get_or_compute(&*client)?,
 						client.clone(),

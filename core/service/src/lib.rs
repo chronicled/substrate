@@ -1067,7 +1067,10 @@ macro_rules! construct_service_factory {
 				client: Arc<$crate::LightClient<Self>>,
 			) -> Result<Self::LightImportQueue, $crate::Error> {
 				let select_chain = Arc::new(
-					<Self::LightService as Components>::build_select_chain(config, client.clone())?,
+					<Self::LightService as $crate::Components>::build_select_chain(
+						config,
+						client.clone(),
+					)?,
 				);
 
 				( $( $light_import_queue_init )* ) (config, client, select_chain)

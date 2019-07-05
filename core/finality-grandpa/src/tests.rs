@@ -26,7 +26,7 @@ use keyring::ed25519::{Keyring as AuthorityKeyring};
 use client::{
 	error::Result,
 	runtime_api::{Core, RuntimeVersion, ApiExt},
-	LongestChain,
+	DummySelectChain, LongestChain,
 };
 use test_client::{self, runtime::BlockNumber};
 use consensus_common::{BlockOrigin, ForkChoiceStrategy, ImportedAux, ImportBlock, ImportResult};
@@ -130,11 +130,14 @@ impl TestNetFactory for GrandpaTestNet {
 			PeersClient::Light(ref client) => {
 				use crate::light_import::tests::light_block_import_without_justifications;
 
+				#[allow(deprecated)]
+				let select_chain = DummySelectChain::new(client.backend().clone());
 				let authorities_provider = Arc::new(self.test_config.clone());
 				// forbid direct finalization using justification that cames with the block
 				// => light clients will try to fetch finality proofs
 				let import = light_block_import_without_justifications(
 					client.clone(),
+					Arc::new(select_chain),
 					authorities_provider,
 					Arc::new(self.test_config.clone())
 				).expect("Could not create block import for fresh peer.");

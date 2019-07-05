@@ -560,17 +560,18 @@ pub mod tests {
 	use crate::tests::TestApi;
 	use crate::finality_proof::tests::TestJustification;
 
-	pub struct NoJustificationsImport<B, E, Block: BlockT<Hash=H256>, RA>(
-		pub GrandpaLightBlockImport<B, E, Block, RA>
+	pub struct NoJustificationsImport<B, E, Block: BlockT<Hash=H256>, RA, SC>(
+		pub GrandpaLightBlockImport<B, E, Block, RA, SC>
 	);
 
-	impl<B, E, Block: BlockT<Hash=H256>, RA> BlockImport<Block>
-		for NoJustificationsImport<B, E, Block, RA> where
+	impl<B, E, Block: BlockT<Hash=H256>, RA, SC> BlockImport<Block>
+		for NoJustificationsImport<B, E, Block, RA, SC> where
 			NumberFor<Block>: grandpa::BlockNumberOps,
 			B: Backend<Block, Blake2Hasher> + 'static,
 			E: CallExecutor<Block, Blake2Hasher> + 'static + Clone + Send + Sync,
 			DigestFor<Block>: Encode,
 			RA: Send + Sync,
+			SC: SelectChain<Block>,
 	{
 		type Error = ConsensusError;
 
@@ -592,13 +593,14 @@ pub mod tests {
 		}
 	}
 
-	impl<B, E, Block: BlockT<Hash=H256>, RA> FinalityProofImport<Block>
-		for NoJustificationsImport<B, E, Block, RA> where
+	impl<B, E, Block: BlockT<Hash=H256>, RA, SC> FinalityProofImport<Block>
+		for NoJustificationsImport<B, E, Block, RA, SC> where
 			NumberFor<Block>: grandpa::BlockNumberOps,
 			B: Backend<Block, Blake2Hasher> + 'static,
 			E: CallExecutor<Block, Blake2Hasher> + 'static + Clone + Send + Sync,
 			DigestFor<Block>: Encode,
 			RA: Send + Sync,
+			SC: SelectChain<Block>,
 	{
 		type Error = ConsensusError;
 
@@ -618,19 +620,22 @@ pub mod tests {
 	}
 
 	/// Creates light block import that ignores justifications that came outside of finality proofs.
-	pub fn light_block_import_without_justifications<B, E, Block: BlockT<Hash=H256>, RA, PRA>(
+	pub fn light_block_import_without_justifications<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC>(
 		client: Arc<Client<B, E, Block, RA>>,
+		select_chain: Arc<SC>,
 		authority_set_provider: Arc<dyn AuthoritySetForFinalityChecker<Block>>,
 		api: Arc<PRA>,
-	) -> Result<NoJustificationsImport<B, E, Block, RA>, ClientError>
+	) -> Result<NoJustificationsImport<B, E, Block, RA, SC>, ClientError>
 		where
 			B: Backend<Block, Blake2Hasher> + 'static,
 			E: CallExecutor<Block, Blake2Hasher> + 'static + Clone + Send + Sync,
 			RA: Send + Sync,
 			PRA: ProvideRuntimeApi,
 			PRA::Api: GrandpaApi<Block>,
+			SC: SelectChain<Block>,
 	{
-		light_block_import(client, authority_set_provider, api).map(NoJustificationsImport)
+		light_block_import(client, select_chain, authority_set_provider, api)
+			.map(NoJustificationsImport)
 	}
 
 	fn import_block(
@@ -638,6 +643,8 @@ pub mod tests {
 		justification: Option<Justification>,
 	) -> ImportResult {
 		let client = test_client::new_light();
+		#[allow(deprecated)]
+		let select_chain = client::DummySelectChain::new(client.backend().clone());
 		let mut import_data = LightImportData {
 			last_finalized: Default::default(),
 			authority_set: LightAuthoritySet::genesis(vec![(AuthorityId::from_raw([1; 32]), 1)]),
@@ -659,8 +666,9 @@ pub mod tests {
 			auxiliary: Vec::new(),
 			fork_choice: ForkChoiceStrategy::LongestChain,
 		};
-		do_import_block::<_, _, _, _, TestJustification>(
+		do_import_block::<_, _, _, _, _, TestJustification>(
 			&client,
+			&select_chain,
 			&mut import_data,
 			block,
 			new_cache,
