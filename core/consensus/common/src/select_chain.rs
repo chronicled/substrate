@@ -50,7 +50,7 @@ pub trait SelectChain<Block: BlockT>: Sync + Send {
 		&self,
 		target_hash: Block::Hash,
 		maybe_max_number: Option<NumberFor<Block>>,
-		import_lock: Option<&'a Mutex<()>>,
+		_import_lock: Option<&'a Mutex<()>>,
 	) -> Result<Option<Block::Hash>, Error> {
 		Ok(Some(target_hash))
 	}

@@ -918,15 +918,16 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		// ensure parent block is finalized to maintain invariant that
 		// finality is called sequentially.
 		if finalized {
-			// `select_chain` is `None` since there's no need to find a new best
-			// in case of re-org. the new best block must be the block we're
-			// importing.
+			// NOTE: `select_chain` is set to `DummySelectChain` since there's
+			// no need to find a new best in case of re-org. the new best block
+			// must be the block we're importing.
 			self.apply_finality_with_block_hash(
 				operation,
 				parent_hash,
 				None,
 				last_best,
-				None,
+				#[allow(deprecated)]
+				&DummySelectChain::new(self.backend().clone()),
 				make_notifications,
 			)?;
 		}
@@ -1053,7 +1054,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		block: Block::Hash,
 		justification: Option<Justification>,
 		best_block: Block::Hash,
-		select_chain: Option<&dyn SelectChain<Block>>,
+		select_chain: &dyn SelectChain<Block>,
 		notify: bool,
 	) -> error::Result<()> {
 		// find tree route from last finalized to given block.
@@ -1086,15 +1087,10 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		// if the block is not a direct ancestor of the current best chain,
 		// then some other block is the common ancestor.
 		if route_from_best.common_block().hash != block {
-			let new_best = match select_chain {
-				// find the new best block that is a descendent of the finalized
-				// block. we already have the import lock acquired so there's no
-				// need to re-acquire it in `select_chain`.
-				Some(select_chain) => select_chain.best_containing(block, None, None)?
-					.unwrap_or(block),
-				// if no `select_chain` is provided set the finalized block as best
-				None => block,
-			};
+			// find the new best block that is a descendent of the finalized
+			// block. we already have the import lock acquired so there's no
+			// need to re-acquire it in `select_chain`.
+			let new_best = select_chain.best_containing(block, None, None)?.unwrap_or(block);
 
 			operation.op.mark_head(BlockId::Hash(new_best))?;
 		}
@@ -1213,7 +1209,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		operation: &mut ClientImportOperation<Block, Blake2Hasher, B>,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
-		select_chain: Option<&dyn SelectChain<Block>>,
+		select_chain: &dyn SelectChain<Block>,
 		notify: bool,
 	) -> error::Result<()> {
 		let last_best = self.backend.blockchain().info().best_hash;
@@ -1238,7 +1234,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		&self,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
-		select_chain: Option<&dyn SelectChain<Block>>,
+		select_chain: &dyn SelectChain<Block>,
 		notify: bool,
 	) -> error::Result<()> {
 		self.lock_import_and_run(|operation| {
@@ -1579,15 +1575,15 @@ where
 /// block in the backend. This is mainly useful for the light client which
 /// cannot execute complicated select chain logic (e.g. it doesn't track fork
 /// leaves).
-pub struct DummySelectChain<B, Block, H> {
+pub struct DummySelectChain<B, Block> {
 	backend: Arc<B>,
-	_phantom: PhantomData<(Block, H)>,
+	_phantom: PhantomData<Block>,
 }
 
-impl<B, Block: BlockT, H> DummySelectChain<B, Block, H>
+impl<B, Block> DummySelectChain<B, Block>
 where
-	B: backend::Backend<Block, H>,
-	H: Hasher<Out=Block::Hash>,
+	B: backend::Backend<Block, Blake2Hasher>,
+	Block: BlockT<Hash=H256>,
 {
 	/// Instantiate a new `DummySelectChain` using the given backend.
 	pub fn new(backend: Arc<B>) -> Self {
@@ -1598,10 +1594,10 @@ where
 	}
 }
 
-impl<B, Block: BlockT, H> SelectChain<Block> for DummySelectChain<B, Block, H>
+impl<B, Block> SelectChain<Block> for DummySelectChain<B, Block>
 where
-	B: backend::Backend<Block, H>,
-	H: Hasher<Out=Block::Hash>,
+	B: backend::Backend<Block, Blake2Hasher>,
+	Block: BlockT<Hash=H256>,
 {
 	fn leaves(&self) -> Result<Vec<Block::Hash>, ConsensusError> {
 		Ok(vec![self.backend.blockchain().info().best_hash])

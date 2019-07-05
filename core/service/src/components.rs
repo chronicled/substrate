@@ -20,7 +20,7 @@ use std::{sync::Arc, ops::Deref, ops::DerefMut};
 use serde::{Serialize, de::DeserializeOwned};
 use crate::chain_spec::ChainSpec;
 use client_db;
-use client::{self, Client, runtime_api};
+use client::{self, Client, DummySelectChain, runtime_api};
 use crate::{error, Service};
 use consensus_common::{import_queue::ImportQueue, SelectChain};
 use network::{self, OnDemand, FinalityProofProvider};
@@ -353,7 +353,7 @@ pub trait ServiceFactory: 'static + Sized {
 	/// ImportQueue for a light client
 	fn build_light_import_queue(
 		config: &mut FactoryFullConfiguration<Self>,
-		_client: Arc<LightClient<Self>>
+		_client: Arc<LightClient<Self>>,
 	) -> Result<Self::LightImportQueue, error::Error> {
 		if let Some(name) = config.chain_spec.consensus_engine() {
 			match name {
@@ -409,7 +409,7 @@ pub trait Components: Sized + 'static {
 	fn build_import_queue(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>,
-		select_chain: Option<Arc<Self::SelectChain>>,
+		select_chain: Arc<Self::SelectChain>,
 	) -> Result<Self::ImportQueue, error::Error>;
 
 	/// Finality proof provider for serving network requests.
@@ -421,7 +421,7 @@ pub trait Components: Sized + 'static {
 	fn build_select_chain(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>
-	) -> Result<Option<Self::SelectChain>, error::Error>;
+	) -> Result<Self::SelectChain, error::Error>;
 }
 
 /// A struct that implement `Components` for the full client.
@@ -510,18 +510,16 @@ impl<Factory: ServiceFactory> Components for FullComponents<Factory> {
 	fn build_import_queue(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>,
-		select_chain: Option<Arc<Self::SelectChain>>,
+		select_chain: Arc<Self::SelectChain>,
 	) -> Result<Self::ImportQueue, error::Error> {
-		let select_chain = select_chain
-			.ok_or(error::Error::SelectChainRequired)?;
 		Factory::build_full_import_queue(config, client, select_chain)
 	}
 
 	fn build_select_chain(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>
-	) -> Result<Option<Self::SelectChain>, error::Error> {
-		Self::Factory::build_select_chain(config, client).map(Some)
+	) -> Result<Self::SelectChain, error::Error> {
+		Self::Factory::build_select_chain(config, client)
 	}
 
 	fn build_finality_proof_provider(
@@ -574,7 +572,10 @@ impl<Factory: ServiceFactory> Components for LightComponents<Factory> {
 	type ImportQueue = <Factory as ServiceFactory>::LightImportQueue;
 	type RuntimeApi = Factory::RuntimeApi;
 	type RuntimeServices = Factory::LightService;
-	type SelectChain = Factory::SelectChain;
+	type SelectChain = DummySelectChain<
+		Self::Backend,
+		<Factory as ServiceFactory>::Block,
+	>;
 
 	fn build_client(
 		config: &FactoryFullConfiguration<Factory>,
@@ -612,7 +613,7 @@ impl<Factory: ServiceFactory> Components for LightComponents<Factory> {
 	fn build_import_queue(
 		config: &mut FactoryFullConfiguration<Self::Factory>,
 		client: Arc<ComponentClient<Self>>,
-		_select_chain: Option<Arc<Self::SelectChain>>,
+		_select_chain: Arc<Self::SelectChain>,
 	) -> Result<Self::ImportQueue, error::Error> {
 		Factory::build_light_import_queue(config, client)
 	}
@@ -624,9 +625,13 @@ impl<Factory: ServiceFactory> Components for LightComponents<Factory> {
 	}
 	fn build_select_chain(
 		_config: &mut FactoryFullConfiguration<Self::Factory>,
-		_client: Arc<ComponentClient<Self>>
-	) -> Result<Option<Self::SelectChain>, error::Error> {
-		Ok(None)
+		client: Arc<ComponentClient<Self>>
+	) -> Result<Self::SelectChain, error::Error> {
+		// NOTE: for now we don't allow configuring the `SelectChain` on light
+		// clients. This is mostly used for authoring / voting which is not
+		// possible with the light client.
+		#[allow(deprecated)]
+		Ok(DummySelectChain::new(client.backend().clone()))
 	}
 }
 

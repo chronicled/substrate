@@ -37,9 +37,6 @@ pub enum Error {
 	Network(network::error::Error),
 	/// Keystore error.
 	Keystore(keystore::Error),
-	/// Best chain selection strategy is missing.
-	#[display(fmt="Best chain selection strategy (SelectChain) is not provided.")]
-	SelectChainRequired,
 	/// Other error.
 	Other(String),
 }

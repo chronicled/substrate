@@ -127,10 +127,10 @@ pub fn import_blocks<F, E, R>(
 	let client = new_client::<F>(&config)?;
 
 	// FIXME #1134 this shouldn't need a mutable config.
-	let select_chain = components::FullComponents::<F>::build_select_chain(
+	let select_chain = Arc::new(components::FullComponents::<F>::build_select_chain(
 		&mut config,
 		client.clone(),
-	)?.map(Arc::new);
+	)?);
 
 	let mut queue = components::FullComponents::<F>::build_import_queue(&mut config, client.clone(), select_chain)?;
 

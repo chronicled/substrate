@@ -47,7 +47,7 @@ pub trait ClientExt<Block: BlockT>: Sized {
 		&self,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
-		select_chain: Option<&dyn SelectChain<Block>>,
+		select_chain: &dyn SelectChain<Block>,
 	) -> client::error::Result<()>;
 
 	/// Returns hash of the genesis block.
@@ -104,7 +104,7 @@ impl<B, E, RA, Block> ClientExt<Block> for Client<B, E, Block, RA>
 		&self,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
-		select_chain: Option<&dyn SelectChain<Block>>,
+		select_chain: &dyn SelectChain<Block>,
 	) -> client::error::Result<()> {
 		self.finalize_block(id, justification, select_chain, true)
 	}

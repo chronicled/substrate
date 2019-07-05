@@ -890,7 +890,7 @@ pub(crate) fn finalize_block<B, Block: BlockT<Hash=H256>, E, RA, SC>(
 			import_op,
 			BlockId::Hash(hash),
 			justification,
-			Some(select_chain),
+			select_chain,
 			true,
 		).map_err(|e| {
 			warn!(target: "finality", "Error applying finality to block {:?}: {:?}", (hash, number), e);

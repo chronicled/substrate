@@ -73,8 +73,7 @@ construct_service_factory! {
 						transaction_pool: service.transaction_pool(),
 					});
 					let client = service.client();
-					let select_chain = service.select_chain()
-						.ok_or_else(|| ServiceError::SelectChainRequired)?;
+					let select_chain = service.select_chain();
 					let aura = start_aura(
 						SlotDuration::get_or_compute(&*client)?,
 						Arc::new(key),

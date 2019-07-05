@@ -30,9 +30,8 @@ use futures::prelude::*;
 use node_primitives::{AuraPair, Block};
 use node_runtime::{GenesisConfig, RuntimeApi};
 use substrate_service::{
-	FactoryFullConfiguration, LightComponents, FullComponents, FullBackend,
+	Components, FactoryFullConfiguration, LightComponents, FullComponents, FullBackend,
 	FullClient, LightClient, LightBackend, FullExecutor, LightExecutor,
-	error::{Error as ServiceError},
 };
 use transaction_pool::{self, txpool::{Pool as TransactionPool}};
 use inherents::InherentDataProviders;
@@ -92,8 +91,7 @@ construct_service_factory! {
 					});
 
 					let client = service.client();
-					let select_chain = service.select_chain()
-						.ok_or(ServiceError::SelectChainRequired)?;
+					let select_chain = service.select_chain();
 
 					let aura = start_aura(
 						SlotDuration::get_or_compute(&*client)?,
@@ -179,15 +177,20 @@ construct_service_factory! {
 					config.custom.inherent_data_providers.clone(),
 				).map_err(Into::into)
 			}},
-		LightImportQueue = AuraImportQueue<Self::Block>
-			{ |config: &FactoryFullConfiguration<Self>, client: Arc<LightClient<Self>>| {
+		LightImportQueue = AuraImportQueue<Self::Block> {
+			|config: &FactoryFullConfiguration<Self>,
+			client: Arc<LightClient<Self>>,
+			select_chain: Arc<<Self::LightService as Components>::SelectChain>| {
 				#[allow(deprecated)]
 				let fetch_checker = client.backend().blockchain().fetcher()
 					.upgrade()
 					.map(|fetcher| fetcher.checker().clone())
 					.ok_or_else(|| "Trying to start light import queue without active fetch checker")?;
-				let block_import = grandpa::light_block_import::<_, _, _, RuntimeApi, LightClient<Self>>(
-					client.clone(), Arc::new(fetch_checker), client.clone()
+				let block_import = grandpa::light_block_import::<_, _, _, RuntimeApi, LightClient<Self>, _>(
+					client.clone(),
+					select_chain,
+					Arc::new(fetch_checker),
+					client.clone(),
 				)?;
 				let block_import = Arc::new(block_import);
 				let finality_proof_import = block_import.clone();

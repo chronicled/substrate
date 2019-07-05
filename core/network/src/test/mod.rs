@@ -27,7 +27,7 @@ use std::sync::Arc;
 use crate::build_multiaddr;
 use log::trace;
 use crate::chain::FinalityProofProvider;
-use client::{self, ClientInfo, BlockchainEvents, FinalityNotifications};
+use client::{self, BlockchainEvents, ClientInfo, DummySelectChain, FinalityNotifications};
 use client::{in_mem::Backend as InMemoryBackend, error::Result as ClientResult};
 use client::block_builder::BlockBuilder;
 use client::backend::AuxStore;
@@ -199,11 +199,16 @@ impl PeersClient {
 		justification: Option<Justification>,
 		notify: bool,
 	) -> ClientResult<()> {
+		#[allow(deprecated)]
 		match *self {
-			PeersClient::Full(ref client) =>
-				client.finalize_block(id, justification, None, notify),
-			PeersClient::Light(ref client) =>
-				client.finalize_block(id, justification, None, notify),
+			PeersClient::Full(ref client) => {
+				let select_chain = DummySelectChain::new(client.backend().clone());
+				client.finalize_block(id, justification, &select_chain, notify)
+			},
+			PeersClient::Light(ref client) => {
+				let select_chain = DummySelectChain::new(client.backend().clone());
+				client.finalize_block(id, justification, &select_chain, notify)
+			},
 		}
 	}
 }
