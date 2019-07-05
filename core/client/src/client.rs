@@ -1575,21 +1575,53 @@ where
 	}
 }
 
+/// Dummy select chain implementation that always returns the existing best
+/// block in the backend. This is mainly useful for the light client which
+/// cannot execute complicated select chain logic (e.g. it doesn't track fork
+/// leaves).
+pub struct DummySelectChain<B, Block, H> {
+	backend: Arc<B>,
+	_phantom: PhantomData<(Block, H)>,
+}
+
+impl<B, Block: BlockT, H> DummySelectChain<B, Block, H>
+where
+	B: backend::Backend<Block, H>,
+	H: Hasher<Out=Block::Hash>,
+{
+	/// Instantiate a new `DummySelectChain` using the given backend.
+	pub fn new(backend: Arc<B>) -> Self {
+		DummySelectChain {
+			backend,
+			_phantom: Default::default()
+		}
+	}
+}
+
+impl<B, Block: BlockT, H> SelectChain<Block> for DummySelectChain<B, Block, H>
+where
+	B: backend::Backend<Block, H>,
+	H: Hasher<Out=Block::Hash>,
+{
+	fn leaves(&self) -> Result<Vec<Block::Hash>, ConsensusError> {
+		Ok(vec![self.backend.blockchain().info().best_hash])
+	}
+
+	fn best_chain(&self) -> Result<Block::Header, ConsensusError> {
+		let best_hash = self.backend.blockchain().info().best_hash;
+		let best_header: Block::Header = self.backend.blockchain().header(BlockId::Hash(best_hash))
+			.map_err(|e| ConsensusError::ChainLookup(e.to_string()))?
+			.expect("Best block header must always exist");
+
+		Ok(best_header)
+	}
+}
+
 /// Implement Longest Chain Select implementation
 /// where 'longest' is defined as the highest number of blocks
 pub struct LongestChain<B, Block> {
 	backend: Arc<B>,
 	_phantom: PhantomData<Block>
-}
-
-impl<B, Block> Clone for LongestChain<B, Block> {
-	fn clone(&self) -> Self {
-		let backend = self.backend.clone();
-		LongestChain {
-			backend,
-			_phantom: Default::default()
-		}
-	}
 }
 
 impl<B, Block> LongestChain<B, Block>
@@ -1605,8 +1637,8 @@ where
 		}
 	}
 
-	fn best_block_header(&self) -> error::Result<<Block as BlockT>::Header> {
-		let info : ChainInfo<Block> = self.backend.blockchain().info();
+	fn best_block_header(&self) -> error::Result<Block::Header> {
+		let info: ChainInfo<Block> = self.backend.blockchain().info();
 		Ok(self.backend.blockchain().header(BlockId::Hash(info.best_hash))?
 			.expect("Best block header must always exist"))
 	}
@@ -1733,7 +1765,7 @@ where
 		Ok(None)
 	}
 
-	fn leaves(&self) -> Result<Vec<<Block as BlockT>::Hash>, error::Error> {
+	fn leaves(&self) -> Result<Vec<Block::Hash>, error::Error> {
 		self.backend.blockchain().leaves()
 	}
 }
@@ -1744,13 +1776,13 @@ where
 	Block: BlockT<Hash=H256>,
 {
 
-	fn leaves(&self) -> Result<Vec<<Block as BlockT>::Hash>, ConsensusError> {
+	fn leaves(&self) -> Result<Vec<Block::Hash>, ConsensusError> {
 		LongestChain::leaves(self)
 			.map_err(|e| ConsensusError::ChainLookup(e.to_string()).into())
 	}
 
 	fn best_chain(&self)
-		-> Result<<Block as BlockT>::Header, ConsensusError>
+		-> Result<Block::Header, ConsensusError>
 	{
 		LongestChain::best_block_header(&self)
 			.map_err(|e| ConsensusError::ChainLookup(e.to_string()).into())

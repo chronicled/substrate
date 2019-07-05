@@ -39,19 +39,19 @@ pub trait SelectChain<Block: BlockT>: Sync + Send {
 
 	/// Get all leaves of the chain: block hashes that have no children currently.
 	/// Leaves that can never be finalized will not be returned.
-	fn leaves(&self) -> Result<Vec<<Block as BlockT>::Hash>, Error>;
+	fn leaves(&self) -> Result<Vec<Block::Hash>, Error>;
 
 	/// Among those `leaves` deterministically pick one chain as the generally
 	/// best chain to author new blocks upon and probably finalize.
-	fn best_chain(&self) -> Result<<Block as BlockT>::Header, Error>;
+	fn best_chain(&self) -> Result<Block::Header, Error>;
 
 	/// Get the best block in the fork containing `target_hash`, if any.
 	fn best_containing<'a>(
 		&self,
-		target_hash: <Block as BlockT>::Hash,
+		target_hash: Block::Hash,
 		maybe_max_number: Option<NumberFor<Block>>,
 		import_lock: Option<&'a Mutex<()>>,
-	) -> Result<Option<<Block as BlockT>::Hash>, Error> {
+	) -> Result<Option<Block::Hash>, Error> {
 		Ok(Some(target_hash))
 	}
 
@@ -59,10 +59,10 @@ pub trait SelectChain<Block: BlockT>: Sync + Send {
 	/// to finalize next.
 	fn finality_target<'a>(
 		&self,
-		target_hash: <Block as BlockT>::Hash,
+		target_hash: Block::Hash,
 		maybe_max_number: Option<NumberFor<Block>>,
 		import_lock: Option<&'a Mutex<()>>,
-	) -> Result<Option<<Block as BlockT>::Hash>, Error> {
+	) -> Result<Option<Block::Hash>, Error> {
 		self.best_containing(
 			target_hash,
 			maybe_max_number,
