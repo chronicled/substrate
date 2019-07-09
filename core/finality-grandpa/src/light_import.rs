@@ -88,10 +88,11 @@ pub struct GrandpaLightBlockImport<B, E, Block: BlockT<Hash=H256>, RA, SC> {
 	data: Arc<RwLock<LightImportData<Block>>>,
 }
 
-impl<B, E, Block: BlockT<Hash=H256>, RA> Clone for GrandpaLightBlockImport<B, E, Block, RA> {
+impl<B, E, Block: BlockT<Hash=H256>, RA, SC> Clone for GrandpaLightBlockImport<B, E, Block, RA, SC> {
 	fn clone(&self) -> Self {
 		GrandpaLightBlockImport {
 			client: self.client.clone(),
+			select_chain: self.select_chain.clone(),
 			authority_set_provider: self.authority_set_provider.clone(),
 			data: self.data.clone(),
 		}

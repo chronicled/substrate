@@ -63,7 +63,7 @@ pub struct GrandpaBlockImport<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC> {
 	api: Arc<PRA>,
 }
 
-impl<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC: Clone> Clone for
+impl<B, E, Block: BlockT<Hash=H256>, RA, PRA, SC> Clone for
 	GrandpaBlockImport<B, E, Block, RA, PRA, SC>
 {
 	fn clone(&self) -> Self {
