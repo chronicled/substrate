@@ -268,11 +268,11 @@ macro_rules! __decl_generic_event {
 		{ $( $events:tt )* };
 		{ ,$( $generic_param:ident = $generic_type:ty ),* };
 	) => {
-		/// [`RawEvent`] specialized for the configuration [`Trait`]
-		///
-		/// [`RawEvent`]: enum.RawEvent.html
-		/// [`Trait`]: trait.Trait.html
-		pub type Event<$event_generic_param $(, $instance $( = $event_default_instance)? )?> = RawEvent<$( $generic_type ),* $(, $instance)? >;
+		///// [`RawEvent`] specialized for the configuration [`Trait`]
+		/////
+		///// [`RawEvent`]: enum.RawEvent.html
+		///// [`Trait`]: trait.Trait.html
+		//pub type Event<$event_generic_param $(, $instance $( = $event_default_instance)? )?> = RawEvent<$( $generic_type ),* $(, $instance)? >;
 
 		// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
 		#[derive(Clone, PartialEq, Eq, $crate::codec::Encode, $crate::codec::Decode)]
@@ -284,20 +284,20 @@ macro_rules! __decl_generic_event {
 			$(
 				$events
 			)*
-			$(
-				#[doc(hidden)]
-				PhantomData($crate::rstd::marker::PhantomData<$instance>),
-			)?
+			// $(
+			// 	#[doc(hidden)]
+			// 	PhantomData($crate::rstd::marker::PhantomData<$instance>),
+			// )?
 		}
-		impl<$( $generic_param ),* $(, $instance)? > From<RawEvent<$( $generic_param ),* $(, $instance)?>> for () {
-			fn from(_: RawEvent<$( $generic_param ),* $(, $instance)?>) -> () { () }
-		}
-		impl<$( $generic_param ),* $(, $instance)?> RawEvent<$( $generic_param ),* $(, $instance)?> {
-			#[allow(dead_code)]
-			pub fn metadata() -> &'static [$crate::event::EventMetadata] {
-				$crate::__events_to_metadata!(; $( $events )* )
-			}
-		}
+		// impl<$( $generic_param ),* $(, $instance)? > From<RawEvent<$( $generic_param ),* $(, $instance)?>> for () {
+		// 	fn from(_: RawEvent<$( $generic_param ),* $(, $instance)?>) -> () { () }
+		// }
+		// impl<$( $generic_param ),* $(, $instance)?> RawEvent<$( $generic_param ),* $(, $instance)?> {
+		// 	#[allow(dead_code)]
+		// 	pub fn metadata() -> &'static [$crate::event::EventMetadata] {
+		// 		$crate::__events_to_metadata!(; $( $events )* )
+		// 	}
+		// }
 	};
 	(@cannot_parse $ty:ty) => {
 		compile_error!(concat!("The type `", stringify!($ty), "` can't be parsed as an unnamed one, please name it `Name = ", stringify!($ty), "`"));
@@ -423,35 +423,35 @@ macro_rules! impl_outer_event {
 		Modules {};
 		$( $module_name:ident::Event $( <$generic_param:ident $(, $generic_instance:path)? > )*, )*;
 	) => {
-		// // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
-		// #[derive(Clone, PartialEq, Eq, $crate::codec::Encode, $crate::codec::Decode)]
-		// #[cfg_attr(feature = "std", derive(Debug))]
-		// $(#[$attr])*
-		// #[allow(non_camel_case_types)]
-		// pub enum $name {
-		// 	system($system::Event),
-		// 	$(
-		// 		$module_name( $module_name::Event $( <$generic_param $(, $generic_instance)? > )* ),
-		// 	)*
-		// }
-		// impl From<$system::Event> for $name {
-		// 	fn from(x: $system::Event) -> Self {
-		// 		$name::system(x)
-		// 	}
-		// }
-		// $(
-		// 	impl From<$module_name::Event $( <$generic_param $(, $generic_instance)? > )*> for $name {
-		// 		fn from(x: $module_name::Event $( <$generic_param $(, $generic_instance)? > )*) -> Self {
-		// 			$name::$module_name(x)
-		// 		}
-		// 	}
-		// )*
-		// $crate::__impl_outer_event_json_metadata!(
-		// 	$runtime;
-		// 	$name;
-		// 	$system;
-		// 	$( $module_name::Event $( <$generic_param $(, $generic_instance)? > )*, )*;
-		// );
+		// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
+		#[derive(Clone, PartialEq, Eq, $crate::codec::Encode, $crate::codec::Decode)]
+		#[cfg_attr(feature = "std", derive(Debug))]
+		$(#[$attr])*
+		#[allow(non_camel_case_types)]
+		pub enum $name {
+			system($system::Event),
+			$(
+				$module_name( $module_name::Event $( <$generic_param $(, $generic_instance)? > )* ),
+			)*
+		}
+		impl From<$system::Event> for $name {
+			fn from(x: $system::Event) -> Self {
+				$name::system(x)
+			}
+		}
+		$(
+			impl From<$module_name::Event $( <$generic_param $(, $generic_instance)? > )*> for $name {
+				fn from(x: $module_name::Event $( <$generic_param $(, $generic_instance)? > )*) -> Self {
+					$name::$module_name(x)
+				}
+			}
+		)*
+		$crate::__impl_outer_event_json_metadata!(
+			$runtime;
+			$name;
+			$system;
+			$( $module_name::Event $( <$generic_param $(, $generic_instance)? > )*, )*;
+		);
 	}
 }
 
