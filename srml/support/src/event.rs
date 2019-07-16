@@ -423,35 +423,35 @@ macro_rules! impl_outer_event {
 		Modules {};
 		$( $module_name:ident::Event $( <$generic_param:ident $(, $generic_instance:path)? > )*, )*;
 	) => {
-		// Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
-		#[derive(Clone, PartialEq, Eq, $crate::codec::Encode, $crate::codec::Decode)]
-		#[cfg_attr(feature = "std", derive(Debug))]
-		$(#[$attr])*
-		#[allow(non_camel_case_types)]
-		pub enum $name {
-			system($system::Event),
-			$(
-				$module_name( $module_name::Event $( <$generic_param $(, $generic_instance)? > )* ),
-			)*
-		}
-		impl From<$system::Event> for $name {
-			fn from(x: $system::Event) -> Self {
-				$name::system(x)
-			}
-		}
-		$(
-			impl From<$module_name::Event $( <$generic_param $(, $generic_instance)? > )*> for $name {
-				fn from(x: $module_name::Event $( <$generic_param $(, $generic_instance)? > )*) -> Self {
-					$name::$module_name(x)
-				}
-			}
-		)*
-		$crate::__impl_outer_event_json_metadata!(
-			$runtime;
-			$name;
-			$system;
-			$( $module_name::Event $( <$generic_param $(, $generic_instance)? > )*, )*;
-		);
+		// // Workaround for https://github.com/rust-lang/rust/issues/26925 . Remove when sorted.
+		// #[derive(Clone, PartialEq, Eq, $crate::codec::Encode, $crate::codec::Decode)]
+		// #[cfg_attr(feature = "std", derive(Debug))]
+		// $(#[$attr])*
+		// #[allow(non_camel_case_types)]
+		// pub enum $name {
+		// 	system($system::Event),
+		// 	$(
+		// 		$module_name( $module_name::Event $( <$generic_param $(, $generic_instance)? > )* ),
+		// 	)*
+		// }
+		// impl From<$system::Event> for $name {
+		// 	fn from(x: $system::Event) -> Self {
+		// 		$name::system(x)
+		// 	}
+		// }
+		// $(
+		// 	impl From<$module_name::Event $( <$generic_param $(, $generic_instance)? > )*> for $name {
+		// 		fn from(x: $module_name::Event $( <$generic_param $(, $generic_instance)? > )*) -> Self {
+		// 			$name::$module_name(x)
+		// 		}
+		// 	}
+		// )*
+		// $crate::__impl_outer_event_json_metadata!(
+		// 	$runtime;
+		// 	$name;
+		// 	$system;
+		// 	$( $module_name::Event $( <$generic_param $(, $generic_instance)? > )*, )*;
+		// );
 	}
 }
 
