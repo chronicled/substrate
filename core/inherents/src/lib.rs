@@ -52,7 +52,7 @@ pub type InherentIdentifier = [u8; 8];
 /// Inherent data to include in a block.
 #[derive(Clone, Default, Encode, Decode)]
 pub struct InherentData {
-	/// All inherent data encoded with parity-codec and an identifier.
+	/// All inherent data encoded with parity-scale-codec and an identifier.
 	data: BTreeMap<InherentIdentifier, Vec<u8>>
 }
 

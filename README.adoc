@@ -52,7 +52,7 @@ Other examples include the parachain-heads extrinsic in Polkadot and the "note-m
 
 Substrate chains all have a runtime. The runtime is a WebAssembly "blob" that includes a number of entry-points. Some entry-points are required as part of the underlying Substrate specification. Others are merely convention and required for the default implementation of the Substrate client to be able to author blocks.
 
-If you want to develop a chain with Substrate, you will need to implement the `Core` trait. This `Core` trait generates an API with the minimum necessary functionality to interact with your runtime. A special macro is provided called `impl_runtime_apis!` that help you implement runtime API traits. All runtime API trait implementations need to be done in one call of the `impl_runtime_apis!` macro. All parameters and return values need to implement https://crates.io/crates/parity-codec[`parity-codec`] to be encodable and decodable.
+If you want to develop a chain with Substrate, you will need to implement the `Core` trait. This `Core` trait generates an API with the minimum necessary functionality to interact with your runtime. A special macro is provided called `impl_runtime_apis!` that help you implement runtime API traits. All runtime API trait implementations need to be done in one call of the `impl_runtime_apis!` macro. All parameters and return values need to implement https://crates.io/crates/parity-scale-codec[`parity-scale-codec`] to be encodable and decodable.
 
 Here's a snippet of the Polkadot API implementation as of PoC-3:
 
