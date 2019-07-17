@@ -27,7 +27,7 @@ use crate::on_demand_layer::OnDemand;
 use crate::service::{ExHashT, TransactionPool};
 use bitflags::bitflags;
 use consensus::import_queue::ImportQueue;
-use parity_codec;
+use parity_scale_codec;
 use runtime_primitives::traits::{Block as BlockT};
 use std::sync::Arc;
 use libp2p::identity::{Keypair, secp256k1, ed25519};
@@ -109,14 +109,14 @@ impl Roles {
 	}
 }
 
-impl parity_codec::Encode for Roles {
-	fn encode_to<T: parity_codec::Output>(&self, dest: &mut T) {
+impl parity_scale_codec::Encode for Roles {
+	fn encode_to<T: parity_scale_codec::Output>(&self, dest: &mut T) {
 		dest.push_byte(self.bits())
 	}
 }
 
-impl parity_codec::Decode for Roles {
-	fn decode<I: parity_codec::Input>(input: &mut I) -> Option<Self> {
+impl parity_scale_codec::Decode for Roles {
+	fn decode<I: parity_scale_codec::Input>(input: &mut I) -> Option<Self> {
 		Self::from_bits(input.read_byte()?)
 	}
 }

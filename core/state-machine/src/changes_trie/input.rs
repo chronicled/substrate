@@ -16,7 +16,7 @@
 
 //! Different types of changes trie input pairs.
 
-use parity_codec::{Decode, Encode, Input, Output};
+use parity_scale_codec::{Decode, Encode, Input, Output};
 use crate::changes_trie::BlockNumber;
 
 /// Key of { changed key => set of extrinsic indices } mapping.

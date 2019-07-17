@@ -21,13 +21,13 @@
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 
-use parity_codec::Decode;
+use parity_scale_codec::Decode;
 use keyring::sr25519::Keyring;
 use node_primitives::Hash;
 use node_runtime::{Call, CheckedExtrinsic, UncheckedExtrinsic, BalancesCall};
 use primitives::sr25519;
 use primitives::crypto::Pair;
-use parity_codec::Encode;
+use parity_scale_codec::Encode;
 use sr_primitives::generic::Era;
 use sr_primitives::traits::{Block as BlockT, Header as HeaderT};
 use substrate_service::ServiceFactory;

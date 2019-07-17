@@ -21,7 +21,7 @@ use crate::wasm_executor::WasmExecutor;
 use wasmi::{Module as WasmModule, ModuleRef as WasmModuleInstanceRef};
 use runtime_version::{NativeVersion, RuntimeVersion};
 use std::{collections::HashMap, panic::UnwindSafe};
-use parity_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use crate::RuntimeInfo;
 use primitives::{Blake2Hasher, NativeOrEncoded};
 use primitives::storage::well_known_keys;

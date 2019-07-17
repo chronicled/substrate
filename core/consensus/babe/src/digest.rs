@@ -20,7 +20,7 @@ use primitives::sr25519::Signature;
 use babe_primitives::{self, BABE_ENGINE_ID, SlotNumber};
 use runtime_primitives::{DigestItem, generic::OpaqueDigestItemId};
 use std::fmt::Debug;
-use parity_codec::{Decode, Encode, Codec, Input};
+use parity_scale_codec::{Decode, Encode, Codec, Input};
 use schnorrkel::{vrf::{VRFProof, VRFOutput, VRF_OUTPUT_LENGTH, VRF_PROOF_LENGTH}};
 
 /// A BABE pre-digest.  It includes:
@@ -55,7 +55,7 @@ impl Encode for BabePreDigest {
 			self.index,
 			self.slot_num,
 		);
-		parity_codec::Encode::encode(&tmp)
+		parity_scale_codec::Encode::encode(&tmp)
 	}
 }
 

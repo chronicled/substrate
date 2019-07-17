@@ -12,7 +12,7 @@ use std::fmt;
 use std::error::Error as StdError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-/// Error concerning the Parity-Codec based decoder.
+/// Error concerning the parity-scale-codec based decoder.
 pub enum Error {
 	/// Bad format.
 	BadFormat,

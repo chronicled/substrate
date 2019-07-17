@@ -34,7 +34,7 @@ use consensus_common::{BlockOrigin, ForkChoiceStrategy, ImportedAux, ImportBlock
 use consensus_common::import_queue::{BoxBlockImport, BoxJustificationImport, BoxFinalityProofImport};
 use std::collections::{HashMap, HashSet};
 use std::result;
-use parity_codec::Decode;
+use parity_scale_codec::Decode;
 use runtime_primitives::traits::{ApiRef, ProvideRuntimeApi, Header as HeaderT};
 use runtime_primitives::generic::BlockId;
 use substrate_primitives::{NativeOrEncoded, ExecutionContext};

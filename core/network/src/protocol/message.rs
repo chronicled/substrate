@@ -18,7 +18,7 @@
 
 use bitflags::bitflags;
 use runtime_primitives::{ConsensusEngineId, traits::{Block as BlockT, Header as HeaderT}};
-use parity_codec::{Encode, Decode, Input, Output};
+use parity_scale_codec::{Encode, Decode, Input, Output};
 pub use self::generic::{
 	BlockAnnounce, RemoteCallRequest, RemoteReadRequest,
 	RemoteHeaderRequest, RemoteHeaderResponse,
@@ -126,7 +126,7 @@ pub struct RemoteReadResponse {
 /// Generic types.
 pub mod generic {
 	use crate::custom_proto::CustomMessage;
-	use parity_codec::{Encode, Decode};
+	use parity_scale_codec::{Encode, Decode};
 	use runtime_primitives::Justification;
 	use crate::config::Roles;
 	use super::{

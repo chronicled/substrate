@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use log::{debug, warn, info};
-use parity_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use futures::prelude::*;
 use tokio_timer::Delay;
 use parking_lot::RwLock;
@@ -95,7 +95,7 @@ impl<Block: BlockT> Encode for CompletedRounds<Block> {
 }
 
 impl<Block: BlockT> Decode for CompletedRounds<Block> {
-	fn decode<I: parity_codec::Input>(value: &mut I) -> Option<Self> {
+	fn decode<I: parity_scale_codec::Input>(value: &mut I) -> Option<Self> {
 		<(Vec<CompletedRound<Block>>, u64, Vec<AuthorityId>)>::decode(value)
 			.map(|(rounds, set_id, voters)| CompletedRounds {
 				rounds: rounds.into(),

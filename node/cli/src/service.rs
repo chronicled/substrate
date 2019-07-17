@@ -217,7 +217,7 @@ mod tests {
 	use consensus_common::{Environment, Proposer, ImportBlock, BlockOrigin, ForkChoiceStrategy};
 	use node_primitives::DigestItem;
 	use node_runtime::{BalancesCall, Call, CENTS, SECS_PER_BLOCK, UncheckedExtrinsic};
-	use parity_codec::{Compact, Encode, Decode};
+	use parity_scale_codec::{Compact, Encode, Decode};
 	use primitives::{
 		crypto::Pair as CryptoPair, ed25519::Pair, blake2_256,
 		sr25519::Public as AddressPublic, H256,

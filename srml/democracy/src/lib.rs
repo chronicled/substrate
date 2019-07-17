@@ -21,7 +21,7 @@
 use rstd::prelude::*;
 use rstd::{result, convert::TryFrom};
 use primitives::traits::{Zero, Bounded, CheckedMul, CheckedDiv, EnsureOrigin, Hash};
-use parity_codec::{Encode, Decode, Input, Output};
+use parity_scale_codec::{Encode, Decode, Input, Output};
 use srml_support::{
 	decl_module, decl_storage, decl_event, ensure,
 	StorageValue, StorageMap, Parameter, Dispatchable, IsSubType, EnumerableStorageMap,

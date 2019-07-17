@@ -19,7 +19,7 @@ use client::backend::OffchainStorage;
 use crate::AuthorityKeyProvider;
 use futures::{Stream, Future, sync::mpsc};
 use log::{info, debug, warn, error};
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 use primitives::offchain::{
 	Timestamp, HttpRequestId, HttpRequestStatus, HttpError,
 	Externalities as OffchainExt,

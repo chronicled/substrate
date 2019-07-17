@@ -23,7 +23,7 @@ use hex_literal::hex;
 use clap::load_yaml;
 use bip39::{Mnemonic, Language, MnemonicType};
 use substrate_primitives::{ed25519, sr25519, hexdisplay::HexDisplay, Pair, Public, crypto::Ss58Codec, blake2_256};
-use parity_codec::{Encode, Decode, Compact};
+use parity_scale_codec::{Encode, Decode, Compact};
 use sr_primitives::generic::Era;
 use node_primitives::{Balance, Index, Hash};
 use node_runtime::{Call, UncheckedExtrinsic, BalancesCall};

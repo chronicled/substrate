@@ -17,7 +17,7 @@
 //! Functionality for reading and storing children hashes from db.
 
 use kvdb::{KeyValueDB, DBTransaction};
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 use crate::error;
 use std::hash::Hash;
 

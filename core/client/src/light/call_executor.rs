@@ -22,7 +22,7 @@ use std::{
 	marker::PhantomData, cell::RefCell, rc::Rc,
 };
 
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 use primitives::{offchain, H256, Blake2Hasher, convert_hash, NativeOrEncoded};
 use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::{One, Block as BlockT, Header as HeaderT};

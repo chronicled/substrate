@@ -26,7 +26,7 @@
 //! Afterwards, the proofs can be fed to a consensus module when reporting misbehavior.
 
 use rstd::prelude::*;
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 use primitives::KeyTypeId;
 use primitives::traits::{Convert, OpaqueKeys, Hash as HashT};
 use srml_support::{

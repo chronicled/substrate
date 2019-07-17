@@ -104,3 +104,10 @@ is-it-maintained-open-issues = { repository = "paritytech/substrate" }
 [profile.release]
 # Substrate runtime requires unwinding.
 panic = "unwind"
+
+[patch.crates-io]
+parity-scale-codec = { path = "../parity-scale-codec" }
+finality-grandpa = { path = "../finality-grandpa" }
+primitive-types = { path = "../parity-common/primitive-types" }
+rhododendron = { path = "../rhododendron" }
+trie-bench = { path = "../trie/test-support/trie-bench" }

@@ -35,7 +35,7 @@ mod pruning;
 
 use std::fmt;
 use parking_lot::RwLock;
-use parity_codec as codec;
+use parity_scale_codec as codec;
 use codec::Codec;
 use std::collections::{VecDeque, HashMap, hash_map::Entry};
 use noncanonical::NonCanonicalOverlay;
@@ -71,7 +71,7 @@ pub enum Error<E: fmt::Debug> {
 	/// Database backend error.
 	Db(E),
 	/// `Codec` decoding error.
-	Decoding,
+	Decoding(codec::Error),
 	/// Trying to canonicalize invalid block.
 	InvalidBlock,
 	/// Trying to insert block with invalid number.
@@ -86,12 +86,18 @@ impl<E: fmt::Debug> fmt::Debug for Error<E> {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		match self {
 			Error::Db(e) => e.fmt(f),
-			Error::Decoding => write!(f, "Error decoding slicable value"),
+			Error::Decoding(e) => e.fmt(f),
 			Error::InvalidBlock => write!(f, "Trying to canonicalize invalid block"),
 			Error::InvalidBlockNumber => write!(f, "Trying to insert block with invalid number"),
 			Error::InvalidParent => write!(f, "Trying to insert block with unknown parent"),
 			Error::DiscardingPinned => write!(f, "Trying to discard pinned state"),
 		}
+	}
+}
+
+impl<E: fmt::Debug> From<codec::Error> for Error<E> {
+	fn from(x: codec::Error) -> Self {
+		Error::Decoding(x)
 	}
 }
 

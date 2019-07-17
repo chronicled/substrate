@@ -27,7 +27,7 @@ use kvdb_rocksdb::{Database, DatabaseConfig};
 use log::debug;
 
 use client;
-use parity_codec::Decode;
+use parity_scale_codec::Decode;
 use trie::DBValue;
 use runtime_primitives::generic::BlockId;
 use runtime_primitives::traits::{

@@ -22,7 +22,7 @@ use std::{fmt, panic::UnwindSafe, result, marker::PhantomData};
 use std::borrow::Cow;
 use log::warn;
 use hash_db::Hasher;
-use parity_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	storage::well_known_keys, NativeOrEncoded, NeverNativeValue, offchain
 };
@@ -962,7 +962,7 @@ where
 #[cfg(test)]
 mod tests {
 	use std::collections::HashMap;
-	use parity_codec::Encode;
+	use parity_scale_codec::Encode;
 	use overlayed_changes::OverlayedValue;
 	use super::*;
 	use super::backend::InMemory;

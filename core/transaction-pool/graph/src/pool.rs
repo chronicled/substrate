@@ -452,7 +452,7 @@ fn fire_events<H, H2, Ex>(
 mod tests {
 	use super::*;
 	use futures::Stream;
-	use parity_codec::Encode;
+	use parity_scale_codec::Encode;
 	use test_runtime::{Block, Extrinsic, Transfer, H256, AccountId};
 	use assert_matches::assert_matches;
 	use crate::watcher;

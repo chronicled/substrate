@@ -43,7 +43,7 @@ use client::{
 	light::fetcher::{FetchChecker, RemoteCallRequest},
 	ExecutionStrategy, NeverOffchainExt,
 };
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 use grandpa::BlockNumberOps;
 use runtime_primitives::{Justification, generic::BlockId};
 use runtime_primitives::traits::{

@@ -42,7 +42,7 @@ use runtime_primitives::traits::{
 };
 use std::{sync::Arc, u64, fmt::{Debug, Display}, time::{Instant, Duration}};
 use runtime_support::serde::{Serialize, Deserialize};
-use parity_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use parking_lot::Mutex;
 use primitives::{Pair, Public, sr25519};
 use merlin::Transcript;

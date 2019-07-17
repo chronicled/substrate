@@ -1060,7 +1060,7 @@ impl_function_executor!(this: FunctionExecutor<'e, E>,
 		request_id: u32,
 		written_out: *mut u32
 	) -> *mut u8 => {
-		use parity_codec::Encode;
+		use parity_scale_codec::Encode;
 
 		let headers = this.ext.offchain()
 			.map(|api| api.http_response_headers(offchain::HttpRequestId(request_id as u16)))
@@ -1151,7 +1151,7 @@ impl_function_executor!(this: FunctionExecutor<'e, E>,
 		return_val_len: usize,
 		state: usize
 	) -> u32 => {
-		use parity_codec::{Decode, Encode};
+		use parity_scale_codec::{Decode, Encode};
 
 		trace!(target: "sr-sandbox", "invoke, instance_idx={}", instance_idx);
 		let export = this.memory.get(export_ptr, export_len as usize)
@@ -1416,7 +1416,7 @@ impl WasmExecutor {
 mod tests {
 	use super::*;
 
-	use parity_codec::Encode;
+	use parity_scale_codec::Encode;
 
 	use state_machine::TestExternalities as CoreTestExternalities;
 	use hex_literal::hex;

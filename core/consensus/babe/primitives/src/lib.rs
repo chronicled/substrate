@@ -18,7 +18,7 @@
 #![deny(warnings, unsafe_code, missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode};
 use rstd::vec::Vec;
 use runtime_primitives::ConsensusEngineId;
 use substrate_primitives::sr25519::Public;

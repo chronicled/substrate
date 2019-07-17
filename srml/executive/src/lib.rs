@@ -83,7 +83,7 @@ use primitives::{generic::Digest, traits::{
 	ValidateUnsigned,
 }};
 use srml_support::{Dispatchable, traits::MakePayment};
-use parity_codec::{Codec, Encode};
+use parity_scale_codec::{Codec, Encode};
 use system::{extrinsics_root, DigestOf};
 use primitives::{ApplyOutcome, ApplyError};
 use primitives::transaction_validity::{TransactionValidity, TransactionPriority, TransactionLongevity};

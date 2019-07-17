@@ -28,7 +28,7 @@ use network::message;
 use consensus_common::BlockOrigin;
 use crate::components::{self, Components, ServiceFactory, FactoryFullConfiguration, FactoryBlockNumber, RuntimeGenesis};
 use crate::new_client;
-use parity_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use crate::error;
 use crate::chain_spec::ChainSpec;
 
