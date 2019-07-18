@@ -58,7 +58,9 @@ impl OpaqueKeys for UintAuthorityId {
 			)
 		}
 	}
-	fn get<T: Decode>(&self, _: KeyTypeId) -> Option<T> { self.0.using_encoded(|mut x| T::decode(&mut x)) }
+	fn get<T: Decode>(&self, _: KeyTypeId) -> Option<T> {
+		self.0.using_encoded(|mut x| T::decode(&mut x).ok())
+	}
 }
 
 /// Digest item
@@ -124,7 +126,9 @@ impl traits::Header for Header {
 impl<'a> Deserialize<'a> for Header {
 	fn deserialize<D: Deserializer<'a>>(de: D) -> Result<Self, D::Error> {
 		let r = <Vec<u8>>::deserialize(de)?;
-		Decode::decode(&mut &r[..]).ok_or(DeError::custom("Invalid value passed into decode"))
+		Decode::decode(&mut &r[..]).map_err(|e| {
+			DeError::custom(format!("Invalid value passed into decode: {}", e.what()))
+		})
 	}
 }
 
@@ -190,7 +194,9 @@ impl<Xt: 'static + Codec + Sized + Send + Sync + Serialize + Clone + Eq + Debug 
 impl<'a, Xt> Deserialize<'a> for Block<Xt> where Block<Xt>: Decode {
 	fn deserialize<D: Deserializer<'a>>(de: D) -> Result<Self, D::Error> {
 		let r = <Vec<u8>>::deserialize(de)?;
-		Decode::decode(&mut &r[..]).ok_or(DeError::custom("Invalid value passed into decode"))
+		Decode::decode(&mut &r[..]).map_err(|e| {
+			DeError::custom(format!("Invalid value passed into decode: {}", e.what()))
+		})
 	}
 }
 

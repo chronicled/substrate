@@ -284,7 +284,7 @@ impl OverlayedChanges {
 		match self.changes_trie_config.is_some() {
 			true => Some(
 				self.storage(EXTRINSIC_INDEX)
-					.and_then(|idx| idx.and_then(|idx| Decode::decode(&mut &*idx)))
+					.and_then(|idx| idx.and_then(|idx| Decode::decode(&mut &*idx).ok()))
 					.unwrap_or(NO_EXTRINSIC_INDEX)),
 			false => None,
 		}

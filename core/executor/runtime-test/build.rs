@@ -19,9 +19,6 @@ use wasm_builder_runner::{build_current_project, WasmBuilderSource};
 fn main() {
 	build_current_project(
 		"wasm_binary.rs",
-		WasmBuilderSource::CratesOrPath {
-			path: "../../utils/wasm-builder",
-			version: "1.0.4",
-		},
+		WasmBuilderSource::Path("../../utils/wasm-builder")
 	);
 }

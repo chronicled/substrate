@@ -156,13 +156,13 @@ fn prepare_digest_input<'a, S, H, Number>(
 
 			let extrinsic_prefix = ExtrinsicIndex::key_neutral_prefix(digest_build_block.clone());
 			trie_storage.for_keys_with_prefix(&extrinsic_prefix, |key|
-				if let Some(InputKey::ExtrinsicIndex::<Number>(trie_key)) = Decode::decode(&mut &key[..]) {
+				if let Ok(InputKey::ExtrinsicIndex::<Number>(trie_key)) = Decode::decode(&mut &key[..]) {
 					insert_to_map(trie_key.key);
 				});
 
 			let digest_prefix = DigestIndex::key_neutral_prefix(digest_build_block.clone());
 			trie_storage.for_keys_with_prefix(&digest_prefix, |key|
-				if let Some(InputKey::DigestIndex::<Number>(trie_key)) = Decode::decode(&mut &key[..]) {
+				if let Ok(InputKey::DigestIndex::<Number>(trie_key)) = Decode::decode(&mut &key[..]) {
 					insert_to_map(trie_key.key);
 				});
 

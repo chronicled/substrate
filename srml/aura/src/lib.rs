@@ -138,7 +138,7 @@ impl ProvideInherentData for InherentDataProvider {
 	}
 
 	fn error_to_string(&self, error: &[u8]) -> Option<String> {
-		RuntimeString::decode(&mut &error[..]).map(Into::into)
+		RuntimeString::decode(&mut &error[..]).map(Into::into).ok()
 	}
 }
 

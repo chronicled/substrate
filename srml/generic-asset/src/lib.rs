@@ -151,7 +151,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Decode, Encode, HasCompact, Input, Output};
+use parity_scale_codec::{Decode, Encode, HasCompact, Input, Output, Error};
 
 use primitives::traits::{
 	CheckedAdd, CheckedSub, MaybeSerializeDebug, Member, One, Saturating, SimpleArithmetic, Zero, Bounded
@@ -285,9 +285,14 @@ impl<AccountId: Encode> Encode for PermissionVersions<AccountId> {
 }
 
 impl<AccountId: Decode> Decode for PermissionVersions<AccountId> {
-	fn decode<I: Input>(input: &mut I) -> Option<Self> {
+	fn min_encoded_len() -> usize {
+		PermissionVersionNumber::min_encoded_len()
+			+ <PermissionsV1<AccountId>>::min_encoded_len()
+	}
+
+	fn decode<I: Input>(input: &mut I) -> core::result::Result<Self, Error> {
 		let version = PermissionVersionNumber::decode(input)?;
-		Some(
+		Ok(
 			match version {
 				PermissionVersionNumber::V1 => PermissionVersions::V1(Decode::decode(input)?)
 			}

@@ -372,7 +372,7 @@ mod tests {
 		{
 			for (id, data) in digests {
 				if id == TEST_ID {
-					return u64::decode(&mut &data[..]);
+					return u64::decode(&mut &data[..]).ok();
 				}
 			}
 
@@ -399,8 +399,9 @@ mod tests {
 			for (id, seal) in seals {
 				if id == TEST_ID {
 					match u64::decode(&mut &seal[..]) {
-						None => return Err("wrong seal"),
-						Some(a) => {
+						// TODO TODO: use err with concat ?
+						Err(_) => return Err("wrong seal encoding"),
+						Ok(a) => {
 							if a != author {
 								return Err("wrong author in seal");
 							}

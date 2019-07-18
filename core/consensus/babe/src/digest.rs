@@ -20,7 +20,7 @@ use primitives::sr25519::Signature;
 use babe_primitives::{self, BABE_ENGINE_ID, SlotNumber};
 use runtime_primitives::{DigestItem, generic::OpaqueDigestItemId};
 use std::fmt::Debug;
-use parity_scale_codec::{Decode, Encode, Codec, Input};
+use parity_scale_codec::{Decode, Encode, Codec, Input, Error};
 use schnorrkel::{vrf::{VRFProof, VRFOutput, VRF_OUTPUT_LENGTH, VRF_PROOF_LENGTH}};
 
 /// A BABE pre-digest.  It includes:
@@ -60,15 +60,21 @@ impl Encode for BabePreDigest {
 }
 
 impl Decode for BabePreDigest {
-	fn decode<R: Input>(i: &mut R) -> Option<Self> {
-		let (output, proof, index, slot_num): RawBabePreDigest = Decode::decode(i)?;
+	fn min_encoded_len() -> usize {
+		RawBabePreDigest::min_encoded_len()
+	}
+
+	fn decode<R: Input>(i: &mut R) -> Result<Self, Error> {
+		let (output, proof, index, slot_num) = RawBabePreDigest::decode(i)?;
 
 		// Verify (at compile time) that the sizes in babe_primitives are correct
 		let _: [u8; babe_primitives::VRF_OUTPUT_LENGTH] = output;
 		let _: [u8; babe_primitives::VRF_PROOF_LENGTH] = proof;
-		Some(BabePreDigest {
-			proof: VRFProof::from_bytes(&proof).ok()?,
-			vrf_output: VRFOutput::from_bytes(&output).ok()?,
+		Ok(BabePreDigest {
+			// TODO TODO: make better error
+			proof: VRFProof::from_bytes(&proof).map_err(|_| Error::from("Invalid VRFProof"))?,
+			// TODO TODO: make better error
+			vrf_output: VRFOutput::from_bytes(&output).map_err(|_| Error::from("Invalid VRFOutput"))?,
 			index,
 			slot_num,
 		})

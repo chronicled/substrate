@@ -851,21 +851,28 @@ pub trait OpaqueKeys: Clone {
 	/// Get the raw bytes of key with key-type ID `i`.
 	fn get_raw(&self, i: super::KeyTypeId) -> &[u8];
 	/// Get the decoded key with index `i`.
-	fn get<T: Decode>(&self, i: super::KeyTypeId) -> Option<T> { T::decode(&mut self.get_raw(i)) }
+	fn get<T: Decode>(&self, i: super::KeyTypeId) -> Option<T> {
+		T::decode(&mut self.get_raw(i)).ok()
+	}
 	/// Verify a proof of ownership for the keys.
 	fn ownership_proof_is_valid(&self, _proof: &[u8]) -> bool { true }
 }
 
 struct TrailingZeroInput<'a>(&'a [u8]);
 impl<'a> codec::Input for TrailingZeroInput<'a> {
-	fn read(&mut self, into: &mut [u8]) -> usize {
-		let len = into.len().min(self.0.len());
-		into[..len].copy_from_slice(&self.0[..len]);
-		for i in &mut into[len..] {
-			*i = 0;
-		}
-		self.0 = &self.0[len..];
-		into.len()
+	fn require_min_len(&mut self, len: usize) -> Result<(), codec::Error> {
+		unimplemented!();
+	}
+
+	fn read(&mut self, into: &mut [u8]) -> Result<(), codec::Error> {
+		unimplemented!();
+		// let len = into.len().min(self.0.len());
+		// into[..len].copy_from_slice(&self.0[..len]);
+		// for i in &mut into[len..] {
+		// 	*i = 0;
+		// }
+		// self.0 = &self.0[len..];
+		// into.len()
 	}
 }
 
@@ -913,7 +920,7 @@ impl<T: Encode + Decode + Default, Id: Encode + Decode + TypeId> AccountIdConver
 		x.using_encoded(|d| {
 			if &d[0..4] != Id::TYPE_ID { return None }
 			let mut cursor = &d[4..];
-			let result = Decode::decode(&mut cursor)?;
+			let result = Decode::decode(&mut cursor).ok()?;
 			if cursor.iter().all(|x| *x == 0) {
 				Some(result)
 			} else {

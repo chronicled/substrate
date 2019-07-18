@@ -174,7 +174,7 @@ pub trait StorageDoubleMap<K1: codec::Codec, K2: codec::Codec, V: codec::Codec> 
 		let new_val = <V as codec::EncodeAppend>::append(
 			storage.get_raw(&key).unwrap_or_default(),
 			items,
-		).ok_or_else(|| "Could not append given item")?;
+		).map_err(|e| e.what())?;
 		storage.put_raw(&key, &new_val);
 		Ok(())
 	}

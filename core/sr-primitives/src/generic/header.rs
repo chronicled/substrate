@@ -20,7 +20,7 @@
 use serde::Serialize;
 #[cfg(feature = "std")]
 use log::debug;
-use crate::codec::{Decode, Encode, Codec, Input, Output, HasCompact, EncodeAsRef};
+use crate::codec::{Decode, Encode, Codec, Input, Output, HasCompact, EncodeAsRef, Error};
 use crate::traits::{
 	self, Member, SimpleArithmetic, SimpleBitOps, MaybeDisplay, Hash as HashT, MaybeSerializeDebug,
 	MaybeSerializeDebugButNotDeserialize
@@ -28,7 +28,7 @@ use crate::traits::{
 use crate::generic::Digest;
 
 /// Abstraction over a block header for a substrate chain.
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[cfg_attr(feature = "std", serde(deny_unknown_fields))]
@@ -37,6 +37,7 @@ pub struct Header<Number: Copy + Into<u128>, Hash: HashT> {
 	pub parent_hash: <Hash as HashT>::Output,
 	/// The block number.
 	#[cfg_attr(feature = "std", serde(serialize_with = "serialize_number"))]
+	#[codec(compact)]
 	pub number: Number,
 	/// The state trie merkle root
 	pub state_root: <Hash as HashT>::Output,
@@ -55,35 +56,39 @@ pub fn serialize_number<S, T: Copy + Into<u128>>(val: &T, s: S) -> Result<S::Ok,
 	::serde::Serialize::serialize(&(upper + lower), s)
 }
 
-impl<Number, Hash> Decode for Header<Number, Hash> where
-	Number: HasCompact + Copy + Into<u128>,
-	Hash: HashT,
-	Hash::Output: Decode,
-{
-	fn decode<I: Input>(input: &mut I) -> Option<Self> {
-		Some(Header {
-			parent_hash: Decode::decode(input)?,
-			number: <<Number as HasCompact>::Type>::decode(input)?.into(),
-			state_root: Decode::decode(input)?,
-			extrinsics_root: Decode::decode(input)?,
-			digest: Decode::decode(input)?,
-		})
-	}
-}
+// TODO TODO: remove
+// impl<Number, Hash> Decode for Header<Number, Hash> where
+// 	Number: HasCompact + Copy + Into<u128>,
+// 	Hash: HashT,
+// 	Hash::Output: Decode,
+// {
+// 	fn min_encoded_len() -> usize {
+// 	}
 
-impl<Number, Hash> Encode for Header<Number, Hash> where
-	Number: HasCompact + Copy + Into<u128>,
-	Hash: HashT,
-	Hash::Output: Encode,
-{
-	fn encode_to<T: Output>(&self, dest: &mut T) {
-		dest.push(&self.parent_hash);
-		dest.push(&<<<Number as HasCompact>::Type as EncodeAsRef<_>>::RefType>::from(&self.number));
-		dest.push(&self.state_root);
-		dest.push(&self.extrinsics_root);
-		dest.push(&self.digest);
-	}
-}
+// 	fn decode<I: Input>(input: &mut I) -> Result<Self, Error> {
+// 		Ok(Header {
+// 			parent_hash: Decode::decode(input)?,
+// 			number: <<Number as HasCompact>::Type>::decode(input)?.into(),
+// 			state_root: Decode::decode(input)?,
+// 			extrinsics_root: Decode::decode(input)?,
+// 			digest: Decode::decode(input)?,
+// 		})
+// 	}
+// }
+
+// impl<Number, Hash> Encode for Header<Number, Hash> where
+// 	Number: HasCompact + Copy + Into<u128>,
+// 	Hash: HashT,
+// 	Hash::Output: Encode,
+// {
+// 	fn encode_to<T: Output>(&self, dest: &mut T) {
+// 		dest.push(&self.parent_hash);
+// 		dest.push(&<<<Number as HasCompact>::Type as EncodeAsRef<_>>::RefType>::from(&self.number));
+// 		dest.push(&self.state_root);
+// 		dest.push(&self.extrinsics_root);
+// 		dest.push(&self.digest);
+// 	}
+// }
 
 impl<Number, Hash> traits::Header for Header<Number, Hash> where
 	Number: Member + MaybeSerializeDebug + ::rstd::hash::Hash + MaybeDisplay + SimpleArithmetic + Codec + Copy + Into<u128>,

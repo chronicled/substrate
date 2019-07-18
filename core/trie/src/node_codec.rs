@@ -18,10 +18,9 @@
 
 use rstd::marker::PhantomData;
 use rstd::vec::Vec;
-use codec::{Encode, Decode, Compact};
+use codec::{Encode, Decode, Compact, Error};
 use hash_db::Hasher;
 use trie_db::{self, DBValue, NibbleSlice, node::Node, ChildReference};
-use crate::error::Error;
 use super::{EMPTY_TRIE, LEAF_NODE_OFFSET, LEAF_NODE_BIG, EXTENSION_NODE_OFFSET,
 	EXTENSION_NODE_BIG, take, partial_to_key, node_header::NodeHeader, branch_node};
 
@@ -36,16 +35,15 @@ impl<H: Hasher> trie_db::NodeCodec<H> for NodeCodec<H> {
 		H::hash(&[0u8][..])
 	}
 
-	fn decode(data: &[u8]) -> ::rstd::result::Result<Node, Self::Error> {
-		use Error::BadFormat;
+	fn decode(data: &[u8]) -> ::rstd::result::Result<Node, Error> {
 		let input = &mut &*data;
-		match NodeHeader::decode(input).ok_or(BadFormat)? {
+		match NodeHeader::decode(input)? {
 			NodeHeader::Null => Ok(Node::Empty),
 			NodeHeader::Branch(has_value) => {
-				let bitmap = u16::decode(input).ok_or(BadFormat)?;
+				let bitmap = u16::decode(input)?;
 				let value = if has_value {
-					let count = <Compact<u32>>::decode(input).ok_or(BadFormat)?.0 as usize;
-					Some(take(input, count).ok_or(BadFormat)?)
+					let count = <Compact<u32>>::decode(input)?.0 as usize;
+					Some(take(input, count)?)
 				} else {
 					None
 				};
@@ -53,8 +51,8 @@ impl<H: Hasher> trie_db::NodeCodec<H> for NodeCodec<H> {
 				let mut pot_cursor = 1;
 				for i in 0..16 {
 					if bitmap & pot_cursor != 0 {
-						let count = <Compact<u32>>::decode(input).ok_or(BadFormat)?.0 as usize;
-						children[i] = Some(take(input, count).ok_or(BadFormat)?);
+						let count = <Compact<u32>>::decode(input)?.0 as usize;
+						children[i] = Some(take(input, count)?);
 					}
 					pot_cursor <<= 1;
 				}
@@ -62,21 +60,21 @@ impl<H: Hasher> trie_db::NodeCodec<H> for NodeCodec<H> {
 			}
 			NodeHeader::Extension(nibble_count) => {
 				if nibble_count % 2 == 1 && input[0] & 0xf0 != 0x00 {
-					return Err(BadFormat);
+					return Err("Invalid node header extension".into());
 				}
-				let nibble_data = take(input, (nibble_count + 1) / 2).ok_or(BadFormat)?;
+				let nibble_data = take(input, (nibble_count + 1) / 2)?;
 				let nibble_slice = NibbleSlice::new_offset(nibble_data, nibble_count % 2);
-				let count = <Compact<u32>>::decode(input).ok_or(BadFormat)?.0 as usize;
-				Ok(Node::Extension(nibble_slice, take(input, count).ok_or(BadFormat)?))
+				let count = <Compact<u32>>::decode(input)?.0 as usize;
+				Ok(Node::Extension(nibble_slice, take(input, count)?))
 			}
 			NodeHeader::Leaf(nibble_count) => {
 				if nibble_count % 2 == 1 && input[0] & 0xf0 != 0x00 {
-					return Err(BadFormat);
+					return Err("Invalid node header leaf".into());
 				}
-				let nibble_data = take(input, (nibble_count + 1) / 2).ok_or(BadFormat)?;
+				let nibble_data = take(input, (nibble_count + 1) / 2)?;
 				let nibble_slice = NibbleSlice::new_offset(nibble_data, nibble_count % 2);
-				let count = <Compact<u32>>::decode(input).ok_or(BadFormat)?.0 as usize;
-				Ok(Node::Leaf(nibble_slice, take(input, count).ok_or(BadFormat)?))
+				let count = <Compact<u32>>::decode(input)?.0 as usize;
+				Ok(Node::Leaf(nibble_slice, take(input, count)?))
 			}
 		}
 	}

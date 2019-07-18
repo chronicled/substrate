@@ -218,6 +218,13 @@ fn create_project(cargo_manifest: &Path, wasm_workspace: &Path) -> PathBuf {
 
 				[dependencies]
 				wasm_project = {{ package = "{crate_name}", path = "{crate_path}", default-features = false, features = [ "no_std" ] }}
+
+				[patch.crates-io]
+				parity-scale-codec = {{ path = "../../../../../parity-scale-codec" }}
+				finality-grandpa = {{ path = "../../../../../finality-grandpa" }}
+				primitive-types = {{ path = "../../../../../parity-common/primitive-types" }}
+				rhododendron = {{ path = "../../../../../rhododendron" }}
+				trie-bench = {{ path = "../../../../../trie/test-support/trie-bench" }}
 			"#,
 			crate_name = crate_name,
 			crate_path = crate_path.display(),

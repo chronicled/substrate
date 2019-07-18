@@ -326,12 +326,14 @@ define_env!(Env, <E: Ext>,
 		let callee = {
 			let callee_buf = read_sandbox_memory(ctx, callee_ptr, callee_len)?;
 			<<E as Ext>::T as system::Trait>::AccountId::decode(&mut &callee_buf[..])
-				.ok_or_else(|| sandbox::HostError)?
+				// TODO TODO: use error ?
+				.map_err(|_| sandbox::HostError)?
 		};
 		let value = {
 			let value_buf = read_sandbox_memory(ctx, value_ptr, value_len)?;
 			BalanceOf::<<E as Ext>::T>::decode(&mut &value_buf[..])
-				.ok_or_else(|| sandbox::HostError)?
+				// TODO TODO: use error ?
+				.map_err(|_| sandbox::HostError)?
 		};
 		let input_data = read_sandbox_memory(ctx, input_data_ptr, input_data_len)?;
 
@@ -401,12 +403,14 @@ define_env!(Env, <E: Ext>,
 	) -> u32 => {
 		let code_hash = {
 			let code_hash_buf = read_sandbox_memory(ctx, init_code_ptr, init_code_len)?;
-			<CodeHash<<E as Ext>::T>>::decode(&mut &code_hash_buf[..]).ok_or_else(|| sandbox::HostError)?
+			// TODO TODO: use error ?
+			<CodeHash<<E as Ext>::T>>::decode(&mut &code_hash_buf[..]).map_err(|_| sandbox::HostError)?
 		};
 		let value = {
 			let value_buf = read_sandbox_memory(ctx, value_ptr, value_len)?;
 			BalanceOf::<<E as Ext>::T>::decode(&mut &value_buf[..])
-				.ok_or_else(|| sandbox::HostError)?
+				// TODO TODO: use error ?
+				.map_err(|_| sandbox::HostError)?
 		};
 		let input_data = read_sandbox_memory(ctx, input_data_ptr, input_data_len)?;
 
@@ -571,7 +575,8 @@ define_env!(Env, <E: Ext>,
 		let call = {
 			let call_buf = read_sandbox_memory(ctx, call_ptr, call_len)?;
 			<<<E as Ext>::T as Trait>::Call>::decode(&mut &call_buf[..])
-				.ok_or_else(|| sandbox::HostError)?
+				// TODO TODO: use error ?
+				.map_err(|_| sandbox::HostError)?
 		};
 
 		// Charge gas for dispatching this call.
@@ -638,7 +643,8 @@ define_env!(Env, <E: Ext>,
 			_ => {
 				let topics_buf = read_sandbox_memory(ctx, topics_ptr, topics_len)?;
 				Vec::<TopicOf<<E as Ext>::T>>::decode(&mut &topics_buf[..])
-					.ok_or_else(|| sandbox::HostError)?
+					// TODO TODO: use error ?
+					.map_err(|_| sandbox::HostError)?
 			}
 		};
 
@@ -678,7 +684,8 @@ define_env!(Env, <E: Ext>,
 		let value = {
 			let value_buf = read_sandbox_memory(ctx, value_ptr, value_len)?;
 			BalanceOf::<<E as Ext>::T>::decode(&mut &value_buf[..])
-				.ok_or_else(|| sandbox::HostError)?
+				// TODO TODO: use error ?
+				.map_err(|_| sandbox::HostError)?
 		};
 		ctx.ext.set_rent_allowance(value);
 

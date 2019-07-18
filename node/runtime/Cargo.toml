@@ -80,3 +80,10 @@ std = [
 	"substrate-keyring",
 	"offchain-primitives/std",
 ]
+
+[patch.crates-io]
+parity-scale-codec = { path = "../parity-scale-codec" }
+finality-grandpa = { path = "../finality-grandpa" }
+primitive-types = { path = "../parity-common/primitive-types" }
+rhododendron = { path = "../rhododendron" }
+trie-bench = { path = "../trie/test-support/trie-bench" }

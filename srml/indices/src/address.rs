@@ -19,7 +19,8 @@
 #[cfg(feature = "std")]
 use std::fmt;
 use rstd::convert::TryInto;
-use crate::{Member, Decode, Encode, Input, Output};
+use primitives::traits::Member;
+use parity_scale_codec::{Decode, Encode, Input, Output, Error};
 
 /// An indices-aware address, which can be either a direct `AccountId` or
 /// an index.
@@ -54,16 +55,24 @@ impl<AccountId, AccountIndex> From<AccountId> for Address<AccountId, AccountInde
 	}
 }
 
-fn need_more_than<T: PartialOrd>(a: T, b: T) -> Option<T> {
-	if a < b { Some(b) } else { None }
+fn need_more_than<T: PartialOrd>(a: T, b: T) -> Result<T, Error> {
+	if a < b {
+		Ok(b)
+	} else {
+		Err("Invalid range".into())
+	}
 }
 
 impl<AccountId, AccountIndex> Decode for Address<AccountId, AccountIndex> where
 	AccountId: Member + Decode,
 	AccountIndex: Member + Decode + PartialOrd<AccountIndex> + Ord + From<u32> + Copy,
 {
-	fn decode<I: Input>(input: &mut I) -> Option<Self> {
-		Some(match input.read_byte()? {
+	fn min_encoded_len() -> usize {
+		1 // In case x in 0x00..=0xef
+	}
+
+	fn decode<I: Input>(input: &mut I) -> Result<Self, Error> {
+		Ok(match input.read_byte()? {
 			x @ 0x00..=0xef => Address::Index(AccountIndex::from(x as u32)),
 			0xfc => Address::Index(AccountIndex::from(
 				need_more_than(0xef, u16::decode(input)?)? as u32
@@ -75,7 +84,7 @@ impl<AccountId, AccountIndex> Decode for Address<AccountId, AccountIndex> where
 				need_more_than(0xffffffffu32.into(), Decode::decode(input)?)?
 			),
 			0xff => Address::Id(Decode::decode(input)?),
-			_ => return None,
+			_ => return Err("Invalid prefix".into()),
 		})
 	}
 }
@@ -125,14 +134,14 @@ impl<AccountId, AccountIndex> Default for Address<AccountId, AccountIndex> where
 
 #[cfg(test)]
 mod tests {
-	use crate::{Encode, Decode};
+	use parity_scale_codec::{Encode, Decode, Error};
 
 	type Address = super::Address<[u8; 8], u32>;
 	fn index(i: u32) -> Address { super::Address::Index(i) }
 	fn id(i: [u8; 8]) -> Address { super::Address::Id(i) }
 
-	fn compare(a: Option<Address>, d: &[u8]) {
-		if let Some(ref a) = a {
+	fn compare(a: Result<Address, Error>, d: &[u8]) {
+		if let Ok(ref a) = a {
 			assert_eq!(d, &a.encode()[..]);
 		}
 		assert_eq!(Address::decode(&mut &d[..]), a);
@@ -140,13 +149,13 @@ mod tests {
 
 	#[test]
 	fn it_should_work() {
-		compare(Some(index(2)), &[2][..]);
-		compare(None, &[240][..]);
-		compare(None, &[252, 239, 0][..]);
-		compare(Some(index(240)), &[252, 240, 0][..]);
-		compare(Some(index(304)), &[252, 48, 1][..]);
-		compare(None, &[253, 255, 255, 0, 0][..]);
-		compare(Some(index(0x10000)), &[253, 0, 0, 1, 0][..]);
-		compare(Some(id([42, 69, 42, 69, 42, 69, 42, 69])), &[255, 42, 69, 42, 69, 42, 69, 42, 69][..]);
+		compare(Ok(index(2)), &[2][..]);
+		compare(Err("todo".into()), &[240][..]);
+		compare(Err("todo".into()), &[252, 239, 0][..]);
+		compare(Ok(index(240)), &[252, 240, 0][..]);
+		compare(Ok(index(304)), &[252, 48, 1][..]);
+		compare(Err("todo".into()), &[253, 255, 255, 0, 0][..]);
+		compare(Ok(index(0x10000)), &[253, 0, 0, 1, 0][..]);
+		compare(Ok(id([42, 69, 42, 69, 42, 69, 42, 69])), &[255, 42, 69, 42, 69, 42, 69, 42, 69][..]);
 	}
 }

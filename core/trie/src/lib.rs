@@ -18,7 +18,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod error;
 mod node_header;
 mod node_codec;
 mod trie_stream;
@@ -26,8 +25,7 @@ mod trie_stream;
 use rstd::boxed::Box;
 use rstd::vec::Vec;
 use hash_db::Hasher;
-/// Our `NodeCodec`-specific error.
-pub use error::Error;
+
 /// The Substrate format implementation of `TrieStream`.
 pub use trie_stream::TrieStream;
 /// The Substrate format implementation of `NodeCodec`.
@@ -40,7 +38,7 @@ pub use memory_db::{KeyFunction, prefixed_key};
 pub use hash_db::HashDB as HashDBT;
 
 /// As in `trie_db`, but less generic, error type for the crate.
-pub type TrieError<H> = trie_db::TrieError<H, Error>;
+pub type TrieError<H> = trie_db::TrieError<H, codec::Error>;
 /// As in `hash_db`, but less generic, trait exposed.
 pub trait AsHashDB<H: Hasher>: hash_db::AsHashDB<H, trie_db::DBValue> {}
 impl<H: Hasher, T: hash_db::AsHashDB<H, trie_db::DBValue>> AsHashDB<H> for T {}
@@ -292,13 +290,13 @@ const EXTENSION_NODE_THRESHOLD: u8 = EXTENSION_NODE_BIG - EXTENSION_NODE_OFFSET;
 const LEAF_NODE_SMALL_MAX: u8 = LEAF_NODE_BIG - 1;
 const EXTENSION_NODE_SMALL_MAX: u8 = EXTENSION_NODE_BIG - 1;
 
-fn take<'a>(input: &mut &'a[u8], count: usize) -> Option<&'a[u8]> {
+fn take<'a>(input: &mut &'a[u8], count: usize) -> Result<&'a[u8], codec::Error> {
 	if input.len() < count {
-		return None
+		return Err("Invalid input length".into());
 	}
 	let r = &(*input)[..count];
 	*input = &(*input)[count..];
-	Some(r)
+	Ok(r)
 }
 
 fn partial_to_key(partial: &[u8], offset: u8, big: u8) -> Vec<u8> {

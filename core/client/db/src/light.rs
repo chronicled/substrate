@@ -360,7 +360,8 @@ impl<Block: BlockT> LightStorage<Block> {
 		let cht_start = cht::start_number(cht_size, cht_number);
 		self.db.get(columns::CHT, &cht_key(cht_type, cht_start)).map_err(db_err)?
 			.ok_or_else(no_cht_for_block)
-			.and_then(|hash| Block::Hash::decode(&mut &*hash).ok_or_else(no_cht_for_block))
+			// TODO TODO use error?
+			.and_then(|hash| Block::Hash::decode(&mut &*hash).map_err(|_| no_cht_for_block()))
 	}
 }
 

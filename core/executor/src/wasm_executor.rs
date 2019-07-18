@@ -1165,7 +1165,9 @@ impl_function_executor!(this: FunctionExecutor<'e, E>,
 		let serialized_args = this.memory.get(args_ptr, args_len as usize)
 			.map_err(|_| "OOB while ext_sandbox_invoke: args")?;
 		let args = Vec::<sandbox_primitives::TypedValue>::decode(&mut &serialized_args[..])
-			.ok_or_else(|| "Can't decode serialized arguments for the invocation")?
+			// TODO TODO: put error inside
+			// .map_err(|e| format!("Can't decode serialized arguments for the invocation: {}", e.what()).into_owned())?
+			.map_err(|_| "Can't decode serialized arguments for the invocation")?
 			.into_iter()
 			.map(Into::into)
 			.collect::<Vec<_>>();

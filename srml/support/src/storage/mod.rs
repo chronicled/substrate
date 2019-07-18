@@ -18,7 +18,7 @@
 
 use crate::rstd::prelude::*;
 use crate::rstd::borrow::Borrow;
-use codec::{Codec, Encode, Decode, KeyedVec, Input, EncodeAppend};
+use codec::{Codec, Encode, Decode, KeyedVec, Input, EncodeAppend, Error};
 use hashed::generator::{HashedStorage, StorageHasher};
 use unhashed::generator::UnhashedStorage;
 
@@ -33,11 +33,19 @@ struct IncrementalInput<'a> {
 }
 
 impl<'a> Input for IncrementalInput<'a> {
-	fn read(&mut self, into: &mut [u8]) -> usize {
-		let len = runtime_io::read_storage(self.key, into, self.pos).unwrap_or(0);
-		let read = crate::rstd::cmp::min(len, into.len());
-		self.pos += read;
-		read
+	fn require_min_len(&mut self, len: usize) -> Result<(), Error> {
+		// TODO TODO:
+		unimplemented!();
+	}
+
+	fn read(&mut self, into: &mut [u8]) -> Result<(), Error> {
+		let len = runtime_io::read_storage(self.key, into, self.pos)
+			.ok_or_else(|| Into::<Error>::into("Key doesn't exist"))?;
+		if len < into.len() {
+			return Err("Not enough data in value".into())
+		}
+		self.pos += into.len();
+		Ok(())
 	}
 }
 
@@ -48,11 +56,19 @@ struct IncrementalChildInput<'a> {
 }
 
 impl<'a> Input for IncrementalChildInput<'a> {
-	fn read(&mut self, into: &mut [u8]) -> usize {
-		let len = runtime_io::read_child_storage(self.storage_key, self.key, into, self.pos).unwrap_or(0);
-		let read = crate::rstd::cmp::min(len, into.len());
-		self.pos += read;
-		read
+	fn require_min_len(&mut self, len: usize) -> Result<(), Error> {
+		// TODO TODO:
+		unimplemented!();
+	}
+
+	fn read(&mut self, into: &mut [u8]) -> Result<(), Error> {
+		let len = runtime_io::read_child_storage(self.storage_key, self.key, into, self.pos)
+			.ok_or_else(|| Into::<Error>::into("Key doesn't exist"))?;
+		if len < into.len() {
+			return Err("Not enough data in value".into())
+		}
+		self.pos += into.len();
+		Ok(())
 	}
 }
 

@@ -103,7 +103,7 @@ impl ProvideInherentData for InherentDataProvider {
 	}
 
 	fn error_to_string(&self, error: &[u8]) -> Option<String> {
-		RuntimeString::decode(&mut &error[..]).map(Into::into)
+		RuntimeString::decode(&mut &error[..]).map(Into::into).ok()
 	}
 }
 
@@ -151,7 +151,7 @@ decl_module! {
 				.iter()
 				.filter_map(|s| s.as_pre_runtime())
 				.filter_map(|(id, mut data)| if id == BABE_ENGINE_ID {
-					<[u8; VRF_OUTPUT_LENGTH]>::decode(&mut data)
+					<[u8; VRF_OUTPUT_LENGTH]>::decode(&mut data).ok()
 				} else {
 					None
 				}) {
@@ -180,7 +180,8 @@ impl<T: Trait> FindAuthor<u64> for Module<T> {
 					[u8; VRF_OUTPUT_LENGTH],
 					[u8; VRF_PROOF_LENGTH],
 					u64,
-				) = Decode::decode(&mut data)?;
+					// TODO TODO: use error ?
+				) = Decode::decode(&mut data).ok()?;
 				return Some(i)
 			}
 		}

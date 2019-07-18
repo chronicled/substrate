@@ -927,8 +927,10 @@ pub(crate) fn set_changes_trie_config(
 	final_check: bool,
 ) -> Result<(), Box<dyn Error>> {
 	let config = match config {
-		Some(v) => Some(Decode::decode(&mut &v[..])
-			.ok_or_else(|| Box::new("Failed to decode changes trie configuration".to_owned()) as Box<dyn Error>)?),
+		Some(v) => Some(Decode::decode(&mut &v[..]).map_err(|e| {
+			Box::new(format!("Failed to decode changes trie configuration: {}", e.what()))
+				as Box<dyn Error>
+		})?),
 		None => None,
 	};
 

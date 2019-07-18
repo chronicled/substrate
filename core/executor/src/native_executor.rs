@@ -65,7 +65,7 @@ fn fetch_cached_runtime_version<'a, E: Externalities<Blake2Hasher>>(
 				None => return RuntimePreproc::InvalidCode,
 			};
 			let heap_pages = ext.storage(well_known_keys::HEAP_PAGES)
-				.and_then(|pages| u64::decode(&mut &pages[..]))
+				.and_then(|pages| u64::decode(&mut &pages[..]).ok())
 				.or(default_heap_pages)
 				.unwrap_or(DEFAULT_HEAP_PAGES);
 			match WasmModule::from_buffer(code)
@@ -75,7 +75,7 @@ fn fetch_cached_runtime_version<'a, E: Externalities<Blake2Hasher>>(
 				Ok(module) => {
 					let version = wasm_executor.call_in_wasm_module(ext, &module, "Core_version", &[])
 						.ok()
-						.and_then(|v| RuntimeVersion::decode(&mut v.as_slice()));
+						.and_then(|v| RuntimeVersion::decode(&mut v.as_slice()).ok());
 					RuntimePreproc::ValidCode(module, version)
 				}
 				Err(e) => {

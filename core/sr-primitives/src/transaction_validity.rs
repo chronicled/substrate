@@ -17,7 +17,7 @@
 //! Transaction validity interface.
 
 use rstd::prelude::*;
-use crate::codec::{Encode, Decode};
+use crate::codec::{Encode, Decode, Error};
 
 /// Priority for a transaction. Additive. Higher is better.
 pub type TransactionPriority = u64;
@@ -71,9 +71,14 @@ pub enum TransactionValidity {
 }
 
 impl Decode for TransactionValidity {
-	fn decode<I: crate::codec::Input>(value: &mut I) -> Option<Self> {
+	fn min_encoded_len() -> usize {
+		1 // Variant
+			+ 1 // Invalid transaction variant
+	}
+
+	fn decode<I: crate::codec::Input>(value: &mut I) -> Result<Self, Error> {
 		match value.read_byte()? {
-			0 => Some(TransactionValidity::Invalid(i8::decode(value)?)),
+			0 => Ok(TransactionValidity::Invalid(i8::decode(value)?)),
 			1 => {
 				let priority = TransactionPriority::decode(value)?;
 				let requires = Vec::decode(value)?;
@@ -81,12 +86,12 @@ impl Decode for TransactionValidity {
 				let longevity = TransactionLongevity::decode(value)?;
 				let propagate = bool::decode(value).unwrap_or(true);
 
-				Some(TransactionValidity::Valid {
+				Ok(TransactionValidity::Valid {
 					priority, requires, provides, longevity, propagate,
 				})
 			},
-			2 => Some(TransactionValidity::Unknown(i8::decode(value)?)),
-			_ => None,
+			2 => Ok(TransactionValidity::Unknown(i8::decode(value)?)),
+			_ => Err("Invalid varian".into()),
 		}
 	}
 }
@@ -101,7 +106,7 @@ mod tests {
 			1, 5, 0, 0, 0, 0, 0, 0, 0, 4, 16, 1, 2, 3, 4, 4, 12, 4, 5, 6, 42, 0, 0, 0, 0, 0, 0, 0
 		];
 
-		assert_eq!(TransactionValidity::decode(&mut &*old_encoding), Some(TransactionValidity::Valid {
+		assert_eq!(TransactionValidity::decode(&mut &*old_encoding), Ok(TransactionValidity::Valid {
 			priority: 5,
 			requires: vec![vec![1, 2, 3, 4]],
 			provides: vec![vec![4, 5, 6]],
@@ -127,6 +132,6 @@ mod tests {
 		);
 
 		// decode back
-		assert_eq!(TransactionValidity::decode(&mut &*encoded), Some(v));
+		assert_eq!(TransactionValidity::decode(&mut &*encoded), Ok(v));
 	}
 }

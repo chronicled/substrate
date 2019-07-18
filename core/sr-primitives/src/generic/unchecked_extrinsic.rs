@@ -20,7 +20,7 @@
 use std::fmt;
 
 use rstd::prelude::*;
-use crate::codec::{Decode, Encode, Codec, Input, HasCompact};
+use crate::codec::{Decode, Encode, Codec, Input, HasCompact, Error};
 use crate::traits::{self, Member, SimpleArithmetic, MaybeDisplay, Lookup, Extrinsic};
 use super::CheckedExtrinsic;
 
@@ -122,14 +122,19 @@ impl<
 impl<Address: Codec, Index: HasCompact + Codec, Signature: Codec, Call: Decode> Decode
 	for UncheckedExtrinsic<Address, Index, Call, Signature>
 {
-	fn decode<I: Input>(input: &mut I) -> Option<Self> {
+	fn min_encoded_len() -> usize {
+		<Vec<()>>::min_encoded_len()
+			+ <Option<SignatureContent<Address, Index, Signature>>>::min_encoded_len()
+			+ Call::min_encoded_len()
+	}
+
+	fn decode<I: Input>(input: &mut I) -> Result<Self, Error> {
 		// This is a little more complicated than usual since the binary format must be compatible
 		// with substrate's generic `Vec<u8>` type. Basically this just means accepting that there
-		// will be a prefix of vector length (we don't need
-		// to use this).
+		// will be a prefix of vector length (we don't need to use this).
 		let _length_do_not_remove_me_see_above: Vec<()> = Decode::decode(input)?;
 
-		Some(UncheckedExtrinsic {
+		Ok(UncheckedExtrinsic {
 			signature: Decode::decode(input)?,
 			function: Decode::decode(input)?,
 		})

@@ -202,7 +202,8 @@ impl<T: Clone> SlotDuration<T> {
 		match client.get_aux(T::SLOT_KEY)? {
 			Some(v) => <T as codec::Decode>::decode(&mut &v[..])
 				.map(SlotDuration)
-				.ok_or_else(|| {
+				// TODO TODO: use error?
+				.map_err(|_| {
 					::client::error::Error::Backend({
 						error!(target: "slots", "slot duration kept in invalid format");
 						format!("slot duration kept in invalid format")

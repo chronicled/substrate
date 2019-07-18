@@ -41,8 +41,9 @@ pub fn read_children<
 	};
 
 	let children: Vec<V> = match Decode::decode(&mut &raw_val[..]) {
-		Some(children) => children,
-		None => return Err(error::Error::Backend("Error decoding children".into())),
+		Ok(children) => children,
+		// TODO TODO: use error
+		Err(_) => return Err(error::Error::Backend("Error decoding children".into())),
 	};
 
 	Ok(children)

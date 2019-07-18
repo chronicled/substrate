@@ -89,7 +89,8 @@ impl<Storage, KeyProvider> Api<Storage, KeyProvider> where
 	fn read_key(&self, id: Option<CryptoKeyId>, kind: CryptoKind) -> Result<Key, ()> {
 		if let Some(id) = id {
 			let key = self.db.get(KEYS_PREFIX, &id.0.encode())
-				.and_then(|key| CryptoKey::decode(&mut &*key))
+				// TODO TODO: use error ?
+				.and_then(|key| CryptoKey::decode(&mut &*key).ok())
 				.ok_or(())?;
 			if key.kind != kind {
 				warn!(
@@ -143,7 +144,7 @@ impl<Storage, KeyProvider> OffchainExt for Api<Storage, KeyProvider> where
 		let (id, id_encoded) = loop {
 			let encoded = self.db.get(KEYS_PREFIX, NEXT_ID);
 			let encoded_slice = encoded.as_ref().map(|x| x.as_slice());
-			let new_id = encoded_slice.and_then(|mut x| u16::decode(&mut x)).unwrap_or_default()
+			let new_id = encoded_slice.and_then(|mut x| u16::decode(&mut x).ok()).unwrap_or_default()
 				.checked_add(1)
 				.ok_or(())?;
 			let new_id_encoded = new_id.encode();
@@ -335,9 +336,9 @@ impl<A: ChainApi> AsyncApi<A> {
 
 	fn submit_extrinsic(&mut self, ext: Vec<u8>) {
 		let xt = match <A::Block as traits::Block>::Extrinsic::decode(&mut &*ext) {
-			Some(xt) => xt,
-			None => {
-				warn!("Unable to decode extrinsic: {:?}", ext);
+			Ok(xt) => xt,
+			Err(e) => {
+				warn!("Unable to decode extrinsic: {:?}: {}", ext, e.what());
 				return
 			},
 		};
