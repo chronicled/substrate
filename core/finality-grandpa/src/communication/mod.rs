@@ -367,10 +367,10 @@ impl<B: BlockT, N: Network<B>> NetworkBridge<B, N> {
 		let incoming = self.service.messages_for(topic)
 			.filter_map(|notification| {
 				let decoded = GossipMessage::<B>::decode(&mut &notification.message[..]);
-				if decoded.is_none() {
+				if decoded.is_err() {
 					debug!(target: "afg", "Skipping malformed message {:?}", notification);
 				}
-				decoded
+				decoded.ok()
 			})
 			.and_then(move |msg| {
 				match msg {
@@ -583,10 +583,11 @@ fn incoming_global<B: BlockT, N: Network<B>>(
 		.filter_map(|notification| {
 			// this could be optimized by decoding piecewise.
 			let decoded = GossipMessage::<B>::decode(&mut &notification.message[..]);
-			if decoded.is_none() {
+			// TODO TODO: better error message
+			if decoded.is_err() {
 				trace!(target: "afg", "Skipping malformed commit message {:?}", notification);
 			}
-			decoded.map(move |d| (notification, d))
+			decoded.map(move |d| (notification, d)).ok()
 		})
 		.filter_map(move |(notification, msg)| {
 			match msg {

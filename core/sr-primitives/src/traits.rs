@@ -861,18 +861,24 @@ pub trait OpaqueKeys: Clone {
 struct TrailingZeroInput<'a>(&'a [u8]);
 impl<'a> codec::Input for TrailingZeroInput<'a> {
 	fn require_min_len(&mut self, len: usize) -> Result<(), codec::Error> {
-		unimplemented!();
+		if self.0.len() < len {
+			return Err("Not enough data for required minimum length".into());
+		}
+
+		Ok(())
 	}
 
 	fn read(&mut self, into: &mut [u8]) -> Result<(), codec::Error> {
-		unimplemented!();
-		// let len = into.len().min(self.0.len());
-		// into[..len].copy_from_slice(&self.0[..len]);
-		// for i in &mut into[len..] {
-		// 	*i = 0;
-		// }
-		// self.0 = &self.0[len..];
-		// into.len()
+		if into.len() > self.0.len() {
+			return Err("Not enough data to fill buffer".into());
+		}
+		let len = into.len();
+		into.copy_from_slice(&self.0[..len]);
+		for i in &mut into[len..] {
+			*i = 0;
+		}
+		self.0 = &self.0[len..];
+		Ok(())
 	}
 }
 

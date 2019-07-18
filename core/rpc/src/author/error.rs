@@ -36,8 +36,8 @@ pub enum Error {
 	#[display(fmt="Extrinsic verification error: {}", _0)]
 	Verification(Box<dyn std::error::Error + Send>),
 	/// Incorrect extrinsic format.
-	#[display(fmt="Invalid extrinsic format")]
-	BadFormat,
+	#[display(fmt="Invalid extrinsic format: {}", _0.what())]
+	BadFormat(parity_scale_codec::Error),
 }
 
 impl std::error::Error for Error {
@@ -46,7 +46,7 @@ impl std::error::Error for Error {
 			Error::Client(ref err) => Some(err),
 			Error::Pool(ref err) => Some(err),
 			Error::Verification(ref err) => Some(&**err),
-			_ => None,
+			Error::BadFormat(ref err) => Some(err),
 		}
 	}
 }
@@ -78,10 +78,10 @@ impl From<Error> for rpc::Error {
 		use txpool::error::{Error as PoolError};
 
 		match e {
-			Error::BadFormat => rpc::Error {
+			Error::BadFormat(e) => rpc::Error {
 				code: rpc::ErrorCode::ServerError(BAD_FORMAT),
-				message: "Extrinsic has invalid format.".into(),
-				data: None,
+				message: format!("Extrinsic has invalid format: {}", e.what()).into(),
+				data: Some(format!("{:?}", e).into()),
 			},
 			Error::Verification(e) => rpc::Error {
 				code: rpc::ErrorCode::ServerError(VERIFICATION_ERROR),

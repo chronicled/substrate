@@ -59,6 +59,7 @@ use lazy_static::lazy_static;
 
 use futures::Future;
 use substrate_telemetry::TelemetryEndpoints;
+use parity_scale_codec::IoReader;
 
 /// The maximum number of characters for a node name.
 const NODE_NAME_MAX_LENGTH: usize = 32;
@@ -646,7 +647,9 @@ where
 		None => Box::new(stdin()),
 	};
 
-	let fut = service::chain_ops::import_blocks::<F, _, _>(config, exit.into_exit(), file)?;
+	let input = IoReader::from(file);
+
+	let fut = service::chain_ops::import_blocks::<F, _, _>(config, exit.into_exit(), input)?;
 	tokio::run(fut);
 	Ok(())
 }

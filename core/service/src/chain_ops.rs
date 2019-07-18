@@ -28,7 +28,7 @@ use network::message;
 use consensus_common::BlockOrigin;
 use crate::components::{self, Components, ServiceFactory, FactoryFullConfiguration, FactoryBlockNumber, RuntimeGenesis};
 use crate::new_client;
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, Input};
 use crate::error;
 use crate::chain_spec::ChainSpec;
 
@@ -125,12 +125,12 @@ impl<B: Block> Link<B> for WaitLink {
 }
 
 /// Returns a future that import blocks from a binary stream.
-pub fn import_blocks<F, E, R>(
+pub fn import_blocks<F, E, I>(
 	mut config: FactoryFullConfiguration<F>,
 	exit: E,
-	mut input: R
+	mut input: I
 ) -> error::Result<impl Future<Item = (), Error = ()>>
-	where F: ServiceFactory, E: Future<Item=(),Error=()> + Send + 'static, R: Read,
+	where F: ServiceFactory, E: Future<Item=(),Error=()> + Send + 'static, I: Input,
 {
 	let client = new_client::<F>(&config)?;
 	// FIXME #1134 this shouldn't need a mutable config.
@@ -147,14 +147,15 @@ pub fn import_blocks<F, E, R>(
 		let _ = exit_send.send(());
 	});
 
-	let count: u64 = Decode::decode(&mut input).ok_or("Error reading file")?;
+	// TODO TODO: better error message
+	let count: u64 = Decode::decode(&mut input).ok().ok_or("Error reading file")?;
 	info!("Importing {} blocks", count);
 	let mut block_count = 0;
 	for b in 0 .. count {
 		if exit_recv.try_recv().is_ok() {
 			break;
 		}
-		if let Some(signed) = SignedBlock::<F::Block>::decode(&mut input) {
+		if let Ok(signed) = SignedBlock::<F::Block>::decode(&mut input) {
 			let (header, extrinsics) = signed.block.deconstruct();
 			let hash = header.hash();
 			let block  = message::BlockData::<F::Block> {

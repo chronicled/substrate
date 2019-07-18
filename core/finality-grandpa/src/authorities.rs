@@ -19,7 +19,7 @@
 use fork_tree::ForkTree;
 use parking_lot::RwLock;
 use grandpa::voter_set::VoterSet;
-use parity_scale_codec::{Encode, Decode};
+use parity_scale_codec::{Encode, Decode, Error};
 use log::{debug, info};
 use substrate_telemetry::{telemetry, CONSENSUS_INFO};
 use fg_primitives::AuthorityId;
@@ -403,7 +403,12 @@ pub(crate) struct PendingChange<H, N> {
 }
 
 impl<H: Decode, N: Decode> Decode for PendingChange<H, N> {
-	fn decode<I: parity_scale_codec::Input>(value: &mut I) -> Option<Self> {
+	fn min_encoded_len() -> usize {
+		<Vec<(AuthorityId, u64)>>::min_encoded_len() // next_authorities
+			+ 3*N::min_encoded_len() // delay, canon_height, canon_hash
+	}
+
+	fn decode<I: parity_scale_codec::Input>(value: &mut I) -> Result<Self, Error> {
 		let next_authorities = Decode::decode(value)?;
 		let delay = Decode::decode(value)?;
 		let canon_height = Decode::decode(value)?;
@@ -411,7 +416,7 @@ impl<H: Decode, N: Decode> Decode for PendingChange<H, N> {
 
 		let delay_kind = DelayKind::decode(value).unwrap_or(DelayKind::Finalized);
 
-		Some(PendingChange {
+		Ok(PendingChange {
 			next_authorities,
 			delay,
 			canon_height,

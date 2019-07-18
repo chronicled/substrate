@@ -981,7 +981,7 @@ mod tests {
 	#[test]
 	fn can_serialize_block() {
 		drop(env_logger::try_init());
-		assert!(BabePreDigest::decode(&mut &b""[..]).is_none());
+		assert!(BabePreDigest::decode(&mut &b""[..]).is_err());
 	}
 
 	#[test]

@@ -566,7 +566,7 @@ pub mod tests {
 		// 'fetch' read proof from remote node
 		let heap_pages = remote_client.storage(&remote_block_id, &StorageKey(well_known_keys::HEAP_PAGES.to_vec()))
 			.unwrap()
-			.and_then(|v| Decode::decode(&mut &v.0[..])).unwrap();
+			.and_then(|v| Decode::decode(&mut &v.0[..]).ok()).unwrap();
 		let remote_read_proof = remote_client.read_proof(&remote_block_id, well_known_keys::HEAP_PAGES).unwrap();
 
 		// check remote read proof locally

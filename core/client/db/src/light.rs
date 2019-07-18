@@ -888,7 +888,7 @@ pub(crate) mod tests {
 		}
 
 		fn get_authorities(cache: &dyn BlockchainCache<Block>, at: BlockId<Block>) -> Option<Vec<AuthorityId>> {
-			cache.get_at(&well_known_cache_keys::AUTHORITIES, &at).and_then(|val| Decode::decode(&mut &val[..]))
+			cache.get_at(&well_known_cache_keys::AUTHORITIES, &at).and_then(|val| Decode::decode(&mut &val[..]).ok())
 		}
 
 		let auth1 = || AuthorityId::from_raw([1u8; 32]);

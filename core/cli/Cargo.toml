@@ -34,6 +34,7 @@ keyring = { package = "substrate-keyring", path = "../keyring" }
 names = "0.11.0"
 structopt = "0.2"
 rpassword = "3.0"
+parity-scale-codec = { path = "../../../parity-scale-codec" }
 
 [dev-dependencies]
 tempdir = "0.3"

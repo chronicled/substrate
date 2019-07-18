@@ -95,7 +95,11 @@ impl<Block: BlockT> Encode for CompletedRounds<Block> {
 }
 
 impl<Block: BlockT> Decode for CompletedRounds<Block> {
-	fn decode<I: parity_scale_codec::Input>(value: &mut I) -> Option<Self> {
+	fn min_encoded_len() -> usize {
+		<(Vec<CompletedRound<Block>>, u64, Vec<AuthorityId>)>::min_encoded_len()
+	}
+
+	fn decode<I: parity_scale_codec::Input>(value: &mut I) -> Result<Self, parity_scale_codec::Error> {
 		<(Vec<CompletedRound<Block>>, u64, Vec<AuthorityId>)>::decode(value)
 			.map(|(rounds, set_id, voters)| CompletedRounds {
 				rounds: rounds.into(),

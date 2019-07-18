@@ -8,6 +8,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use srml_support as support;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 use parity_scale_codec::{Encode, Decode};

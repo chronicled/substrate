@@ -336,7 +336,8 @@ impl AuthoritySetForFinalityChecker<Block> for TestApi {
 		proof: Vec<Vec<u8>>,
 	) -> Result<Vec<(AuthorityId, u64)>> {
 		Decode::decode(&mut &proof[0][..])
-			.ok_or_else(|| unreachable!("incorrect value is passed as GRANDPA authorities proof"))
+			// TODO TODO: more precise err
+			.map_err(|_| unreachable!("incorrect value is passed as GRANDPA authorities proof"))
 	}
 }
 

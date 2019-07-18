@@ -844,7 +844,7 @@ impl<C: Components> network::TransactionPool<ComponentExHash<C>, ComponentBlock<
 		}
 
 		let encoded = transaction.encode();
-		if let Some(uxt) = Decode::decode(&mut &encoded[..]) {
+		if let Ok(uxt) = Decode::decode(&mut &encoded[..]) {
 			let best_block_id = self.best_block_id()?;
 			match self.pool.submit_one(&best_block_id, uxt) {
 				Ok(hash) => Some(hash),

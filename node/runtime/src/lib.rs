@@ -21,6 +21,7 @@
 #![recursion_limit="256"]
 
 use rstd::prelude::*;
+use srml_support as support;
 use support::{
 	construct_runtime, parameter_types, traits::{SplitTwoWays, Currency, OnUnbalanced}
 };

@@ -81,7 +81,8 @@ impl<B, E, Block: BlockT<Hash=H256>, RA> AuthoritySetForFinalityProver<Block> fo
 			ExecutionStrategy::NativeElseWasm,
 			NeverOffchainExt::new(),
 		).and_then(|call_result| Decode::decode(&mut &call_result[..])
-			.ok_or_else(|| ClientError::CallResultDecode(
+			// TODO TODO: more precies error
+			.map_err(|_| ClientError::CallResultDecode(
 				"failed to decode GRANDPA authorities set proof".into(),
 			)))
 	}
@@ -121,7 +122,8 @@ impl<Block: BlockT> AuthoritySetForFinalityChecker<Block> for Arc<dyn FetchCheck
 		self.check_execution_proof(&request, proof)
 			.and_then(|authorities| {
 				let authorities: Vec<(AuthorityId, u64)> = Decode::decode(&mut &authorities[..])
-					.ok_or_else(|| ClientError::CallResultDecode(
+					// TODO TODO: more precies error
+					.map_err(|_| ClientError::CallResultDecode(
 						"failed to decode GRANDPA authorities set proof".into(),
 					))?;
 				Ok(authorities.into_iter().collect())
@@ -167,7 +169,8 @@ impl<B, E, Block, RA> network::FinalityProofProvider<Block> for FinalityProofPro
 		request: &[u8],
 	) -> Result<Option<Vec<u8>>, ClientError> {
 		let request: FinalityProofRequest<Block::Hash> = Decode::decode(&mut &request[..])
-			.ok_or_else(|| {
+			// TODO TODO: more precise err
+			.map_err(|_| {
 				warn!(target: "finality", "Unable to decode finality proof request.");
 				ClientError::Backend(format!("Invalid finality proof request"))
 			})?;
@@ -445,7 +448,8 @@ fn do_check_finality_proof<Block: BlockT<Hash=H256>, B, J>(
 {
 	// decode finality proof
 	let proof = FinalityProof::<Block::Header>::decode(&mut &remote_proof[..])
-		.ok_or_else(|| ClientError::BadJustification("failed to decode finality proof".into()))?;
+		// TODO TODO: more precise err
+		.map_err(|_| ClientError::BadJustification("failed to decode finality proof".into()))?;
 
 	// empty proof can't prove anything
 	if proof.is_empty() {
@@ -500,7 +504,8 @@ fn check_finality_proof_fragment<Block: BlockT<Hash=H256>, B, J>(
 	// verify justification using previous authorities set
 	let (mut current_set_id, mut current_authorities) = authority_set.extract_authorities();
 	let justification: J = Decode::decode(&mut &proof_fragment.justification[..])
-		.ok_or_else(|| ClientError::JustificationDecode)?;
+		// TODO TODO: more precise error
+		.map_err(|_| ClientError::JustificationDecode)?;
 	justification.verify(current_set_id, &current_authorities)?;
 
 	// and now verify new authorities proof (if provided)
@@ -560,7 +565,8 @@ pub(crate) trait ProvableJustification<Header: HeaderT>: Encode + Decode {
 		set_id: u64,
 		authorities: &[(AuthorityId, u64)],
 	) -> ClientResult<Self> {
-		let justification = Self::decode(&mut &**justification).ok_or(ClientError::JustificationDecode)?;
+		// TODO TODO: more precise error
+		let justification = Self::decode(&mut &**justification).map_err(|_| ClientError::JustificationDecode)?;
 		justification.verify(set_id, authorities)?;
 		Ok(justification)
 	}

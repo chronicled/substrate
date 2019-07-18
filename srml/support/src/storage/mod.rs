@@ -34,8 +34,15 @@ struct IncrementalInput<'a> {
 
 impl<'a> Input for IncrementalInput<'a> {
 	fn require_min_len(&mut self, len: usize) -> Result<(), Error> {
-		// TODO TODO:
-		unimplemented!();
+		// TODO TODO: we might be able to improve
+		let value_len = runtime_io::read_storage(self.key, &mut [], self.pos)
+			.ok_or_else(|| Into::<Error>::into("Key doesn't exist"))?;
+
+		if len > value_len {
+			return Err("Not enough data for required minimum length".into());
+		}
+
+		Ok(())
 	}
 
 	fn read(&mut self, into: &mut [u8]) -> Result<(), Error> {
@@ -57,8 +64,15 @@ struct IncrementalChildInput<'a> {
 
 impl<'a> Input for IncrementalChildInput<'a> {
 	fn require_min_len(&mut self, len: usize) -> Result<(), Error> {
-		// TODO TODO:
-		unimplemented!();
+		// TODO TODO: we might be able to improve
+		let value_len = runtime_io::read_child_storage(self.storage_key, self.key, &mut [], self.pos)
+			.ok_or_else(|| Into::<Error>::into("Key doesn't exist"))?;
+
+		if len > value_len {
+			return Err("Not enough data for required minimum length".into());
+		}
+
+		Ok(())
 	}
 
 	fn read(&mut self, into: &mut [u8]) -> Result<(), Error> {
