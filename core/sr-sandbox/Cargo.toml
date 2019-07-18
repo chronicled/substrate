@@ -12,7 +12,7 @@ rustc_version = "0.2"
 wasmi = { version = "0.4.3", optional = true }
 primitives = { package = "substrate-primitives", path = "../primitives", default-features = false }
 rstd = { package = "sr-std", path = "../sr-std", default-features = false }
-codec = { package = "parity-scale-codec", version = "1.0.1", default-features = false }
+codec = { package = "parity-scale-codec", path = "/home/thiolliere/Developpement/parity-scale-codec", default-features = false }
 
 [dev-dependencies]
 wabt = "~0.7.4"
@@ -29,9 +29,9 @@ std = [
 nightly = []
 strict = []
 
-[patch.crates-io]
-parity-scale-codec = { path = "../../../parity-scale-codec" }
-finality-grandpa = { path = "../../../finality-grandpa" }
-primitive-types = { path = "../../../parity-common/primitive-types" }
-rhododendron = { path = "../../../rhododendron" }
-trie-bench = { path = "../../../trie/test-support/trie-bench" }
+# [patch.crates-io]
+# parity-scale-codec = { path = "../../../parity-scale-codec" }
+# finality-grandpa = { path = "../../../finality-grandpa" }
+# primitive-types = { path = "../../../parity-common/primitive-types" }
+# rhododendron = { path = "../../../rhododendron" }
+# trie-bench = { path = "../../../trie/test-support/trie-bench" }

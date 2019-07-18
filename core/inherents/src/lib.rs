@@ -111,7 +111,8 @@ impl InherentData {
 		match self.data.get(identifier) {
 			Some(inherent) =>
 				I::decode(&mut &inherent[..])
-					.map_err(|e| format!("Could note decode type: {}", e.what()).into())
+					// TODO TODO: use error
+					.map_err(|_| "Could not decode requested inherent type!".into())
 					.map(Some),
 			None => Ok(None)
 		}
