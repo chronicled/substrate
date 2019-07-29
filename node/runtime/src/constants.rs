@@ -47,9 +47,10 @@ pub mod time {
 
 	pub const EPOCH_DURATION_IN_BLOCKS: Moment = 10 * MINUTES;
 	pub const EPOCH_DURATION_IN_SLOTS: Moment = {
-		const SLOT_FILL_RATE: f64 = MILLISECS_PER_BLOCK as f64 / SLOT_DURATION as f64;
+		// const SLOT_FILL_RATE: f64 = MILLISECS_PER_BLOCK as f64 / SLOT_DURATION as f64;
 
-		(EPOCH_DURATION_IN_BLOCKS as f64 * SLOT_FILL_RATE) as Moment
+		// (EPOCH_DURATION_IN_BLOCKS as f64 * SLOT_FILL_RATE) as Moment
+		3
 	};
 
 	// These time units are defined in number of blocks.
