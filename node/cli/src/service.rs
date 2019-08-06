@@ -157,6 +157,7 @@ construct_service_factory! {
 						inherent_data_providers: service.config.custom.inherent_data_providers.clone(),
 						on_exit: service.on_exit(),
 						telemetry_on_connect: Some(telemetry_on_connect),
+						transaction_pool: service.transaction_pool(),
 					};
 					service.spawn_task(Box::new(grandpa::run_grandpa_voter(grandpa_config)?));
 				} else if !service.config.grandpa_voter {
