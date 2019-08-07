@@ -16,7 +16,7 @@
 
 //! Substrate chain configurations.
 
-use babe_primitives::AuthorityId as BabeId;
+use auraboros_primitives::AuthorityId as AuraborosId;
 use primitives::{ed25519, sr25519, Pair, crypto::UncheckedInto};
 use node_primitives::{AccountId, Balance};
 use node_runtime::{
@@ -56,7 +56,7 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 	// and
 	// for i in 1 2 3 4 ; do for j in session; do subkey --ed25519 inspect "$secret"//fir//$j//$i; done; done
 
-	let initial_authorities: Vec<(AccountId, AccountId, BabeId, GrandpaId)> = vec![(
+	let initial_authorities: Vec<(AccountId, AccountId, AuraborosId, GrandpaId)> = vec![(
 		// 5Fbsd6WXDGiLTxunqeK5BATNiocfCqu9bS1yArVjCgeBLkVy
 		hex!["9c7a2ee14e565db0c69f78c7b4cd839fbf52b607d867e9e9c5a79042898a0d12"].unchecked_into(),
 		// 5EnCiV7wSHeNhjW3FSUwiJNkcc2SBkPLn5Nj93FmbLtBjQUq
@@ -158,7 +158,7 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 		sudo: Some(SudoConfig {
 			key: endowed_accounts[0].clone(),
 		}),
-		babe: Some(BabeConfig {
+		auraboros: Some(BabeConfig {
 			authorities: initial_authorities.iter().map(|x| (x.2.clone(), 1)).collect(),
 		}),
 		im_online: Some(ImOnlineConfig {
@@ -193,8 +193,8 @@ pub fn get_account_id_from_seed(seed: &str) -> AccountId {
 		.public()
 }
 
-/// Helper function to generate BabeId from seed
-pub fn get_babe_id_from_seed(seed: &str) -> BabeId {
+/// Helper function to generate AuraborosId from seed
+pub fn get_auraboros_id_from_seed(seed: &str) -> AuraborosId {
 	sr25519::Pair::from_string(&format!("//{}", seed), None)
 		.expect("static values are valid; qed")
 		.public()
@@ -208,18 +208,18 @@ pub fn get_grandpa_id_from_seed(seed: &str) -> GrandpaId {
 }
 
 /// Helper function to generate stash, controller and session key from seed
-pub fn get_authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, BabeId, GrandpaId) {
+pub fn get_authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, AuraborosId, GrandpaId) {
 	(
 		get_account_id_from_seed(&format!("{}//stash", seed)),
 		get_account_id_from_seed(seed),
-		get_babe_id_from_seed(seed),
+		get_auraboros_id_from_seed(seed),
 		get_grandpa_id_from_seed(seed)
 	)
 }
 
 /// Helper function to create GenesisConfig for testing
 pub fn testnet_genesis(
-	initial_authorities: Vec<(AccountId, AccountId, BabeId, GrandpaId)>,
+	initial_authorities: Vec<(AccountId, AccountId, AuraborosId, GrandpaId)>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 	enable_println: bool,
@@ -301,7 +301,7 @@ pub fn testnet_genesis(
 		sudo: Some(SudoConfig {
 			key: root_key,
 		}),
-		babe: Some(BabeConfig {
+		auraboros: Some(BabeConfig {
 			authorities: initial_authorities.iter().map(|x| (x.2.clone(), 1)).collect(),
 		}),
 		im_online: Some(ImOnlineConfig{

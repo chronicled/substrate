@@ -21,8 +21,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use babe::{import_queue, start_babe, BabeImportQueue, Config};
-use babe_primitives::AuthorityPair as BabePair;
+use auraboros::{import_queue, start_babe, BabeImportQueue, Config};
+use auraboros_primitives::AuthorityPair as BabePair;
 use client::{self, LongestChain};
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use node_executor;
@@ -48,7 +48,7 @@ construct_simple_protocol! {
 	pub struct NodeProtocol where Block = Block { }
 }
 
-type BabeBlockImportForService<F> = babe::BabeBlockImport<
+type BabeBlockImportForService<F> = auraboros::BabeBlockImport<
 	FullBackend<F>,
 	FullExecutor<F>,
 	<F as crate::ServiceFactory>::Block,
@@ -69,7 +69,7 @@ pub struct NodeConfig<F: substrate_service::ServiceFactory> {
 	pub import_setup: Option<(
 		BabeBlockImportForService<F>,
 		grandpa::LinkHalfForService<F>,
-		babe::BabeLink,
+		auraboros::BabeLink,
 	)>,
 	/// Tasks that were created by previous setup steps and should be spawned.
 	pub tasks_to_spawn: Option<Vec<Box<dyn Future<Item = (), Error = ()> + Send>>>,
@@ -131,7 +131,7 @@ construct_service_factory! {
 					let select_chain = service.select_chain()
 						.ok_or(ServiceError::SelectChainRequired)?;
 
-					let babe_config = babe::BabeParams {
+					let babe_config = auraboros::BabeParams {
 						config: Config::get_or_compute(&*client)?,
 						local_key: Arc::new(babe_key),
 						client,

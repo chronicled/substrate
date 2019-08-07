@@ -17,8 +17,8 @@ offchain-primitives = { package = "substrate-offchain-primitives", path = "../..
 version = { package = "sr-version", path = "../../core/sr-version", default-features = false }
 support = { package = "srml-support", path = "../../srml/support", default-features = false }
 authorship = { package = "srml-authorship", path = "../../srml/authorship", default-features = false }
-babe = { package = "srml-babe", path = "../../srml/babe", default-features = false }
-babe-primitives = { package = "substrate-consensus-babe-primitives", path = "../../core/consensus/babe/primitives", default-features = false }
+auraboros = { package = "srml-auraboros", path = "../../srml/auraboros", default-features = false }
+auraboros-primitives = { package = "substrate-consensus-auraboros-primitives", path = "../../core/consensus/auraboros/primitives", default-features = false }
 consensus-primitives = { package = "substrate-consensus-common-primitives", path = "../../core/consensus/common/primitives", default-features = false }
 balances = { package = "srml-balances", path = "../../srml/balances", default-features = false }
 contracts = { package = "srml-contracts", path = "../../srml/contracts", default-features = false }
@@ -56,8 +56,8 @@ std = [
 	"sr-primitives/std",
 	"support/std",
 	"authorship/std",
-	"babe/std",
-	"babe-primitives/std",
+	"auraboros/std",
+	"auraboros-primitives/std",
 	"consensus-primitives/std",
 	"balances/std",
 	"contracts/std",

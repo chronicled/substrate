@@ -29,7 +29,7 @@ use node_primitives::{
 	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index,
 	Moment, Signature,
 };
-use babe::{AuthorityId as BabeId};
+use auraboros::{AuthorityId as BabeId};
 use grandpa::fg_primitives::{self, ScheduledChange};
 use client::{
 	block_builder::api::{self as block_builder_api, InherentData, CheckInherentsResult},
@@ -131,7 +131,7 @@ parameter_types! {
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 }
 
-impl babe::Trait for Runtime {
+impl auraboros::Trait for Runtime {
 	type EpochDuration = EpochDuration;
 	type ExpectedBlockTime = ExpectedBlockTime;
 }
@@ -399,7 +399,7 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		System: system::{Module, Call, Storage, Config, Event},
-		Babe: babe::{Module, Call, Storage, Config, Inherent(Timestamp)},
+		Babe: auraboros::{Module, Call, Storage, Config, Inherent(Timestamp)},
 		Timestamp: timestamp::{Module, Call, Storage, Inherent},
 		Authorship: authorship::{Module, Call, Storage},
 		Indices: indices,
@@ -517,22 +517,22 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl babe_primitives::BabeApi<Block> for Runtime {
-		fn startup_data() -> babe_primitives::BabeConfiguration {
+	impl auraboros_primitives::BabeApi<Block> for Runtime {
+		fn startup_data() -> auraboros_primitives::BabeConfiguration {
 			// The choice of `c` parameter (where `1 - c` represents the
 			// probability of a slot being empty), is done in accordance to the
 			// slot duration and expected target block time, for safely
 			// resisting network delays of maximum two seconds.
 			// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
-			babe_primitives::BabeConfiguration {
+			auraboros_primitives::BabeConfiguration {
 				median_required_blocks: 1000,
 				slot_duration: Babe::slot_duration(),
 				c: (278, 1000),
 			}
 		}
 
-		fn epoch() -> babe_primitives::Epoch {
-			babe_primitives::Epoch {
+		fn epoch() -> auraboros_primitives::Epoch {
+			auraboros_primitives::Epoch {
 				start_slot: Babe::epoch_start_slot(),
 				authorities: Babe::authorities(),
 				epoch_index: Babe::epoch_index(),
@@ -542,8 +542,8 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl consensus_primitives::ConsensusApi<Block, babe_primitives::AuthorityId> for Runtime {
-		fn authorities() -> Vec<babe_primitives::AuthorityId> {
+	impl consensus_primitives::ConsensusApi<Block, auraboros_primitives::AuthorityId> for Runtime {
+		fn authorities() -> Vec<auraboros_primitives::AuthorityId> {
 			Babe::authorities().into_iter().map(|(a, _)| a).collect()
 		}
 	}
