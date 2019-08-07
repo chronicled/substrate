@@ -50,7 +50,8 @@ pub use self::error::Error;
 pub use config::{Configuration, Roles, PruningMode};
 pub use chain_spec::{ChainSpec, Properties};
 pub use transaction_pool::txpool::{
-	self, Pool as TransactionPool, Options as TransactionPoolOptions, ChainApi, IntoPoolError
+	self, Pool as TransactionPool, Options as TransactionPoolOptions, ChainApi,
+	IntoPoolError, SubmitExtrinsic
 };
 pub use client::FinalityNotifications;
 
