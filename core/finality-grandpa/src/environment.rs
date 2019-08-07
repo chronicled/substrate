@@ -768,7 +768,6 @@ where
 				round_number: equivocation.round_number,
 				session_index: SessionIndex::default(), // TODO: add session index.
 				identity: equivocation.identity,
-				identity_proof: Proof::default(), // TODO: add proof.
 				first: (first_vote, first_signature),
 				second: (second_vote, second_signature),
 				set_id: self.set_id,
@@ -810,7 +809,6 @@ where
 				round_number: equivocation.round_number,
 				session_index: SessionIndex::default(), // TODO: add session index.
 				identity: equivocation.identity,
-				identity_proof: Proof::default(), // TODO: add proof.
 				first: (first_vote, first_signature),
 				second: (second_vote, second_signature),
 				set_id: self.set_id,
