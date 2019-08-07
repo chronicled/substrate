@@ -545,8 +545,7 @@ impl_runtime_apis! {
 		}
 
 		fn construct_equivocation_report_call(
-			equivocation: GrandpaEquivocationFrom<Block>,
-			proof: Proof,
+			equivocation: GrandpaEquivocationFrom<Block>
 		) -> Option<Vec<u8>> {
 			// TODO: Check proof.
 			let grandpa_call = GrandpaCall::report_equivocation(equivocation);
@@ -581,7 +580,6 @@ impl_runtime_apis! {
 
 		fn construct_equivocation_report_call(
 			equivocation: BabeEquivocationProof<<Block as BlockT>::Header>,
-			proof: Proof,
 		) -> Option<Vec<u8>> {
 			// TODO: Check proof.
 			let babe_call = BabeCall::report_equivocation(equivocation);
