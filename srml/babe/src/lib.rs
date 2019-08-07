@@ -29,7 +29,7 @@ use srml_support::{
 use timestamp::{OnTimestampSet};
 use sr_primitives::{generic::DigestItem, ConsensusEngineId, key_types, KeyTypeId};
 use sr_primitives::traits::{
-	IsMember, SaturatedConversion, Saturating, RandomnessBeacon, Convert, Verify, Header
+	IsMember, SaturatedConversion, Saturating, RandomnessBeacon, Convert, Header
 };
 #[cfg(feature = "std")]
 use timestamp::TimestampInherentData;
@@ -44,6 +44,7 @@ use babe_primitives::{
 	BABE_ENGINE_ID, ConsensusLog, BabeWeight, Epoch, RawBabePreDigest, 
 	BabeEquivocationProof, get_slot
 };
+use app_crypto::RuntimeAppPublic;
 pub use babe_primitives::{AuthorityId, AuthoritySignature, VRF_OUTPUT_LENGTH, PUBLIC_KEY_LENGTH};
 
 /// The BABE inherent identifier.
@@ -197,10 +198,10 @@ fn equivocation_is_valid<T: Trait>(equivocation: BabeEquivocationProof<T::Header
 	if equivocation.slot() == first_slot && first_slot == second_slot {
 		let author = equivocation.identity();
 
-		if !equivocation.first_signature().verify(first_header.hash().as_ref(), author) {
+		if !author.verify(&first_header.hash(), equivocation.first_signature()) {
 			return false
 		}
-		if !equivocation.second_signature().verify(second_header.hash().as_ref(), author) {
+		if !author.verify(&second_header.hash(), equivocation.second_signature()) {
 			return false
 		}
 		return true;
