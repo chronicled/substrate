@@ -253,6 +253,9 @@ impl<Hash, H, B, C, E, I, Error, SO> SlotWorker<B> for BabeWorker<C, E, I, SO> w
 		let (timestamp, slot_number, slot_duration) =
 			(slot_info.timestamp, slot_info.number, slot_info.duration);
 
+		let parent_weight = find_pre_digest::<B>(&chain_head).map(|d| d.weight())
+			.unwrap_or(0);
+
 		let epoch = match epoch(client.as_ref(), &BlockId::Hash(chain_head.hash())) {
 			Ok(authorities) => authorities,
 			Err(e) => {
@@ -287,6 +290,7 @@ impl<Hash, H, B, C, E, I, Error, SO> SlotWorker<B> for BabeWorker<C, E, I, SO> w
 		let proposal_work = if let Some(inherent_digest) = claim_slot(
 			slot_info.number,
 			epoch,
+			parent_weight,
 			&pair,
 			self.c,
 		) {
@@ -410,9 +414,7 @@ macro_rules! babe_err {
 
 /// Extract the BABE pre digest from the given header. Pre-runtime digests are
 /// mandatory, the function will return `Err` if none is found.
-fn find_pre_digest<B: BlockT>(header: &B::Header) -> Result<AuraBorosPreDigest, String>
-	where DigestItemFor<B>: CompatibleDigestItem,
-{
+fn find_pre_digest<B: BlockT>(header: &B::Header) -> Result<AuraBorosPreDigest, String> {
 	let mut pre_digest: Option<_> = None;
 	for log in header.digest().logs() {
 		trace!(target: "babe", "Checking log {:?}, looking for pre runtime digest", log);
@@ -476,6 +478,7 @@ fn check_header<B: BlockT + Sized, C: AuxStore>(
 	match pre_digest {
 		AuraBorosPreDigest::Babe(ref babe_pre_digest) => {
 			info!(target: "auraboros", "Verifying BABE block");
+			// FIXME: parent weight
 			check_babe_header::<B, _>(
 				client,
 				babe_pre_digest,
@@ -485,21 +488,24 @@ fn check_header<B: BlockT + Sized, C: AuxStore>(
 				hash,
 				authorities,
 				randomness,
+				0,
 				epoch_index,
 				c,
 			)?;
 		},
-		AuraBorosPreDigest::Aura(_) => {
+		AuraBorosPreDigest::Aura(ref aura_pre_digest) => {
 			info!(target: "auraboros", "Verifying AURA block");
 			let authorities = authorities.iter().map(|(a, _)| a).cloned().collect::<Vec<_>>();
 
+			// FIXME: parent weight
 			check_aura_header::<_, B>(
 				client,
-				slot_now,
+				aura_pre_digest,
 				slot_num,
 				sig,
 				&header,
 				hash,
+				0,
 				&authorities,
 			)?;
 		},
@@ -527,10 +533,14 @@ fn check_babe_header<B: BlockT + Sized, C: AuxStore>(
 	hash: B::Hash,
 	authorities: &[(AuthorityId, BabeWeight)],
 	randomness: [u8; 32],
+	parent_weight: u64,
 	epoch_index: u64,
 	c: (u64, u64),
 ) -> Result<(), String> {
-	let BabePreDigest { slot_number, authority_index, vrf_proof, vrf_output } = pre_digest;
+	let BabePreDigest { slot_number, authority_index, vrf_proof, vrf_output, weight } = pre_digest;
+	// if *weight != parent_weight + 1 {
+	// 	return Err("Invalid weight: should increase with BABE block.".to_string());
+	// }
 
 	let (pre_hash, author) = (header.hash(), &authorities[*authority_index as usize].0);
 
@@ -581,18 +591,24 @@ use sr25519::Signature;
 
 fn check_aura_header<C, B: BlockT>(
 	client: &C,
+	pre_digest: &AuraPreDigest,
 	slot_now: u64,
-	slot_num: u64,
 	sig: Signature,
 	header: &B::Header,
 	hash: B::Hash,
+	parent_weight: u64,
 	authorities: &[AuthorityId],
 ) -> Result<(), String> where
 	C: client::backend::AuxStore,
 {
+	let AuraPreDigest { slot_number, weight } = pre_digest;
+	// if *weight != parent_weight {
+	// 	return Err("Invalid weight: Should stay the same with Aura Block.".to_string());
+	// }
+
 	// check the signature is valid under the expected authority and
 	// chain state.
-	let expected_author = match aura_slot_author(slot_num, &authorities) {
+	let expected_author = match aura_slot_author(*slot_number, &authorities) {
 		None => return Err("Slot Author not found".to_string()),
 		Some(author) => author,
 	};
@@ -603,13 +619,13 @@ fn check_aura_header<C, B: BlockT>(
 		if let Some(equivocation_proof) = check_equivocation(
 			client,
 			slot_now,
-			slot_num,
+			*slot_number,
 			header,
 			expected_author,
 		).map_err(|e| e.to_string())? {
 			info!(
 				"Slot author is equivocating at slot {} with headers {:?} and {:?}",
-				slot_num,
+				slot_number,
 				equivocation_proof.fst_header().hash(),
 				equivocation_proof.snd_header().hash(),
 			);
@@ -626,21 +642,22 @@ fn check_aura_header<C, B: BlockT>(
 pub struct BabeLink(Arc<Mutex<(Option<Duration>, Vec<(Instant, u64)>)>>);
 
 /// A verifier for Babe blocks.
-pub struct BabeVerifier<C> {
-	api: Arc<C>,
+pub struct BabeVerifier<B, E, Block: BlockT, RA, PRA> {
+	client: Arc<Client<B, E, Block, RA>>,
+	api: Arc<PRA>,
 	inherent_data_providers: inherents::InherentDataProviders,
 	config: Config,
 	time_source: BabeLink,
 }
 
-impl<C> BabeVerifier<C> {
-	fn check_inherents<B: BlockT>(
+impl<B, E, Block: BlockT, RA, PRA> BabeVerifier<B, E, Block, RA, PRA> {
+	fn check_inherents(
 		&self,
-		block: B,
-		block_id: BlockId<B>,
+		block: Block,
+		block_id: BlockId<Block>,
 		inherent_data: InherentData,
 	) -> Result<(), String>
-		where C: ProvideRuntimeApi, C::Api: BlockBuilderApi<B>
+		where PRA: ProvideRuntimeApi, PRA::Api: BlockBuilderApi<Block>
 	{
 		let inherent_res = self.api.runtime_api().check_inherents(
 			&block_id,
@@ -703,19 +720,21 @@ fn median_algorithm(
 	}
 }
 
-// Chain Scoring: favor chain with most babe blocks
-
-impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
-	C: ProvideRuntimeApi + Send + Sync + AuxStore + ProvideCache<B>,
-	C::Api: BlockBuilderApi<B> + BabeApi<B>,
+impl<B, E, Block, RA, PRA> Verifier<Block> for BabeVerifier<B, E, Block, RA, PRA> where
+	Block: BlockT<Hash=H256>,
+	B: Backend<Block, Blake2Hasher> + 'static,
+	E: CallExecutor<Block, Blake2Hasher> + 'static + Clone + Send + Sync,
+	RA: Send + Sync,
+	PRA: ProvideRuntimeApi + Send + Sync + AuxStore + ProvideCache<Block>,
+	PRA::Api: BlockBuilderApi<Block> + BabeApi<Block>,
 {
 	fn verify(
 		&self,
 		origin: BlockOrigin,
-		header: B::Header,
+		header: Block::Header,
 		justification: Option<Justification>,
-		mut body: Option<Vec<B::Extrinsic>>,
-	) -> Result<(BlockImportParams<B>, Option<Vec<(CacheKeyId, Vec<u8>)>>), String> {
+		mut body: Option<Vec<Block::Extrinsic>>,
+	) -> Result<(BlockImportParams<Block>, Option<Vec<(CacheKeyId, Vec<u8>)>>), String> {
 		trace!(
 			target: "babe",
 			"Verifying origin: {:?} header: {:?} justification: {:?} body: {:?}",
@@ -736,13 +755,14 @@ impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
 
 		let hash = header.hash();
 		let parent_hash = *header.parent_hash();
+
 		let Epoch { authorities, randomness, epoch_index, .. } =
 			epoch(self.api.as_ref(), &BlockId::Hash(parent_hash))
 				.map_err(|e| format!("Could not fetch epoch at {:?}: {:?}", parent_hash, e))?;
 
 		// We add one to allow for some small drift.
 		// FIXME #1019 in the future, alter this queue to allow deferring of headers
-		let checked_header = check_header::<B, C>(
+		let checked_header = check_header::<Block, PRA>(
 			&self.api,
 			slot_now + 1,
 			header,
@@ -759,12 +779,16 @@ impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
 					.expect("check_header always returns a pre-digest digest item; qed")
 					.slot_number();
 
+				let weight = pre_digest.as_auraboros_pre_digest()
+					.expect("check_header always returns a pre-digest digest item; qed")
+					.weight();
+
 				// if the body is passed through, we need to use the runtime
 				// to check that the internally-set timestamp in the inherents
 				// actually matches the slot set in the seal.
 				if let Some(inner_body) = body.take() {
 					inherent_data.babe_replace_inherent_data(slot_number);
-					let block = B::new(pre_header.clone(), inner_body);
+					let block = Block::new(pre_header.clone(), inner_body);
 
 					self.check_inherents(
 						block.clone(),
@@ -782,6 +806,28 @@ impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
 					"babe.checked_and_importing";
 					"pre_header" => ?pre_header);
 
+				let (last_best, last_best_number) = {
+					#[allow(deprecated)]
+					let info = self.client.backend().blockchain().info();
+					(info.best_hash, info.best_number)
+				};
+
+				let best_header = self.client.header(&BlockId::Hash(last_best))
+					.map_err(|_| "Failed fetching best header")?
+					.expect("parent_header must be imported; qed");
+
+				let best_weight = find_pre_digest::<Block>(&best_header)
+					.map(|d| d.weight())
+					.unwrap_or(0);
+
+				let new_best = if weight > best_weight {
+					true
+				} else if weight == best_weight {
+					*pre_header.number() > last_best_number
+				} else {
+					false
+				};
+
 				let import_block = BlockImportParams {
 					origin,
 					header: pre_header,
@@ -790,7 +836,7 @@ impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
 					finalized: false,
 					justification,
 					auxiliary: Vec::new(),
-					fork_choice: ForkChoiceStrategy::Custom(true),
+					fork_choice: ForkChoiceStrategy::Custom(new_best),
 				};
 
 				Ok((import_block, Default::default()))
@@ -907,6 +953,7 @@ fn claim_babe_slot(
 	slot_number: u64,
 	Epoch { authorities, randomness, epoch_index, .. }: &Epoch,
 	key: &sr25519::Pair,
+	parent_weight: u64,
 	c: (u64, u64),
 ) -> Option<BabePreDigest> {
 	let public = &key.public();
@@ -926,6 +973,7 @@ fn claim_babe_slot(
 			vrf_proof: s.1,
 			authority_index: authority_index as u32,
 			slot_number,
+			weight: parent_weight + 1,
 		})
 }
 
@@ -948,6 +996,7 @@ fn claim_aura_slot(
 	slot_number: u64,
 	authorities: &[AuthorityId],
 	key: &sr25519::Pair,
+	parent_weight: u64,
 ) -> Option<AuraPreDigest> {
 	if authorities.is_empty() {
 		return None;
@@ -955,7 +1004,7 @@ fn claim_aura_slot(
 
 	let expected_author = aura_slot_author(slot_number, authorities)?;
 	if *expected_author == key.public() {
-		Some(AuraPreDigest { slot_number })
+		Some(AuraPreDigest { slot_number, weight: parent_weight })
 	} else {
 		None
 	}
@@ -964,13 +1013,15 @@ fn claim_aura_slot(
 fn claim_slot(
 	slot_number: u64,
 	epoch: Epoch,
+	parent_weight: u64,
 	key: &sr25519::Pair,
 	c: (u64, u64),
 ) -> Option<AuraBorosPreDigest> {
-	claim_babe_slot(slot_number, &epoch, key, c).map(AuraBorosPreDigest::Babe)
+	claim_babe_slot(slot_number, &epoch, key, parent_weight, c).map(AuraBorosPreDigest::Babe)
 		.or_else(|| {
 			let authorities = epoch.authorities.into_iter().map(|a| a.0).collect::<Vec<_>>();
-			claim_aura_slot(slot_number, &authorities, key).map(AuraBorosPreDigest::Aura)
+			claim_aura_slot(slot_number, &authorities, key, parent_weight)
+				.map(AuraBorosPreDigest::Aura)
 		})
 }
 
@@ -1112,12 +1163,10 @@ impl<B, E, Block, I, RA, PRA> BlockImport<Block> for BabeBlockImport<B, E, Block
 		}
 
 		let slot_number = {
-			0
-			// let pre_digest = find_pre_digest::<Block>(&block.header)
-			// 	.expect("valid babe headers must contain a predigest; \
-			// 			 header has been already verified; qed");
-			// let BabePreDigest { slot_number, .. } = pre_digest;
-			// slot_number
+			let pre_digest = find_pre_digest::<Block>(&block.header)
+				.expect("valid babe headers must contain a predigest; \
+						 header has been already verified; qed");
+			pre_digest.slot_number()
 		};
 
 		// returns a function for checking whether a block is a descendent of another
@@ -1282,6 +1331,7 @@ pub fn import_queue<B, E, Block: BlockT<Hash=H256>, I, RA, PRA>(
 	initialize_authorities_cache(&*api)?;
 
 	let verifier = BabeVerifier {
+		client: client.clone(),
 		api: api.clone(),
 		inherent_data_providers,
 		time_source: Default::default(),

@@ -47,8 +47,15 @@ pub enum AuraBorosPreDigest {
 impl AuraBorosPreDigest {
 	pub fn slot_number(&self) -> u64 {
 		match self {
-			AuraBorosPreDigest::Aura(AuraPreDigest { slot_number }) => *slot_number,
+			AuraBorosPreDigest::Aura(AuraPreDigest { slot_number, .. }) => *slot_number,
 			AuraBorosPreDigest::Babe(BabePreDigest { slot_number, .. }) => *slot_number,
+		}
+	}
+
+	pub fn weight(&self) -> u64 {
+		match self {
+			AuraBorosPreDigest::Aura(AuraPreDigest { weight, .. }) => *weight,
+			AuraBorosPreDigest::Babe(BabePreDigest { weight, .. }) => *weight,
 		}
 	}
 }
@@ -62,7 +69,7 @@ pub enum RawAuraborosPreDigest {
 impl RawAuraborosPreDigest {
 	pub fn slot_number(&self) -> u64 {
 		match self {
-			RawAuraborosPreDigest::Aura(AuraPreDigest { slot_number }) => *slot_number,
+			RawAuraborosPreDigest::Aura(AuraPreDigest { slot_number, .. }) => *slot_number,
 			RawAuraborosPreDigest::Babe(RawBabePreDigest { slot_number, .. }) => *slot_number,
 		}
 	}
@@ -71,7 +78,10 @@ impl RawAuraborosPreDigest {
 
 #[derive(Clone, Encode, Decode)]
 pub struct AuraPreDigest {
+	/// Slot number
 	pub slot_number: u64,
+	/// Chain weight (measured in number of BABE blocks)
+	pub weight: u64,
 }
 
 /// A BABE pre-digest
@@ -86,6 +96,8 @@ pub struct BabePreDigest {
 	pub authority_index: super::AuthorityIndex,
 	/// Slot number
 	pub slot_number: SlotNumber,
+	/// Chain weight (measured in number of BABE blocks)
+	pub weight: u64,
 }
 
 /// The prefix used by BABE for its VRF keys.
@@ -102,6 +114,8 @@ pub struct RawBabePreDigest {
 	pub vrf_output: [u8; VRF_OUTPUT_LENGTH],
 	/// VRF proof
 	pub vrf_proof: [u8; VRF_PROOF_LENGTH],
+	/// Chain weight (measured in number of BABE blocks)
+	pub weight: u64,
 }
 
 #[cfg(feature = "std")]
@@ -112,6 +126,7 @@ impl Encode for BabePreDigest {
 			vrf_proof: self.vrf_proof.to_bytes(),
 			authority_index: self.authority_index,
 			slot_number: self.slot_number,
+			weight: self.weight,
 		};
 		codec::Encode::encode(&tmp)
 	}
@@ -123,7 +138,8 @@ impl codec::EncodeLike for BabePreDigest {}
 #[cfg(feature = "std")]
 impl Decode for BabePreDigest {
 	fn decode<R: Input>(i: &mut R) -> Result<Self, Error> {
-		let RawBabePreDigest { vrf_output, vrf_proof, authority_index, slot_number } = Decode::decode(i)?;
+		let RawBabePreDigest { vrf_output, vrf_proof, authority_index, slot_number, weight } =
+			Decode::decode(i)?;
 
 		// Verify (at compile time) that the sizes in babe_primitives are correct
 		let _: [u8; super::VRF_OUTPUT_LENGTH] = vrf_output;
@@ -135,6 +151,7 @@ impl Decode for BabePreDigest {
 				.map_err(convert_error)?,
 			authority_index,
 			slot_number,
+			weight,
 		})
 	}
 }
