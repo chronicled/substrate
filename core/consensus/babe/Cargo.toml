@@ -20,8 +20,12 @@ inherents = { package = "substrate-inherents", path = "../../inherents" }
 substrate-telemetry = { path = "../../telemetry" }
 keystore = { package = "substrate-keystore", path = "../../keystore" }
 srml-babe = { path = "../../../srml/babe" }
+srml-session = { path = "../../../srml/session" }
+transaction_pool = { package = "substrate-transaction-pool", path = "../../transaction-pool" }
+
 client = { package = "substrate-client", path = "../../client" }
-consensus-common = { package = "substrate-consensus-common", path = "../common" }
+consensus_common = { package = "substrate-consensus-common", path = "../common" }
+consensus_common_primitives = { package = "substrate-consensus-common-primitives", path = "../common/primitives" }
 uncles = { package = "substrate-consensus-uncles", path = "../uncles" }
 slots = { package = "substrate-consensus-slots", path = "../slots"  }
 sr-primitives = {  path = "../../sr-primitives" }

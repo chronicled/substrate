@@ -19,7 +19,7 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use log::{debug, warn, info};
+use log::{debug, warn, info, error};
 use codec::{Decode, Encode};
 use futures::prelude::*;
 use tokio_timer::Delay;
@@ -27,16 +27,16 @@ use parking_lot::RwLock;
 
 use client::{
 	backend::Backend, BlockchainEvents, CallExecutor, Client, error::Error as ClientError,
-	utils::is_descendent_of,
+	utils::is_descendent_of, blockchain::HeaderBackend
 };
 use grandpa::{
 	BlockNumberOps, Equivocation, Error as GrandpaError, round::State as RoundState,
-	voter, voter_set::VoterSet,
+	voter, voter_set::VoterSet, Message
 };
 use primitives::{Blake2Hasher, H256, Pair};
 use sr_primitives::generic::BlockId;
 use sr_primitives::traits::{
-	Block as BlockT, Header as HeaderT, NumberFor, One, Zero,
+	Block as BlockT, Header as HeaderT, NumberFor, One, Zero, ProvideRuntimeApi
 };
 use substrate_telemetry::{telemetry, CONSENSUS_INFO};
 
@@ -46,12 +46,14 @@ use crate::{
 };
 
 use consensus_common::SelectChain;
+use srml_session::{historical::Proof, SessionIndex};
+use transaction_pool::txpool::{SubmitExtrinsic, ChainApi};
 
 use crate::authorities::{AuthoritySet, SharedAuthoritySet};
 use crate::consensus_changes::SharedConsensusChanges;
 use crate::justification::GrandpaJustification;
 use crate::until_imported::UntilVoteTargetImported;
-use fg_primitives::{AuthorityId, AuthoritySignature};
+use fg_primitives::{AuthorityId, AuthoritySignature, GrandpaEquivocationFrom, GrandpaApi};
 
 type HistoricalVotes<Block> = grandpa::HistoricalVotes<
 	<Block as BlockT>::Hash,
@@ -367,7 +369,7 @@ impl<Block: BlockT> SharedVoterSetState<Block> {
 }
 
 /// The environment we run GRANDPA in.
-pub(crate) struct Environment<B, E, Block: BlockT, N: Network<Block>, RA, SC> {
+pub(crate) struct Environment<B, E, Block: BlockT, N: Network<Block>, RA, SC, T> {
 	pub(crate) inner: Arc<Client<B, E, Block, RA>>,
 	pub(crate) select_chain: SC,
 	pub(crate) voters: Arc<VoterSet<AuthorityId>>,
@@ -377,9 +379,10 @@ pub(crate) struct Environment<B, E, Block: BlockT, N: Network<Block>, RA, SC> {
 	pub(crate) network: crate::communication::NetworkBridge<Block, N>,
 	pub(crate) set_id: u64,
 	pub(crate) voter_set_state: SharedVoterSetState<Block>,
+	pub(crate) transaction_pool: Arc<T>,
 }
 
-impl<B, E, Block: BlockT, N: Network<Block>, RA, SC> Environment<B, E, Block, N, RA, SC> {
+impl<B, E, Block: BlockT, N: Network<Block>, RA, SC, T> Environment<B, E, Block, N, RA, SC, T> {
 	/// Updates the voter set state using the given closure. The write lock is
 	/// held during evaluation of the closure and the environment's voter set
 	/// state is set to its result if successful.
@@ -395,9 +398,9 @@ impl<B, E, Block: BlockT, N: Network<Block>, RA, SC> Environment<B, E, Block, N,
 	}
 }
 
-impl<Block: BlockT<Hash=H256>, B, E, N, RA, SC>
+impl<Block: BlockT<Hash=H256>, B, E, N, RA, SC, T>
 	grandpa::Chain<Block::Hash, NumberFor<Block>>
-for Environment<B, E, Block, N, RA, SC>
+for Environment<B, E, Block, N, RA, SC, T>
 where
 	Block: 'static,
 	B: Backend<Block, Blake2Hasher> + 'static,
@@ -523,9 +526,9 @@ pub(crate) fn ancestry<B, Block: BlockT<Hash=H256>, E, RA>(
 	Ok(tree_route.retracted().iter().skip(1).map(|e| e.hash).collect())
 }
 
-impl<B, E, Block: BlockT<Hash=H256>, N, RA, SC>
+impl<B, E, Block: BlockT<Hash=H256>, N, RA, SC, T>
 	voter::Environment<Block::Hash, NumberFor<Block>>
-for Environment<B, E, Block, N, RA, SC>
+for Environment<B, E, Block, N, RA, SC, T>
 where
 	Block: 'static,
 	B: Backend<Block, Blake2Hasher> + 'static,
@@ -535,6 +538,10 @@ where
 	RA: 'static + Send + Sync,
 	SC: SelectChain<Block> + 'static,
 	NumberFor<Block>: BlockNumberOps,
+	T: SubmitExtrinsic,
+	<T as SubmitExtrinsic>::Api: ChainApi<Block=Block>,
+	Client<B, E, Block, RA>: HeaderBackend<Block> + ProvideRuntimeApi,
+	<Client<B, E, Block, RA> as ProvideRuntimeApi>::Api: GrandpaApi<Block>,
 {
 	type Timer = Box<dyn Future<Item = (), Error = Self::Error> + Send>;
 	type Id = AuthorityId;
@@ -795,8 +802,6 @@ where
 	}
 
 	fn finalize_block(&self, hash: Block::Hash, number: NumberFor<Block>, round: u64, commit: Commit<Block>) -> Result<(), Self::Error> {
-		use client::blockchain::HeaderBackend;
-
 		#[allow(deprecated)]
 		let blockchain = self.inner.backend().blockchain();
 		let status = blockchain.info();
@@ -840,7 +845,40 @@ where
 		equivocation: ::grandpa::Equivocation<Self::Id, Prevote<Block>, Self::Signature>
 	) {
 		warn!(target: "afg", "Detected prevote equivocation in the finality worker: {:?}", equivocation);
-		// nothing yet; this could craft misbehavior reports of some kind.
+
+		let first_vote = Message::<Block::Hash, NumberFor<Block>>::Prevote(equivocation.first.0);
+		let second_vote = Message::<Block::Hash, NumberFor<Block>>::Prevote(equivocation.second.0);
+		let first_signature = equivocation.first.1;
+		let second_signature = equivocation.second.1;
+
+		if let Some(local_key) = crate::is_voter(&self.voters, &self.config.keystore) {
+			let reporter = local_key.public();
+
+			let grandpa_equivocation = GrandpaEquivocationFrom::<Block> {
+				reporter,
+				round_number: equivocation.round_number,
+				session_index: SessionIndex::default(), // TODO: add session index.
+				identity: equivocation.identity,
+				first: (first_vote, first_signature),
+				second: (second_vote, second_signature),
+				set_id: self.set_id,
+			};
+
+			let block_id = BlockId::<Block>::number(self.inner.info().chain.best_number);
+			let maybe_report_call = self.inner.runtime_api()
+				.construct_equivocation_transaction(&block_id, grandpa_equivocation);
+
+			if let Ok(Some(report_call)) = maybe_report_call {
+				let uxt = Decode::decode(&mut report_call.as_slice())
+					.expect("Encoded extrinsic is valid; qed");
+				match self.transaction_pool.submit_one(&block_id, uxt) {
+					Err(e) => warn!("Error importing misbehavior report: {:?}", e),
+					Ok(hash) => info!("Misbehavior report imported to transaction pool: {:?}", hash),
+				}
+			} else {
+				error!(target: "afg", "Failed to construct equivocation report call")
+			}
+		}
 	}
 
 	fn precommit_equivocation(
@@ -849,7 +887,39 @@ where
 		equivocation: Equivocation<Self::Id, Precommit<Block>, Self::Signature>
 	) {
 		warn!(target: "afg", "Detected precommit equivocation in the finality worker: {:?}", equivocation);
-		// nothing yet
+
+		let first_vote = Message::<Block::Hash, NumberFor<Block>>::Precommit(equivocation.first.0);
+		let second_vote = Message::<Block::Hash, NumberFor<Block>>::Precommit(equivocation.second.0);
+		let first_signature = equivocation.first.1;
+		let second_signature = equivocation.second.1;
+
+		if let Some(local_key) = crate::is_voter(&self.voters, &self.config.keystore) {
+			let reporter = local_key.public();
+			let grandpa_equivocation = GrandpaEquivocationFrom::<Block> {
+				reporter,
+				round_number: equivocation.round_number,
+				session_index: SessionIndex::default(), // TODO: add session index.
+				identity: equivocation.identity,
+				first: (first_vote, first_signature),
+				second: (second_vote, second_signature),
+				set_id: self.set_id,
+			};
+
+			let block_id = BlockId::<Block>::number(self.inner.info().chain.best_number);
+			let maybe_report_call = self.inner.runtime_api()
+				.construct_equivocation_transaction(&block_id, grandpa_equivocation);
+
+			if let Ok(Some(report_call)) = maybe_report_call {
+				let uxt = Decode::decode(&mut report_call.as_slice())
+					.expect("Encoded extrinsic is valid; qed");
+				match self.transaction_pool.submit_one(&block_id, uxt) {
+					Err(e) => warn!("Error importing misbehavior report: {:?}", e),
+					Ok(hash) => info!("Misbehavior report imported to transaction pool: {:?}", hash),
+				}
+			} else {
+				error!(target: "afg", "Failed to construct equivocation report call")
+			}
+		}
 	}
 }
 

@@ -31,10 +31,11 @@
 pub use substrate_finality_grandpa_primitives as fg_primitives;
 
 use rstd::prelude::*;
-use codec::{self as codec, Encode, Decode, Error};
+use codec::{self as codec, Encode, Decode, Error, Codec};
 use srml_support::{
 	decl_event, decl_storage, decl_module, dispatch::Result, storage::StorageValue
 };
+use app_crypto::RuntimeAppPublic;
 use sr_primitives::{
 	generic::{DigestItem, OpaqueDigestItemId}, traits::Zero,
 	Perbill,
@@ -43,7 +44,11 @@ use sr_staking_primitives::{
 	SessionIndex,
 	offence::{TimeSlot, Offence, Kind},
 };
-use fg_primitives::{ScheduledChange, ConsensusLog, GRANDPA_ENGINE_ID};
+use fg_primitives::{
+	ScheduledChange, ConsensusLog, GRANDPA_ENGINE_ID, GrandpaEquivocation,
+	localized_payload
+};
+use session::historical::Proof;
 pub use fg_primitives::{AuthorityId, AuthorityWeight};
 use system::{ensure_signed, DigestOf};
 
@@ -154,13 +159,60 @@ decl_storage! {
 	}
 }
 
+fn equivocation_is_valid<H: Codec + PartialEq, N: Codec + PartialEq>(
+	equivocation: GrandpaEquivocation<H, N>
+) -> bool {
+	let first_vote = &equivocation.first.0;
+	let first_signature = &equivocation.first.1;
+
+	let second_vote = &equivocation.second.0;
+	let second_signature = &equivocation.second.1;
+
+	let identity = equivocation.identity;
+
+	if first_vote != second_vote {
+		let first_payload = localized_payload(
+			equivocation.round_number,
+			equivocation.set_id,
+			&first_vote,
+		);
+
+		if !identity.verify(&first_payload, &first_signature) {
+			return false
+		}
+
+		let second_payload = localized_payload(
+			equivocation.round_number,
+			equivocation.set_id,
+			&second_vote,
+		);
+
+		if !identity.verify(&second_payload, &second_signature) {
+			return false
+		}
+
+		return true
+	}
+
+	false
+}
+
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
 		/// Report some misbehavior.
-		fn report_misbehavior(origin, _report: Vec<u8>) {
-			ensure_signed(origin)?;
+		fn report_equivocation(
+			origin,
+			equivocation: GrandpaEquivocation<T::Hash, T::BlockNumber>,
+			_proof: Proof
+		) {
+			let _who = ensure_signed(origin)?;
+
+			if equivocation_is_valid(equivocation) {
+				// slash
+			}
+
 			// FIXME: https://github.com/paritytech/substrate/issues/1112
 		}
 

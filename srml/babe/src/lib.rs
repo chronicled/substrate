@@ -25,9 +25,12 @@
 pub use timestamp;
 
 use rstd::{result, prelude::*};
-use srml_support::{decl_storage, decl_module, StorageValue, StorageMap, traits::FindAuthor, traits::Get};
+use srml_support::{
+	decl_storage, decl_module, StorageValue, StorageMap,
+	traits::{FindAuthor, Get, KeyOwnerProofSystem}
+};
 use timestamp::{OnTimestampSet};
-use sr_primitives::{generic::DigestItem, ConsensusEngineId, Perbill};
+use sr_primitives::{generic::DigestItem, ConsensusEngineId, Perbill, key_types, KeyTypeId};
 use sr_primitives::traits::{IsMember, SaturatedConversion, Saturating, RandomnessBeacon, Convert};
 use sr_staking_primitives::{
 	SessionIndex,
@@ -39,8 +42,15 @@ use codec::{Encode, Decode};
 use inherents::{RuntimeString, InherentIdentifier, InherentData, ProvideInherent, MakeFatalError};
 #[cfg(feature = "std")]
 use inherents::{InherentDataProviders, ProvideInherentData};
-use babe_primitives::{BABE_ENGINE_ID, ConsensusLog, BabeWeight, Epoch, RawBabePreDigest};
-pub use babe_primitives::{AuthorityId, VRF_OUTPUT_LENGTH, PUBLIC_KEY_LENGTH};
+use session::historical::Proof;
+use system::ensure_signed;
+use consensus_common_primitives::AuthorshipEquivocationProof;
+use babe_primitives::{
+	BABE_ENGINE_ID, ConsensusLog, BabeWeight, Epoch, RawBabePreDigest,
+	BabeEquivocationProof, get_slot
+};
+use app_crypto::RuntimeAppPublic;
+pub use babe_primitives::{AuthorityId, AuthoritySignature, VRF_OUTPUT_LENGTH, PUBLIC_KEY_LENGTH};
 
 /// The BABE inherent identifier.
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"babeslot";
@@ -117,6 +127,7 @@ impl ProvideInherentData for InherentDataProvider {
 pub trait Trait: timestamp::Trait {
 	type EpochDuration: Get<u64>;
 	type ExpectedBlockTime: Get<Self::Moment>;
+	type KeyOwnerSystem: KeyOwnerProofSystem<(KeyTypeId, Vec<u8>), Proof=Proof>;
 }
 
 /// The length of the BABE randomness
@@ -172,6 +183,38 @@ decl_storage! {
 	}
 }
 
+fn equivocation_is_valid<T: Trait>(equivocation: BabeEquivocationProof<T::Header>) -> bool {
+	let first_header = equivocation.first_header();
+	let second_header = equivocation.second_header();
+
+	if first_header == second_header {
+		return false
+	}
+
+	let maybe_first_slot = get_slot::<T::Header>(first_header);
+	let maybe_second_slot = get_slot::<T::Header>(second_header);
+
+	if maybe_first_slot.is_err() || maybe_second_slot.is_err() {
+		return false
+	}
+	let first_slot = maybe_first_slot.expect("checked before; qed");
+	let second_slot = maybe_second_slot.expect("checked before; qed");
+
+	if equivocation.slot() == first_slot && first_slot == second_slot {
+		let author = equivocation.identity();
+
+		if !author.verify(&first_header.hash(), equivocation.first_signature()) {
+			return false
+		}
+		if !author.verify(&second_header.hash(), equivocation.second_signature()) {
+			return false
+		}
+		return true;
+	}
+
+	false
+}
+
 decl_module! {
 	/// The BABE SRML module
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -206,6 +249,18 @@ decl_module! {
 				Self::deposit_vrf_output(&digest.vrf_output);
 
 				return;
+			}
+		}
+
+		fn report_equivocation(
+			origin,
+			equivocation: BabeEquivocationProof<T::Header>,
+			_proof: Proof
+		) {
+			let _who = ensure_signed(origin)?;
+
+			if equivocation_is_valid::<T>(equivocation) {
+				// TODO: Slash `to_punish` and reward `who`.
 			}
 		}
 	}

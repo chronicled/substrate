@@ -70,19 +70,21 @@ use client::{
 	ProvideUncles,
 	utils::is_descendent_of,
 };
+use transaction_pool::txpool::{SubmitExtrinsic, ChainApi};
 use fork_tree::ForkTree;
 use slots::{CheckedHeader, check_equivocation};
 use futures::{prelude::*, future};
 use futures01::Stream as _;
 use futures_timer::Delay;
 use log::{error, warn, debug, info, trace};
+use consensus_common_primitives::AuthorshipEquivocationProof;
 
 use slots::{SlotWorker, SlotData, SlotInfo, SlotCompatible, SignedDuration};
 
 mod aux_schema;
 #[cfg(test)]
 mod tests;
-pub use babe_primitives::AuthorityId;
+pub use babe_primitives::{AuthorityId, BabeEquivocationProof};
 
 /// A slot duration. Create with `get_or_compute`.
 // FIXME: Once Rust has higher-kinded types, the duplication between this
@@ -420,23 +422,6 @@ macro_rules! babe_err {
 	};
 }
 
-/// Extract the BABE pre digest from the given header. Pre-runtime digests are
-/// mandatory, the function will return `Err` if none is found.
-fn find_pre_digest<B: BlockT>(header: &B::Header) -> Result<BabePreDigest, String>
-	where DigestItemFor<B>: CompatibleDigestItem,
-{
-	let mut pre_digest: Option<_> = None;
-	for log in header.digest().logs() {
-		trace!(target: "babe", "Checking log {:?}, looking for pre runtime digest", log);
-		match (log.as_babe_pre_digest(), pre_digest.is_some()) {
-			(Some(_), true) => Err(babe_err!("Multiple BABE pre-runtime digests, rejecting!"))?,
-			(None, _) => trace!(target: "babe", "Ignoring digest not meant for us"),
-			(s, false) => pre_digest = s,
-		}
-	}
-	pre_digest.ok_or_else(|| babe_err!("No BABE pre-runtime digest found"))
-}
-
 /// Extract the BABE epoch change digest from the given header, if it exists.
 fn find_next_epoch_digest<B: BlockT>(header: &B::Header) -> Result<Option<Epoch>, String>
 	where DigestItemFor<B>: CompatibleDigestItem,
@@ -463,8 +448,9 @@ fn find_next_epoch_digest<B: BlockT>(header: &B::Header) -> Result<Option<Epoch>
 /// unsigned.  This is required for security and must not be changed.
 ///
 /// This digest item will always return `Some` when used with `as_babe_pre_digest`.
-// FIXME #1018 needs misbehavior types
-fn check_header<B: BlockT + Sized, C: AuxStore>(
+// FIXME #1018 needs misbehavior types. The `transaction_pool` parameter will be 
+// used to submit such misbehavior reports.
+fn check_header<B: BlockT + Sized, C: AuxStore, T>(
 	client: &C,
 	slot_now: u64,
 	mut header: B::Header,
@@ -473,8 +459,13 @@ fn check_header<B: BlockT + Sized, C: AuxStore>(
 	randomness: [u8; 32],
 	epoch_index: u64,
 	c: (u64, u64),
-) -> Result<CheckedHeader<B::Header, (DigestItemFor<B>, DigestItemFor<B>)>, String>
-	where DigestItemFor<B>: CompatibleDigestItem,
+	transaction_pool: Option<&T>,
+) -> Result<CheckedHeader<B::Header, (DigestItemFor<B>, DigestItemFor<B>)>, String> where
+	DigestItemFor<B>: CompatibleDigestItem,
+	C: ProvideRuntimeApi + HeaderBackend<B>,
+	C::Api: BabeApi<B>,
+	T: SubmitExtrinsic + Send + Sync + 'static,
+	<T as SubmitExtrinsic>::Api: ChainApi<Block=B>,
 {
 	trace!(target: "babe", "Checking header");
 	let seal = match header.digest_mut().pop() {
@@ -486,7 +477,7 @@ fn check_header<B: BlockT + Sized, C: AuxStore>(
 		babe_err!("Header {:?} has a bad seal", hash)
 	})?;
 
-	let pre_digest = find_pre_digest::<B>(&header)?;
+	let pre_digest = find_pre_digest::<B::Header, BabePreDigest>(&header)?;
 
 	let BabePreDigest { slot_number, authority_index, ref vrf_proof, ref vrf_output } = pre_digest;
 
@@ -519,20 +510,40 @@ fn check_header<B: BlockT + Sized, C: AuxStore>(
 									  threshold {} exceeded", author, threshold));
 			}
 
-			if let Some(equivocation_proof) = check_equivocation(
+			if let Some(equivocation_proof) = check_equivocation::<
+				_, _, BabeEquivocationProof<B::Header>, _
+			>(
 				client,
 				slot_now,
 				slot_number,
 				&header,
+				sig,
 				author,
 			).map_err(|e| e.to_string())? {
 				info!(
 					"Slot author {:?} is equivocating at slot {} with headers {:?} and {:?}",
 					author,
 					slot_number,
-					equivocation_proof.fst_header().hash(),
-					equivocation_proof.snd_header().hash(),
+					equivocation_proof.first_header().hash(),
+					equivocation_proof.second_header().hash(),
 				);
+
+				// Submit a transaction reporting the equivocation.
+				let block_id = BlockId::number(client.info().best_number);
+				
+				let maybe_report_call = client
+					.runtime_api()
+					.construct_equivocation_transaction(&block_id, equivocation_proof);
+				if let Ok(Some(report_call)) = maybe_report_call {
+						transaction_pool.as_ref().map(|txpool| {
+							let uxt = Decode::decode(&mut report_call.as_slice())
+								.expect("Encoded extrinsic is valid; qed");
+							txpool.submit_one(&block_id, uxt)
+						});
+						info!(target: "afg", "Equivocation report has been submitted")
+				} else {
+					error!(target: "afg", "Error constructing equivocation report")
+				}
 			}
 
 			let pre_digest = CompatibleDigestItem::babe_pre_digest(pre_digest);
@@ -548,14 +559,15 @@ fn check_header<B: BlockT + Sized, C: AuxStore>(
 pub struct BabeLink(Arc<Mutex<(Option<Duration>, Vec<(Instant, u64)>)>>);
 
 /// A verifier for Babe blocks.
-pub struct BabeVerifier<C> {
+pub struct BabeVerifier<C, T> {
 	api: Arc<C>,
 	inherent_data_providers: inherents::InherentDataProviders,
 	config: Config,
 	time_source: BabeLink,
+	transaction_pool: Option<Arc<T>>,
 }
 
-impl<C> BabeVerifier<C> {
+impl<C, T> BabeVerifier<C, T> {
 	fn check_inherents<B: BlockT>(
 		&self,
 		block: B,
@@ -625,9 +637,11 @@ fn median_algorithm(
 	}
 }
 
-impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
-	C: ProvideRuntimeApi + Send + Sync + AuxStore + ProvideCache<B>,
+impl<B: BlockT, C, T> Verifier<B> for BabeVerifier<C, T> where
+	C: ProvideRuntimeApi + HeaderBackend<B> + Send + Sync + AuxStore + ProvideCache<B>,
 	C::Api: BlockBuilderApi<B> + BabeApi<B>,
+	T: SubmitExtrinsic + Send + Sync + 'static,
+	<T as SubmitExtrinsic>::Api: ChainApi<Block=B>,
 {
 	fn verify(
 		&mut self,
@@ -662,7 +676,7 @@ impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
 
 		// We add one to allow for some small drift.
 		// FIXME #1019 in the future, alter this queue to allow deferring of headers
-		let checked_header = check_header::<B, C>(
+		let checked_header = check_header::<B, C, T>(
 			&self.api,
 			slot_now + 1,
 			header,
@@ -671,6 +685,7 @@ impl<B: BlockT, C> Verifier<B> for BabeVerifier<C> where
 			randomness,
 			epoch_index,
 			self.config.c(),
+			self.transaction_pool.as_ref().map(|x| &**x),
 		)?;
 
 		match checked_header {
@@ -986,7 +1001,7 @@ impl<B, E, Block, I, RA, PRA> BlockImport<Block> for BabeBlockImport<B, E, Block
 		}
 
 		let slot_number = {
-			let pre_digest = find_pre_digest::<Block>(&block.header)
+			let pre_digest = find_pre_digest::<Block::Header, BabePreDigest>(&block.header)
 				.expect("valid babe headers must contain a predigest; \
 						 header has been already verified; qed");
 			let BabePreDigest { slot_number, .. } = pre_digest;
@@ -1129,7 +1144,7 @@ impl<B, E, Block, I, RA, PRA> BlockImport<Block> for BabeBlockImport<B, E, Block
 /// authoring when importing its own blocks, and a future that must be run to
 /// completion and is responsible for listening to finality notifications and
 /// pruning the epoch changes tree.
-pub fn import_queue<B, E, Block: BlockT<Hash=H256>, I, RA, PRA>(
+pub fn import_queue<B, E, Block: BlockT<Hash=H256>, I, RA, PRA, T>(
 	config: Config,
 	block_import: I,
 	justification_import: Option<BoxJustificationImport<Block>>,
@@ -1137,6 +1152,7 @@ pub fn import_queue<B, E, Block: BlockT<Hash=H256>, I, RA, PRA>(
 	client: Arc<Client<B, E, Block, RA>>,
 	api: Arc<PRA>,
 	inherent_data_providers: InherentDataProviders,
+	transaction_pool: Option<Arc<T>>,
 ) -> ClientResult<(
 	BabeImportQueue<Block>,
 	BabeLink,
@@ -1148,8 +1164,10 @@ pub fn import_queue<B, E, Block: BlockT<Hash=H256>, I, RA, PRA>(
 	I::Error: Into<ConsensusError>,
 	E: CallExecutor<Block, Blake2Hasher> + Clone + Send + Sync + 'static,
 	RA: Send + Sync + 'static,
-	PRA: ProvideRuntimeApi + ProvideCache<Block> + Send + Sync + AuxStore + 'static,
+	PRA: ProvideRuntimeApi + HeaderBackend<Block> + ProvideCache<Block> + Send + Sync + AuxStore + 'static,
 	PRA::Api: BlockBuilderApi<Block> + BabeApi<Block>,
+	T: SubmitExtrinsic + Send + Sync + 'static,
+	<T as SubmitExtrinsic>::Api: ChainApi<Block=Block>,
 {
 	register_babe_inherent_data_provider(&inherent_data_providers, config.get())?;
 	initialize_authorities_cache(&*api)?;
@@ -1159,6 +1177,7 @@ pub fn import_queue<B, E, Block: BlockT<Hash=H256>, I, RA, PRA>(
 		inherent_data_providers,
 		time_source: Default::default(),
 		config,
+		transaction_pool,
 	};
 
 	#[allow(deprecated)]

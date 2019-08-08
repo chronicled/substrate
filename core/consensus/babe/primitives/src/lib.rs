@@ -23,12 +23,14 @@ mod digest;
 
 use codec::{Encode, Decode};
 use rstd::vec::Vec;
-use sr_primitives::ConsensusEngineId;
+use sr_primitives::{ConsensusEngineId, traits::Header};
 use substrate_client::decl_runtime_apis;
+use consensus_common_primitives::AuthorshipEquivocationProof;
+use srml_session::{historical::Proof, SessionIndex};
 
 #[cfg(feature = "std")]
-pub use digest::{BabePreDigest, CompatibleDigestItem};
-pub use digest::{BABE_VRF_PREFIX, RawBabePreDigest};
+pub use digest::BabePreDigest;
+pub use digest::{BABE_VRF_PREFIX, RawBabePreDigest, get_slot, CompatibleDigestItem, find_pre_digest};
 
 mod app {
 	use app_crypto::{app_crypto, key_types::BABE, sr25519};
@@ -140,6 +142,99 @@ impl slots::SlotData for BabeConfiguration {
 	const SLOT_KEY: &'static [u8] = b"babe_bootstrap_data";
 }
 
+/// Represents an Babe equivocation proof.
+#[derive(Clone, Encode, Decode, PartialEq)]
+#[cfg_attr(any(feature = "std", test), derive(Debug))]
+pub struct BabeEquivocationProof<H> {
+	reporter: AuthorityId,
+	identity: AuthorityId,
+	identity_proof: Proof,
+	slot: u64,
+	session_index: SessionIndex,
+	first_header: H,
+	second_header: H,
+	first_signature: AuthoritySignature,
+	second_signature: AuthoritySignature,
+}
+
+impl<H> AuthorshipEquivocationProof for BabeEquivocationProof<H>
+where
+	H: Header,
+{
+	type Header = H;
+	type Identity = AuthorityId;
+	type Signature = AuthoritySignature;
+
+	/// Create a new Babe equivocation proof.
+	fn new(
+		reporter: Self::Identity,
+		identity: Self::Identity,
+		identity_proof: Proof,
+		slot: u64,
+		session_index: SessionIndex,
+		first_header: H,
+		second_header: H,
+		first_signature: Self::Signature,
+		second_signature: Self::Signature,
+	) -> Self {
+		BabeEquivocationProof {
+			reporter,
+			identity,
+			identity_proof,
+			slot,
+			session_index,
+			first_header,
+			second_header,
+			first_signature,
+			second_signature,
+		}
+	}
+
+	/// Get the reporter of the equivocation.
+	fn reporter(&self) -> &Self::Identity {
+		&self.reporter
+	}
+
+	/// Get the slot where the equivocation happened.
+	fn slot(&self) -> u64 {
+		self.slot
+	}
+
+		/// Get the session index where the equivocation happened.
+	fn session_index(&self) -> &SessionIndex {
+		&self.session_index
+	}
+
+	/// Get the identity of the suspect of equivocating.
+	fn identity(&self) -> &Self::Identity {
+		&self.identity
+	}
+
+	/// Get the identity of the suspect of equivocating.
+	fn identity_proof(&self) -> &Proof {
+		&self.identity_proof
+	}
+
+	/// Get the first header involved in the equivocation.
+	fn first_header(&self) -> &H {
+		&self.first_header
+	}
+
+	/// Get the second header involved in the equivocation.
+	fn second_header(&self) -> &H {
+		&self.second_header
+	}
+
+	fn first_signature(&self) -> &Self::Signature {
+		&self.first_signature
+	}
+
+	fn second_signature(&self) -> &Self::Signature {
+		&self.second_signature
+	}
+}
+
+
 decl_runtime_apis! {
 	/// API necessary for block authorship with BABE.
 	pub trait BabeApi {
@@ -151,5 +246,10 @@ decl_runtime_apis! {
 
 		/// Get the current epoch data for Babe.
 		fn epoch() -> Epoch;
+
+		/// Construct a transaction to report the equivocation.
+		fn construct_equivocation_transaction(
+			equivocation: BabeEquivocationProof<Block::Header>
+		) -> Option<Vec<u8>>;
 	}
 }

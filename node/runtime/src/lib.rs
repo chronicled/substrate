@@ -22,15 +22,21 @@
 
 use rstd::prelude::*;
 use support::{
-	construct_runtime, parameter_types, traits::{SplitTwoWays, Currency}
+	construct_runtime, parameter_types,
+	traits::{
+		SplitTwoWays, Currency, KeyOwnerProofSystem
+	}
 };
 use primitives::u32_trait::{_1, _2, _3, _4};
 use node_primitives::{
 	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index,
 	Moment, Signature,
 };
+use codec::{Encode, Decode, Codec};
+use consensus_primitives::AuthorshipEquivocationProof;
 use babe::{AuthorityId as BabeId};
-use grandpa::fg_primitives::{self, ScheduledChange};
+use babe_primitives::BabeEquivocationProof;
+use grandpa::fg_primitives::{self, ScheduledChange, GrandpaEquivocationFrom};
 use client::{
 	block_builder::api::{self as block_builder_api, InherentData, CheckInherentsResult},
 	runtime_api as client_api, impl_runtime_apis
@@ -49,11 +55,14 @@ use primitives::OpaqueMetadata;
 use grandpa::{AuthorityId as GrandpaId, AuthorityWeight as GrandpaWeight};
 use im_online::{AuthorityId as ImOnlineId};
 use finality_tracker::{DEFAULT_REPORT_LATENCY, DEFAULT_WINDOW_SIZE};
+use session::historical::{self, Proof};
 
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
 pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
+pub use babe::Call as BabeCall;
+pub use grandpa::Call as GrandpaCall;
 pub use contracts::Gas;
 pub use sr_primitives::{Permill, Perbill};
 pub use support::StorageValue;
@@ -136,6 +145,7 @@ parameter_types! {
 impl babe::Trait for Runtime {
 	type EpochDuration = EpochDuration;
 	type ExpectedBlockTime = ExpectedBlockTime;
+	type KeyOwnerSystem = Historical;
 }
 
 impl indices::Trait for Runtime {
@@ -432,6 +442,7 @@ construct_runtime!(
 		Authorship: authorship::{Module, Call, Storage, Inherent},
 		Indices: indices,
 		Balances: balances,
+		Historical: historical::{Module},
 		Staking: staking::{default, OfflineWorker},
 		Session: session::{Module, Call, Storage, Event, Config<T>},
 		Democracy: democracy::{Module, Call, Storage, Config, Event<T>},
@@ -545,6 +556,16 @@ impl_runtime_apis! {
 		fn grandpa_authorities() -> Vec<(GrandpaId, GrandpaWeight)> {
 			Grandpa::grandpa_authorities()
 		}
+
+		fn construct_equivocation_transaction(
+			equivocation: GrandpaEquivocationFrom<Block>
+		) -> Option<Vec<u8>> {
+			// TODO: Check proof and create transaction.
+			let proof = Historical::prove((key_types::SR25519, equivocation.identity.encode()))?;
+			let grandpa_call = GrandpaCall::report_equivocation(equivocation, proof);
+			let call = Call::Grandpa(grandpa_call);
+			Some(call.encode())
+		}
 	}
 
 	impl babe_primitives::BabeApi<Block> for Runtime {
@@ -569,6 +590,16 @@ impl_runtime_apis! {
 				randomness: Babe::randomness(),
 				duration: EpochDuration::get(),
 			}
+		}
+
+		fn construct_equivocation_transaction(
+			equivocation: BabeEquivocationProof<<Block as BlockT>::Header>,
+		) -> Option<Vec<u8>> {
+			// TODO: Check proof and construct transaction.
+			let proof = Historical::prove((key_types::SR25519, equivocation.identity().encode()))?;
+			let babe_call = BabeCall::report_equivocation(equivocation, proof);
+			let call = Call::Babe(babe_call);
+			Some(call.encode())
 		}
 	}
 
