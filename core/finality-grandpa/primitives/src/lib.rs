@@ -28,7 +28,7 @@ use sr_primitives::{ConsensusEngineId, traits::{DigestFor, NumberFor, Block as B
 use client::decl_runtime_apis;
 use rstd::vec::Vec;
 use grandpa::Message;
-use session::{historical::Proof, SessionIndex};
+use consensus_common_primitives::{SessionIndex, SessionMembershipProof as Proof};
 
 mod app {
 	use app_crypto::{app_crypto, key_types::GRANDPA, ed25519};

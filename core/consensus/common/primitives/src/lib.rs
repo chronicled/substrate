@@ -22,8 +22,9 @@ use codec::Codec;
 use client::decl_runtime_apis;
 use rstd::vec::Vec;
 use sr_primitives::{traits::Header};
-use sr_staking_primitives::{SessionIndex, Proof};
 use app_crypto::RuntimeAppPublic;
+
+pub use sr_staking_primitives::{SessionIndex, Proof as SessionMembershipProof};
 
 decl_runtime_apis! {
 	/// Common consensus runtime api.
@@ -42,7 +43,7 @@ pub trait AuthorshipEquivocationProof {
 	fn new(
 		reporter: Self::Identity,
 		identity: Self::Identity,
-		identity_proof: Proof,
+		identity_proof: SessionMembershipProof,
 		slot: u64,
 		session_index: SessionIndex,
 		first_header: Self::Header,
@@ -64,7 +65,7 @@ pub trait AuthorshipEquivocationProof {
 	fn identity(&self) -> &Self::Identity;
 
 	/// Get the identity proof of the suspect of equivocating.
-	fn identity_proof(&self) -> &Proof;
+	fn identity_proof(&self) -> &SessionMembershipProof;
 
 	/// Get the first header involved in the equivocation.
 	fn first_header(&self) -> &Self::Header;

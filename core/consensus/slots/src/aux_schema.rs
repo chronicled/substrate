@@ -22,8 +22,7 @@ use client::backend::AuxStore;
 use client::error::{Result as ClientResult, Error as ClientError};
 use sr_primitives::traits::Header;
 use app_crypto::RuntimeAppPublic;
-use consensus_common_primitives::AuthorshipEquivocationProof;
-use srml_session::{historical::Proof, SessionIndex};
+use consensus_common_primitives::{AuthorshipEquivocationProof, SessionMembershipProof, SessionIndex};
 
 const SLOT_HEADER_MAP_KEY: &[u8] = b"slot_header_map";
 const SLOT_HEADER_START: &[u8] = b"slot_header_start";
@@ -100,7 +99,7 @@ pub fn check_equivocation<C, H, E, V>(
 				return Ok(Some(AuthorshipEquivocationProof::new(
 					signer.clone(), // TODO: this should be the reporter.
 					signer.clone(),
-					Proof::default(), // TODO: add the proof.
+					SessionMembershipProof::default(), // TODO: add the proof.
 					slot,
 					SessionIndex::default(), // TODO: add session index.
 					prev_header.clone(),

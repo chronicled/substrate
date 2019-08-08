@@ -16,9 +16,10 @@
 #[warn(missing_docs)]
 
 use codec::{Encode, Decode};
+use rstd::vec::Vec;
 
-//! A crate which contains primitives that are useful for implementation that uses staking
-//! approaches in general. Definitions related to sessions, slashing, etc go here.
+///! A crate which contains primitives that are useful for implementation that uses staking
+///! approaches in general. Definitions related to sessions, slashing, etc go here.
 
 pub mod offence;
 
@@ -34,6 +35,7 @@ pub trait ValidatorIdByIndex<ValidatorId> {
 
 /// Proof of ownership of a specific key.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, Debug)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct Proof {
 	/// Session index this proof is for.
 	pub session: SessionIndex,

@@ -45,8 +45,7 @@ use crate::{
 	PrimaryPropose, SignedMessage, NewAuthoritySet, VoterCommand,
 };
 
-use consensus_common::SelectChain;
-use srml_session::{historical::Proof, SessionIndex};
+use consensus_common::{SelectChain, SessionIndex, SessionMembershipProof as Proof};
 use transaction_pool::txpool::{SubmitExtrinsic, ChainApi};
 
 use crate::authorities::{AuthoritySet, SharedAuthoritySet};
