@@ -27,10 +27,9 @@
 
 use rstd::prelude::*;
 use codec::{Encode, Decode};
-#[cfg(feature = "std")]
-use serde::Serialize;
 use sr_primitives::KeyTypeId;
 use sr_primitives::traits::{Convert, OpaqueKeys, Hash as HashT};
+use sr_staking_primitives::Proof;
 use srml_support::{
 	StorageValue, StorageMap, decl_module, decl_storage,
 };
@@ -270,14 +269,6 @@ impl<T: Trait> ProvingTrie<T> {
 			.and_then(|raw| <IdentificationTuple<T>>::decode(&mut &*raw).ok())
 	}
 
-}
-
-/// Proof of ownership of a specific key.
-#[cfg_attr(feature = "std", derive(Serialize))]
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Default, Debug)]
-pub struct Proof {
-	session: SessionIndex,
-	trie_nodes: Vec<Vec<u8>>,
 }
 
 impl<T: Trait, D: AsRef<[u8]>> srml_support::traits::KeyOwnerProofSystem<(KeyTypeId, D)>

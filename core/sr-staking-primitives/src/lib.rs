@@ -13,6 +13,9 @@
 // GNU General Public License for more details.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#[warn(missing_docs)]
+
+use codec::{Encode, Decode};
 
 //! A crate which contains primitives that are useful for implementation that uses staking
 //! approaches in general. Definitions related to sessions, slashing, etc go here.
@@ -27,4 +30,13 @@ pub trait ValidatorIdByIndex<ValidatorId> {
 	/// Return a validator identification by the given index in the current elected set of the era,
 	// or `None` if `validator_index` is out of range.
 	fn validator_id_by_index(validator_index: u32) -> Option<ValidatorId>;
+}
+
+/// Proof of ownership of a specific key.
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Default, Debug)]
+pub struct Proof {
+	/// Session index this proof is for.
+	pub session: SessionIndex,
+	/// A list of trie nodes.
+	pub trie_nodes: Vec<Vec<u8>>,
 }

@@ -22,7 +22,7 @@ use codec::Codec;
 use client::decl_runtime_apis;
 use rstd::vec::Vec;
 use sr_primitives::{traits::Header};
-use srml_session::{historical::Proof, SessionIndex};
+use sr_staking_primitives::{SessionIndex, Proof};
 use app_crypto::RuntimeAppPublic;
 
 decl_runtime_apis! {
@@ -47,7 +47,7 @@ pub trait AuthorshipEquivocationProof {
 		session_index: SessionIndex,
 		first_header: Self::Header,
 		second_header: Self::Header,
-		first_signature: Self::Signature, 
+		first_signature: Self::Signature,
 		second_signature: Self::Signature,
 	) -> Self;
 
