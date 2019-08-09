@@ -3931,7 +3931,6 @@ name = "srml-grandpa"
 version = "2.0.0"
 dependencies = [
  "parity-scale-codec 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.97 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0",
  "sr-primitives 2.0.0",
  "sr-staking-primitives 2.0.0",

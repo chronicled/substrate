@@ -29,6 +29,7 @@ primitives = { package = "substrate-primitives",  path = "../../core/primitives"
 [features]
 default = ["std"]
 std = [
+	"app-crypto/std",
 	"babe-primitives/std",
 	"codec/std",
 	"consensus-common-primitives/std",

@@ -5,7 +5,6 @@ authors = ["Parity Technologies <admin@parity.io>"]
 edition = "2018"
 
 [dependencies]
-serde = { version = "1.0", optional = true, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitives = { package = "substrate-primitives",  path = "../../core/primitives", default-features = false }
 substrate-finality-grandpa-primitives = { path = "../../core/finality-grandpa/primitives", default-features = false }
@@ -24,7 +23,7 @@ runtime_io = { package = "sr-io", path = "../../core/sr-io" }
 [features]
 default = ["std"]
 std = [
-	"serde",
+	"app-crypto/std",
 	"codec/std",
 	"primitives/std",
 	"substrate-finality-grandpa-primitives/std",

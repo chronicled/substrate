@@ -17,6 +17,7 @@ sr-staking-primitives = { path = "../../../sr-staking-primitives", default-featu
 [features]
 default = ["std"]
 std = [
+	"app-crypto/std",
 	"client/std",
 	"codec/std",
 	"primitives/std",
