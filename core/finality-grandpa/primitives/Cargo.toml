@@ -12,7 +12,7 @@ sr-primitives = { path = "../../sr-primitives", default-features = false }
 rstd = { package = "sr-std", path = "../../sr-std", default-features = false }
 serde = { version = "1.0", optional = true, features = ["derive"] }
 #grandpa = { package = "finality-grandpa", version = "0.9.0", default-features = false, features = ["derive-codec"] }
-consensus_common_primitives = { package = "substrate-consensus-common-primitives", path = "../../consensus/common/primitives" }
+consensus_common_primitives = { package = "substrate-consensus-common-primitives", path = "../../consensus/common/primitives", default-features = false }
 
 [features]
 default = ["std"]
