@@ -33,7 +33,7 @@ pub trait CurrentElectedSet<ValidatorId> {
 
 /// Proof of ownership of a specific key.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, Debug)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+//#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct Proof {
 	/// Session index this proof is for.
 	pub session: SessionIndex,

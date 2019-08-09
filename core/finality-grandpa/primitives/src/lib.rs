@@ -27,7 +27,7 @@ use codec::{Encode, Decode, Codec};
 use sr_primitives::{ConsensusEngineId, traits::{DigestFor, NumberFor, Block as BlockT}};
 use client::decl_runtime_apis;
 use rstd::vec::Vec;
-use grandpa::Message;
+//use grandpa::Message;
 use consensus_common_primitives::{SessionIndex, SessionMembershipProof as Proof};
 
 mod app {
@@ -71,10 +71,10 @@ pub struct GrandpaEquivocation<H, N> {
 	pub round_number: u64,
 	/// The identity of the equivocator.
 	pub identity: AuthorityId,
-	/// The first vote in the equivocation.
-	pub	first: (Message<H, N>, AuthoritySignature),
-	/// The second vote in the equivocation.
-	pub second: (Message<H, N>, AuthoritySignature),
+	//// The first vote in the equivocation.
+	//pub	first: (Message<H, N>, AuthoritySignature),
+	//// The second vote in the equivocation.
+	//pub second: (Message<H, N>, AuthoritySignature),
 }
 
 pub type GrandpaEquivocationFrom<Block> = GrandpaEquivocation<
