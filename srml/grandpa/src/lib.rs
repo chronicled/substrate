@@ -48,7 +48,7 @@ use fg_primitives::{
 	ScheduledChange, ConsensusLog, GRANDPA_ENGINE_ID, GrandpaEquivocation,
 	localized_payload
 };
-use session::historical::Proof;
+use consensus_common_primitives::{SessionMembershipProof as Proof};
 pub use fg_primitives::{AuthorityId, AuthorityWeight};
 use system::{ensure_signed, DigestOf};
 

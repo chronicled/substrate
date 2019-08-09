@@ -32,8 +32,8 @@ use node_primitives::{
 	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index,
 	Moment, Signature,
 };
-use codec::{Encode, Decode, Codec};
-use consensus_primitives::AuthorshipEquivocationProof;
+use codec::Encode;
+use consensus_primitives::{AuthorshipEquivocationProof, SessionMembershipProof as Proof};
 use babe::{AuthorityId as BabeId};
 use babe_primitives::BabeEquivocationProof;
 use grandpa::fg_primitives::{self, ScheduledChange, GrandpaEquivocationFrom};
@@ -55,7 +55,6 @@ use primitives::OpaqueMetadata;
 use grandpa::{AuthorityId as GrandpaId, AuthorityWeight as GrandpaWeight};
 use im_online::{AuthorityId as ImOnlineId};
 use finality_tracker::{DEFAULT_REPORT_LATENCY, DEFAULT_WINDOW_SIZE};
-use session::historical::{self, Proof};
 
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
@@ -430,6 +429,7 @@ impl finality_tracker::Trait for Runtime {
 	type ReportLatency = ReportLatency;
 }
 
+use session::historical;
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,

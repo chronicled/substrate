@@ -17,11 +17,12 @@ consensus_common_primitives = { package = "substrate-consensus-common-primitives
 [features]
 default = ["std"]
 std = [
+	"app-crypto/std",
 	"client/std",
 	"codec/std",
-	"sr-primitives/std",
+	"consensus_common_primitives/std",
+	#"grandpa/std",
 	"rstd/std",
 	"serde",
-	"app-crypto/std",
-	"consensus_common_primitives/std",
+	"sr-primitives/std",
 ]

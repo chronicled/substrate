@@ -30,8 +30,8 @@ use srml_support::{
 	traits::{FindAuthor, Get, KeyOwnerProofSystem}
 };
 use timestamp::{OnTimestampSet};
-use sr_primitives::{generic::DigestItem, ConsensusEngineId, Perbill, key_types, KeyTypeId};
-use sr_primitives::traits::{IsMember, SaturatedConversion, Saturating, RandomnessBeacon, Convert};
+use sr_primitives::{generic::DigestItem, ConsensusEngineId, Perbill, KeyTypeId};
+use sr_primitives::traits::{IsMember, SaturatedConversion, Saturating, RandomnessBeacon, Convert, Header};
 use sr_staking_primitives::{
 	SessionIndex,
 	offence::{Offence, TimeSlot, Kind},
@@ -42,9 +42,8 @@ use codec::{Encode, Decode};
 use inherents::{RuntimeString, InherentIdentifier, InherentData, ProvideInherent, MakeFatalError};
 #[cfg(feature = "std")]
 use inherents::{InherentDataProviders, ProvideInherentData};
-use session::historical::Proof;
 use system::ensure_signed;
-use consensus_common_primitives::AuthorshipEquivocationProof;
+use consensus_common_primitives::{AuthorshipEquivocationProof, SessionMembershipProof as Proof};
 use babe_primitives::{
 	BABE_ENGINE_ID, ConsensusLog, BabeWeight, Epoch, RawBabePreDigest,
 	BabeEquivocationProof, get_slot
