@@ -44,6 +44,7 @@ use client::ExecutionStrategies;
 use client::backend::{StorageCollection, ChildStorageCollection};
 use codec::{Decode, Encode};
 use hash_db::{Hasher, Prefix};
+use lru_cache::LruCache;
 use kvdb::{KeyValueDB, DBTransaction};
 use trie::{MemoryDB, PrefixedMemoryDB, prefixed_key};
 use parking_lot::{Mutex, RwLock};
@@ -260,11 +261,50 @@ impl<'a> state_db::MetaDb for StateMetaDb<'a> {
 	}
 }
 
+#[derive(Debug, Clone)]
+struct CachedHeaderData<Block: BlockT> {
+	hash: Block::Hash,
+	number: NumberFor<Block>,
+	parent: Block::Hash,
+}
+
+struct HeaderCache<Block: BlockT> {
+	number_to_hash: HashMap<NumberFor<Block>, Block::Hash>,
+	hash_to_data: LruCache<Block::Hash, CachedHeaderData<Block>>,
+}
+
+impl<Block: BlockT> HeaderCache<Block> {
+	fn new(capacity: usize) -> Self {
+		HeaderCache {
+			number_to_hash: HashMap::new(),
+			hash_to_data: LruCache::new(capacity),
+		}
+	}
+
+	fn get_data(&mut self, id: BlockId<Block>) -> Option<CachedHeaderData<Block>> {
+		match id {
+			BlockId::Hash(hash) => self.hash_to_data.get_mut(&hash).cloned(),
+			BlockId::Number(number) => {
+				match self.number_to_hash.get(&number) {
+					Some(hash) => self.hash_to_data.get_mut(hash).cloned(),
+					_ => None,
+				}
+			}
+		}
+	}
+
+	fn put_data(&mut self, data: CachedHeaderData<Block>) {
+		self.number_to_hash.insert(data.number, data.hash);
+		self.hash_to_data.insert(data.hash, data);
+	}
+}
+
 /// Block database
 pub struct BlockchainDb<Block: BlockT> {
 	db: Arc<dyn KeyValueDB>,
 	meta: Arc<RwLock<Meta<NumberFor<Block>, Block::Hash>>>,
 	leaves: RwLock<LeafSet<Block::Hash, NumberFor<Block>>>,
+	header_cache: RwLock<HeaderCache<Block>>,
 }
 
 impl<Block: BlockT> BlockchainDb<Block> {
@@ -275,6 +315,7 @@ impl<Block: BlockT> BlockchainDb<Block> {
 			db,
 			leaves: RwLock::new(leaves),
 			meta: Arc::new(RwLock::new(meta)),
+			header_cache: RwLock::new(HeaderCache::new(5000)),
 		})
 	}
 
