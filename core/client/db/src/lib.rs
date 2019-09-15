@@ -350,6 +350,10 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 			None => Ok(None),
 		})
 	}
+
+	fn parent(&self, id: BlockId<Block>) -> Result<Option<BlockId<Block>>, client::error::Error> {
+		unimplemented!()
+	}
 }
 
 impl<Block: BlockT> client::blockchain::Backend<Block> for BlockchainDb<Block> {

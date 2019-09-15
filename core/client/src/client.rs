@@ -1366,6 +1366,10 @@ impl<B, E, Block, RA> ChainHeaderBackend<Block> for Client<B, E, Block, RA> wher
 	fn hash(&self, number: NumberFor<Block>) -> error::Result<Option<Block::Hash>> {
 		self.backend.blockchain().hash(number)
 	}
+
+	fn parent(&self, id: BlockId<Block>) -> error::Result<Option<BlockId<Block>>> {
+		self.backend.blockchain().parent(id)
+	}
 }
 
 impl<B, E, Block, RA> ChainHeaderBackend<Block> for &Client<B, E, Block, RA> where
@@ -1392,6 +1396,10 @@ impl<B, E, Block, RA> ChainHeaderBackend<Block> for &Client<B, E, Block, RA> whe
 
 	fn hash(&self, number: NumberFor<Block>) -> error::Result<Option<Block::Hash>> {
 		(**self).hash(number)
+	}
+
+	fn parent(&self, id: BlockId<Block>) -> error::Result<Option<BlockId<Block>>> {
+		(**self).parent(id)
 	}
 }
 

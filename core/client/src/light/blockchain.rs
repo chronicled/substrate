@@ -149,6 +149,10 @@ impl<S, F, Block> BlockchainHeaderBackend<Block> for Blockchain<S, F> where Bloc
 	fn hash(&self, number: <<Block as BlockT>::Header as HeaderT>::Number) -> ClientResult<Option<Block::Hash>> {
 		self.storage.hash(number)
 	}
+
+	fn parent(&self, id: BlockId<Block>) -> ClientResult<Option<BlockId<Block>>> {
+		self.storage.parent(id)
+	}
 }
 
 impl<S, F, Block> BlockchainBackend<Block> for Blockchain<S, F> where Block: BlockT, S: Storage<Block>, F: Fetcher<Block> {

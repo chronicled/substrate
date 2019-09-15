@@ -37,6 +37,8 @@ pub trait HeaderBackend<Block: BlockT>: Send + Sync {
 	fn number(&self, hash: Block::Hash) -> Result<Option<<<Block as BlockT>::Header as HeaderT>::Number>>;
 	/// Get block hash by number. Returns `None` if the header is not in the chain.
 	fn hash(&self, number: NumberFor<Block>) -> Result<Option<Block::Hash>>;
+	/// Get id of parent block. Returns `None` if the header is not in the chain.
+	fn parent(&self, id: BlockId<Block>) -> Result<Option<BlockId<Block>>>;
 
 	/// Convert an arbitrary block ID into a block hash.
 	fn block_hash_from_id(&self, id: &BlockId<Block>) -> Result<Option<Block::Hash>> {

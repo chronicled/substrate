@@ -188,6 +188,10 @@ impl<Block> BlockchainHeaderBackend<Block> for LightStorage<Block>
 	fn hash(&self, number: NumberFor<Block>) -> ClientResult<Option<Block::Hash>> {
 		Ok(self.header(BlockId::Number(number))?.map(|header| header.hash().clone()))
 	}
+
+	fn parent(&self, id: BlockId<Block>) -> ClientResult<Option<BlockId<Block>>> {
+		Ok(self.header(id)?.map(|header| BlockId::Hash(header.parent_hash().clone())))
+	}
 }
 
 impl<Block: BlockT> LightStorage<Block> {
