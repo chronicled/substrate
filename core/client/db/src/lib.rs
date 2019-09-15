@@ -361,6 +361,9 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 	}
 
 	fn status(&self, id: BlockId<Block>) -> Result<client::blockchain::BlockStatus, client::error::Error> {
+		if let Some(header_data) = self.header_cache.write().get_data(id) {
+			return Ok(client::blockchain::BlockStatus::InChain)
+		}
 		let exists = match id {
 			BlockId::Hash(_) => read_db(
 				&*self.db,
@@ -377,23 +380,62 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 	}
 
 	fn number(&self, hash: Block::Hash) -> Result<Option<NumberFor<Block>>, client::error::Error> {
-		if let Some(lookup_key) = block_id_to_lookup_key::<Block>(&*self.db, columns::KEY_LOOKUP, BlockId::Hash(hash))? {
-			let number = utils::lookup_key_to_number(&lookup_key)?;
-			Ok(Some(number))
+		let id = BlockId::Hash(hash);
+		if let Some(header_data) = self.header_cache.write().get_data(id) {
+			Ok(Some(header_data.number))
 		} else {
-			Ok(None)
+			self.header(id).and_then(|maybe_header| match maybe_header {
+				Some(header) => {
+					let cached_header_data = CachedHeaderData {
+						hash: header.hash(),
+						number: header.number().clone(),
+						parent: header.parent_hash().clone(),
+					};
+					self.header_cache.write().put_data(cached_header_data);
+					Ok(Some(header.number()))
+				},
+				None => Ok(None),
+			})
 		}
 	}
 
 	fn hash(&self, number: NumberFor<Block>) -> Result<Option<Block::Hash>, client::error::Error> {
-		self.header(BlockId::Number(number)).and_then(|maybe_header| match maybe_header {
-			Some(header) => Ok(Some(header.hash().clone())),
-			None => Ok(None),
-		})
+		let id = BlockId::Number(number);
+		if let Some(header_data) = self.header_cache.write().get_data(id) {
+			Ok(Some(header_data.hash))
+		} else {
+			self.header(id).and_then(|maybe_header| match maybe_header {
+				Some(header) => {
+					let cached_header_data = CachedHeaderData {
+						hash: header.hash().clone(),
+						number: *header.number(),
+						parent: header.parent_hash().clone(),
+					};
+					self.header_cache.write().put_data(cached_header_data);
+					Ok(Some(header.hash()))
+				},
+				None => Ok(None),
+			})
+		}
 	}
 
 	fn parent(&self, id: BlockId<Block>) -> Result<Option<BlockId<Block>>, client::error::Error> {
-		unimplemented!()
+		if let Some(header_data) = self.header_cache.write().get_data(id) {
+			Ok(Some(BlockId::hash(header_data.parent)))
+		} else {
+			self.header(id).and_then(|maybe_header| match maybe_header {
+				Some(header) => {
+					let cached_header_data = CachedHeaderData {
+						hash: header.hash(),
+						number: *header.number(),
+						parent: header.parent_hash().clone(),
+					};
+					self.header_cache.write().put_data(cached_header_data);
+					Ok(Some(BlockId::Hash(*header.parent_hash())))
+				},
+				None => Ok(None),
+			})
+		}
 	}
 }
 
