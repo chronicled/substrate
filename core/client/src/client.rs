@@ -970,7 +970,9 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 
 		let retracted = if is_new_best {
 			let route_from_best = crate::blockchain::tree_route(
-				|id| self.header(&id)?.ok_or_else(|| Error::UnknownBlock(format!("{:?}", id))),
+				|id| self.light_header(&id)?.ok_or_else(
+					|| Error::UnknownBlock(format!("{:?}", id))
+				),
 				BlockId::Hash(info.best_hash),
 				BlockId::Hash(parent_hash),
 			)?;
@@ -1104,7 +1106,9 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		}
 
 		let route_from_finalized = crate::blockchain::tree_route(
-			|id| self.header(&id)?.ok_or_else(|| Error::UnknownBlock(format!("{:?}", id))),
+			|id| self.light_header(&id)?.ok_or_else(||
+				Error::UnknownBlock(format!("{:?}", id))
+			),
 			BlockId::Hash(last_finalized),
 			BlockId::Hash(block),
 		)?;
@@ -1117,7 +1121,9 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		}
 
 		let route_from_best = crate::blockchain::tree_route(
-			|id| self.header(&id)?.ok_or_else(|| Error::UnknownBlock(format!("{:?}", id))),
+			|id| self.light_header(&id)?.ok_or_else(||
+				Error::UnknownBlock(format!("{:?}", id))
+			),
 			BlockId::Hash(best_block),
 			BlockId::Hash(block),
 		)?;
@@ -1256,7 +1262,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 	}
 
 	/// Get block light header by id.
-	fn light_header(&self, id: &BlockId<Block>) -> error::Result<Option<LightHeader<Block>>> {
+	pub fn light_header(&self, id: &BlockId<Block>) -> error::Result<Option<LightHeader<Block>>> {
 		self.backend.blockchain().light_header(*id)
 	}
 
@@ -1948,7 +1954,9 @@ pub mod utils {
 			}
 
 			let tree_route = blockchain::tree_route(
-				|id| client.header(&id)?.ok_or_else(|| Error::UnknownBlock(format!("{:?}", id))),
+				|id| client.light_header(&id)?.ok_or_else(
+					|| Error::UnknownBlock(format!("{:?}", id))
+				),
 				BlockId::Hash(*hash),
 				BlockId::Hash(*base),
 			)?;

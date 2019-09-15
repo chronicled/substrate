@@ -1007,7 +1007,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 		// cannot find tree route with empty DB.
 		if meta.best_hash != Default::default() {
 			let tree_route = ::client::blockchain::tree_route(
-				|id| self.blockchain.header(id)?.ok_or_else(
+				|id| self.blockchain.light_header(id)?.ok_or_else(
 					|| client::error::Error::UnknownBlock(format!("{:?}", id))
 				),
 				BlockId::Hash(meta.best_hash),

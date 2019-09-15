@@ -223,7 +223,9 @@ impl<Block: BlockT> LightStorage<Block> {
 		let meta = self.meta.read();
 		if meta.best_hash != Default::default() {
 			let tree_route = ::client::blockchain::tree_route(
-				|id| self.header(id)?.ok_or_else(|| client::error::Error::UnknownBlock(format!("{:?}", id))),
+				|id| self.light_header(id)?.ok_or_else(||
+					client::error::Error::UnknownBlock(format!("{:?}", id))
+				),
 				BlockId::Hash(meta.best_hash),
 				BlockId::Hash(route_to),
 			)?;
