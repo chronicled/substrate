@@ -39,7 +39,7 @@ use std::io;
 use std::collections::{HashMap, HashSet};
 
 use client::backend::NewBlockState;
-use client::blockchain::HeaderBackend;
+use client::blockchain::{HeaderBackend, LightHeader};
 use client::ExecutionStrategies;
 use client::backend::{StorageCollection, ChildStorageCollection};
 use codec::{Decode, Encode};
@@ -62,7 +62,7 @@ use state_machine::{
 	DBValue, ChangesTrieTransaction, ChangesTrieCacheAction, ChangesTrieBuildCache,
 	backend::Backend as StateBackend,
 };
-use crate::utils::{Meta, db_err, meta_keys, read_db, block_id_to_lookup_key, read_meta};
+use crate::utils::{Meta, db_err, meta_keys, read_db, read_meta};
 use client::leaves::{LeafSet, FinalizationDisplaced};
 use client::children;
 use state_db::StateDb;
@@ -261,16 +261,9 @@ impl<'a> state_db::MetaDb for StateMetaDb<'a> {
 	}
 }
 
-#[derive(Debug, Clone)]
-struct CachedHeaderData<Block: BlockT> {
-	hash: Block::Hash,
-	number: NumberFor<Block>,
-	parent: Block::Hash,
-}
-
 struct HeaderCache<Block: BlockT> {
 	number_to_hash: HashMap<NumberFor<Block>, Block::Hash>,
-	hash_to_data: LruCache<Block::Hash, CachedHeaderData<Block>>,
+	hash_to_data: LruCache<Block::Hash, LightHeader<Block>>,
 }
 
 impl<Block: BlockT> HeaderCache<Block> {
@@ -281,7 +274,7 @@ impl<Block: BlockT> HeaderCache<Block> {
 		}
 	}
 
-	fn get_data(&mut self, id: BlockId<Block>) -> Option<CachedHeaderData<Block>> {
+	fn get_data(&mut self, id: BlockId<Block>) -> Option<LightHeader<Block>> {
 		match id {
 			BlockId::Hash(hash) => self.hash_to_data.get_mut(&hash).cloned(),
 			BlockId::Number(number) => {
@@ -293,7 +286,7 @@ impl<Block: BlockT> HeaderCache<Block> {
 		}
 	}
 
-	fn put_data(&mut self, data: CachedHeaderData<Block>) {
+	fn put_data(&mut self, data: LightHeader<Block>) {
 		self.number_to_hash.insert(data.number, data.hash);
 		self.hash_to_data.insert(data.hash, data);
 	}
@@ -349,6 +342,25 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		utils::read_header(&*self.db, columns::KEY_LOOKUP, columns::HEADER, id)
 	}
 
+	fn light_header(&self, id: BlockId<Block>) -> Result<Option<LightHeader<Block>>, client::error::Error> {
+		if let Some(header_data) = self.header_cache.write().get_data(id) {
+			Ok(Some(header_data))
+		} else {
+			self.header(id).and_then(|maybe_header| match maybe_header {
+				Some(header) => {
+					let light_header = LightHeader {
+						hash: header.hash(),
+						number: *header.number(),
+						parent: *header.parent_hash(),
+					};
+					self.header_cache.write().put_data(light_header.clone());
+					Ok(Some(light_header))
+				},
+				None => Ok(None),
+			})
+		}
+	}
+
 	fn info(&self) -> client::blockchain::Info<Block> {
 		let meta = self.meta.read();
 		client::blockchain::Info {
@@ -386,13 +398,14 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		} else {
 			self.header(id).and_then(|maybe_header| match maybe_header {
 				Some(header) => {
-					let cached_header_data = CachedHeaderData {
+					let number = header.number().clone();
+					let cached_header_data = LightHeader {
 						hash: header.hash(),
-						number: header.number().clone(),
+						number: *header.number(),
 						parent: header.parent_hash().clone(),
 					};
 					self.header_cache.write().put_data(cached_header_data);
-					Ok(Some(header.number()))
+					Ok(Some(number))
 				},
 				None => Ok(None),
 			})
@@ -406,7 +419,7 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		} else {
 			self.header(id).and_then(|maybe_header| match maybe_header {
 				Some(header) => {
-					let cached_header_data = CachedHeaderData {
+					let cached_header_data = LightHeader {
 						hash: header.hash().clone(),
 						number: *header.number(),
 						parent: header.parent_hash().clone(),
@@ -425,7 +438,7 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		} else {
 			self.header(id).and_then(|maybe_header| match maybe_header {
 				Some(header) => {
-					let cached_header_data = CachedHeaderData {
+					let cached_header_data = LightHeader {
 						hash: header.hash(),
 						number: *header.number(),
 						parent: header.parent_hash().clone(),

@@ -23,8 +23,10 @@ use parking_lot::RwLock;
 use kvdb::{KeyValueDB, DBTransaction};
 
 use client::backend::{AuxStore, NewBlockState};
-use client::blockchain::{BlockStatus, Cache as BlockchainCache,
-	HeaderBackend as BlockchainHeaderBackend, Info as BlockchainInfo};
+use client::blockchain::{
+	BlockStatus, Cache as BlockchainCache, LightHeader,
+	HeaderBackend as BlockchainHeaderBackend, Info as BlockchainInfo
+};
 use client::cht;
 use client::error::{Error as ClientError, Result as ClientResult};
 use client::light::blockchain::Storage as LightBlockchainStorage;
@@ -147,6 +149,10 @@ impl<Block> BlockchainHeaderBackend<Block> for LightStorage<Block>
 {
 	fn header(&self, id: BlockId<Block>) -> ClientResult<Option<Block::Header>> {
 		utils::read_header(&*self.db, columns::KEY_LOOKUP, columns::HEADER, id)
+	}
+
+	fn light_header(&self, id: BlockId<Block>) -> ClientResult<Option<LightHeader<Block>>> {
+		unimplemented!()
 	}
 
 	fn info(&self) -> BlockchainInfo<Block> {

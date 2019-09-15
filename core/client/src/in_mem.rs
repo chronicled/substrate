@@ -33,7 +33,7 @@ use crate::error;
 use crate::backend::{self, NewBlockState, StorageCollection, ChildStorageCollection};
 use crate::light;
 use crate::leaves::LeafSet;
-use crate::blockchain::{self, BlockStatus, HeaderBackend};
+use crate::blockchain::{self, BlockStatus, HeaderBackend, LightHeader};
 
 struct PendingBlock<B: BlockT> {
 	block: StoredBlock<B>,
@@ -291,6 +291,19 @@ impl<Block: BlockT> HeaderBackend<Block> for Blockchain<Block> {
 	fn header(&self, id: BlockId<Block>) -> error::Result<Option<<Block as BlockT>::Header>> {
 		Ok(self.id(id).and_then(|hash| {
 			self.storage.read().blocks.get(&hash).map(|b| b.header().clone())
+		}))
+	}
+
+	fn light_header(&self, id: BlockId<Block>) -> error::Result<Option<LightHeader<Block>>> {
+		Ok(self.id(id).and_then(|hash| {
+			self.storage.read().blocks.get(&hash).map(|b| {
+				let header = b.header();
+				LightHeader {
+					hash: header.hash(),
+					number: *header.number(),
+					parent: *header.parent_hash(),
+				}
+			})
 		}))
 	}
 

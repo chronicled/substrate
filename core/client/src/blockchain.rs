@@ -25,9 +25,16 @@ use consensus::well_known_cache_keys;
 
 use crate::error::{Error, Result};
 
+#[derive(Debug, Clone)]
+pub struct LightHeader<Block: BlockT> {
+	pub hash: Block::Hash,
+	pub number: NumberFor<Block>,
+	pub parent: Block::Hash,
+}
+
 /// Blockchain database header backend. Does not perform any validation.
 pub trait HeaderBackend<Block: BlockT>: Send + Sync {
-	/// Get block header. Returns `None` if block is not found.
+	/// Get block header.
 	fn header(&self, id: BlockId<Block>) -> Result<Option<Block::Header>>;
 	/// Get blockchain info.
 	fn info(&self) -> Info<Block>;
@@ -39,6 +46,10 @@ pub trait HeaderBackend<Block: BlockT>: Send + Sync {
 	fn hash(&self, number: NumberFor<Block>) -> Result<Option<Block::Hash>>;
 	/// Get id of parent block. Returns `None` if the header is not in the chain.
 	fn parent(&self, id: BlockId<Block>) -> Result<Option<BlockId<Block>>>;
+
+	/// Get light header, usually without hitting database.
+	/// Returns `None` if the header is not in the chain.
+	fn light_header(&self, id: BlockId<Block>) -> Result<Option<LightHeader<Block>>>;
 
 	/// Convert an arbitrary block ID into a block hash.
 	fn block_hash_from_id(&self, id: &BlockId<Block>) -> Result<Option<Block::Hash>> {
