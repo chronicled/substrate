@@ -343,7 +343,8 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 	}
 
 	fn light_header(&self, id: BlockId<Block>) -> Result<Option<LightHeader<Block>>, client::error::Error> {
-		if let Some(header_data) = self.header_cache.write().get_data(id) {
+		let mut header_cache = self.header_cache.write();
+		if let Some(header_data) = header_cache.get_data(id) {
 			Ok(Some(header_data))
 		} else {
 			self.header(id).and_then(|maybe_header| match maybe_header {
@@ -353,7 +354,7 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 						number: *header.number(),
 						parent: *header.parent_hash(),
 					};
-					self.header_cache.write().put_data(light_header.clone());
+					header_cache.put_data(light_header.clone());
 					Ok(Some(light_header))
 				},
 				None => Ok(None),
@@ -392,63 +393,27 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 	}
 
 	fn number(&self, hash: Block::Hash) -> Result<Option<NumberFor<Block>>, client::error::Error> {
-		let id = BlockId::Hash(hash);
-		if let Some(header_data) = self.header_cache.write().get_data(id) {
-			Ok(Some(header_data.number))
-		} else {
-			self.header(id).and_then(|maybe_header| match maybe_header {
-				Some(header) => {
-					let number = header.number().clone();
-					let cached_header_data = LightHeader {
-						hash: header.hash(),
-						number: *header.number(),
-						parent: header.parent_hash().clone(),
-					};
-					self.header_cache.write().put_data(cached_header_data);
-					Ok(Some(number))
-				},
+		self.light_header(BlockId::Hash(hash))
+			.and_then(|maybe_light_header| match maybe_light_header {
+				Some(light_header) => Ok(Some(light_header.number)),
 				None => Ok(None),
-			})
-		}
+		})
 	}
 
 	fn hash(&self, number: NumberFor<Block>) -> Result<Option<Block::Hash>, client::error::Error> {
-		let id = BlockId::Number(number);
-		if let Some(header_data) = self.header_cache.write().get_data(id) {
-			Ok(Some(header_data.hash))
-		} else {
-			self.header(id).and_then(|maybe_header| match maybe_header {
-				Some(header) => {
-					let cached_header_data = LightHeader {
-						hash: header.hash().clone(),
-						number: *header.number(),
-						parent: header.parent_hash().clone(),
-					};
-					self.header_cache.write().put_data(cached_header_data);
-					Ok(Some(header.hash()))
-				},
+		self.light_header(BlockId::Number(number))
+			.and_then(|maybe_light_header| match maybe_light_header {
+				Some(light_header) => Ok(Some(light_header.hash)),
 				None => Ok(None),
-			})
-		}
+		})
 	}
 
 	fn parent(&self, id: BlockId<Block>) -> Result<Option<BlockId<Block>>, client::error::Error> {
-		if let Some(header_data) = self.header_cache.write().get_data(id) {
-			Ok(Some(BlockId::hash(header_data.parent)))
-		} else {
-			self.header(id).and_then(|maybe_header| match maybe_header {
-				Some(header) => {
-					let cached_header_data = LightHeader {
-						hash: header.hash(),
-						number: *header.number(),
-						parent: header.parent_hash().clone(),
-					};
-					self.header_cache.write().put_data(cached_header_data);
-					Ok(Some(BlockId::Hash(*header.parent_hash())))
-				},
+		self.light_header(id)
+			.and_then(|maybe_light_header| match maybe_light_header {
+				Some(light_header) => Ok(Some(BlockId::Hash(light_header.parent))),
 				None => Ok(None),
-			})
-		}
+		})
 	}
 }
 
