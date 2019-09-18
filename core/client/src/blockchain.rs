@@ -25,9 +25,16 @@ use consensus::well_known_cache_keys;
 
 use crate::error::{Error, Result};
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct LightHeader<Block: BlockT> {
+	pub hash: Block::Hash,
+	pub number: NumberFor<Block>,
+	pub parent: Block::Hash,
+}
+
 /// Blockchain database header backend. Does not perform any validation.
 pub trait HeaderBackend<Block: BlockT>: Send + Sync {
-	/// Get block header. Returns `None` if block is not found.
+	/// Get block header.
 	fn header(&self, id: BlockId<Block>) -> Result<Option<Block::Header>>;
 	/// Get blockchain info.
 	fn info(&self) -> Info<Block>;
@@ -37,6 +44,12 @@ pub trait HeaderBackend<Block: BlockT>: Send + Sync {
 	fn number(&self, hash: Block::Hash) -> Result<Option<<<Block as BlockT>::Header as HeaderT>::Number>>;
 	/// Get block hash by number. Returns `None` if the header is not in the chain.
 	fn hash(&self, number: NumberFor<Block>) -> Result<Option<Block::Hash>>;
+	/// Get id of parent block. Returns `None` if the header is not in the chain.
+	fn parent(&self, id: BlockId<Block>) -> Result<Option<BlockId<Block>>>;
+
+	/// Get light header, usually without hitting database.
+	/// Returns `None` if the header is not in the chain.
+	fn light_header(&self, id: BlockId<Block>) -> Result<Option<LightHeader<Block>>>;
 
 	/// Convert an arbitrary block ID into a block hash.
 	fn block_hash_from_id(&self, id: &BlockId<Block>) -> Result<Option<Block::Hash>> {
@@ -204,58 +217,58 @@ pub fn tree_route<Block: BlockT, Backend: HeaderBackend<Block>>(
 ) -> Result<TreeRoute<Block>> {
 	use sr_primitives::traits::Header;
 
-	let load_header = |id: BlockId<Block>| {
-		match backend.header(id) {
+	let load_light_header = |id: BlockId<Block>| {
+		match backend.light_header(id) {
 			Ok(Some(hdr)) => Ok(hdr),
 			Ok(None) => Err(Error::UnknownBlock(format!("Unknown block {:?}", id))),
 			Err(e) => Err(e),
 		}
 	};
 
-	let mut from = load_header(from)?;
-	let mut to = load_header(to)?;
+	let mut from = load_light_header(from)?;
+	let mut to = load_light_header(to)?;
 
 	let mut from_branch = Vec::new();
 	let mut to_branch = Vec::new();
 
-	while to.number() > from.number() {
+	while to.number > from.number {
 		to_branch.push(RouteEntry {
-			number: to.number().clone(),
-			hash: to.hash(),
+			number: to.number,
+			hash: to.hash,
 		});
 
-		to = load_header(BlockId::Hash(*to.parent_hash()))?;
+		to = load_light_header(BlockId::Hash(to.parent))?;
 	}
 
-	while from.number() > to.number() {
+	while from.number > to.number {
 		from_branch.push(RouteEntry {
-			number: from.number().clone(),
-			hash: from.hash(),
+			number: from.number,
+			hash: from.hash,
 		});
-		from = load_header(BlockId::Hash(*from.parent_hash()))?;
+		from = load_light_header(BlockId::Hash(from.parent))?;
 	}
 
 	// numbers are equal now. walk backwards until the block is the same
 
 	while to != from {
 		to_branch.push(RouteEntry {
-			number: to.number().clone(),
-			hash: to.hash(),
+			number: to.number,
+			hash: to.hash,
 		});
-		to = load_header(BlockId::Hash(*to.parent_hash()))?;
+		to = load_light_header(BlockId::Hash(to.parent))?;
 
 		from_branch.push(RouteEntry {
-			number: from.number().clone(),
-			hash: from.hash(),
+			number: from.number,
+			hash: from.hash,
 		});
-		from = load_header(BlockId::Hash(*from.parent_hash()))?;
+		from = load_light_header(BlockId::Hash(from.parent))?;
 	}
 
 	// add the pivot block. and append the reversed to-branch (note that it's reverse order originalls)
 	let pivot = from_branch.len();
 	from_branch.push(RouteEntry {
-		number: to.number().clone(),
-		hash: to.hash(),
+		number: to.number,
+		hash: to.hash,
 	});
 	from_branch.extend(to_branch.into_iter().rev());
 

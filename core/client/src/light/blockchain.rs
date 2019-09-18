@@ -25,8 +25,10 @@ use sr_primitives::traits::{Block as BlockT, Header as HeaderT, NumberFor, Zero}
 use consensus::well_known_cache_keys;
 
 use crate::backend::{AuxStore, NewBlockState};
-use crate::blockchain::{Backend as BlockchainBackend, BlockStatus, Cache as BlockchainCache,
-	HeaderBackend as BlockchainHeaderBackend, Info as BlockchainInfo, ProvideCache};
+use crate::blockchain::{
+	Backend as BlockchainBackend, BlockStatus, Cache as BlockchainCache, LightHeader,
+	HeaderBackend as BlockchainHeaderBackend, Info as BlockchainInfo, ProvideCache,
+};
 use crate::cht;
 use crate::error::{Error as ClientError, Result as ClientResult};
 use crate::light::fetcher::{Fetcher, RemoteBodyRequest, RemoteHeaderRequest};
@@ -134,6 +136,10 @@ impl<S, F, Block> BlockchainHeaderBackend<Block> for Blockchain<S, F> where Bloc
 		}
 	}
 
+	fn light_header(&self, id: BlockId<Block>) -> ClientResult<Option<LightHeader<Block>>> {
+		self.storage.light_header(id)
+	}
+
 	fn info(&self) -> BlockchainInfo<Block> {
 		self.storage.info()
 	}
@@ -148,6 +154,10 @@ impl<S, F, Block> BlockchainHeaderBackend<Block> for Blockchain<S, F> where Bloc
 
 	fn hash(&self, number: <<Block as BlockT>::Header as HeaderT>::Number) -> ClientResult<Option<Block::Hash>> {
 		self.storage.hash(number)
+	}
+
+	fn parent(&self, id: BlockId<Block>) -> ClientResult<Option<BlockId<Block>>> {
+		self.storage.parent(id)
 	}
 }
 

@@ -33,7 +33,7 @@ use crate::error;
 use crate::backend::{self, NewBlockState, StorageCollection, ChildStorageCollection};
 use crate::light;
 use crate::leaves::LeafSet;
-use crate::blockchain::{self, BlockStatus, HeaderBackend};
+use crate::blockchain::{self, BlockStatus, HeaderBackend, LightHeader};
 
 struct PendingBlock<B: BlockT> {
 	block: StoredBlock<B>,
@@ -294,6 +294,19 @@ impl<Block: BlockT> HeaderBackend<Block> for Blockchain<Block> {
 		}))
 	}
 
+	fn light_header(&self, id: BlockId<Block>) -> error::Result<Option<LightHeader<Block>>> {
+		Ok(self.id(id).and_then(|hash| {
+			self.storage.read().blocks.get(&hash).map(|b| {
+				let header = b.header();
+				LightHeader {
+					hash: header.hash(),
+					number: *header.number(),
+					parent: *header.parent_hash(),
+				}
+			})
+		}))
+	}
+
 	fn info(&self) -> blockchain::Info<Block> {
 		let storage = self.storage.read();
 		blockchain::Info {
@@ -318,6 +331,12 @@ impl<Block: BlockT> HeaderBackend<Block> for Blockchain<Block> {
 
 	fn hash(&self, number: <<Block as BlockT>::Header as HeaderT>::Number) -> error::Result<Option<Block::Hash>> {
 		Ok(self.id(BlockId::Number(number)))
+	}
+
+	fn parent(&self, id: BlockId<Block>) -> error::Result<Option<BlockId<Block>>> {
+		Ok(self.id(id).and_then(|hash| {
+			self.storage.read().blocks.get(&hash).map(|b| BlockId::Hash(*b.header().parent_hash()))
+		}))
 	}
 }
 
