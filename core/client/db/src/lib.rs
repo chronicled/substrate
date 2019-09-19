@@ -263,22 +263,14 @@ impl<Block: BlockT> HeaderCache<Block> {
 		}
 	}
 
-	fn get_data(&mut self, id: BlockId<Block>) -> Option<LightHeader<Block>> {
+	fn get_data(&self, id: BlockId<Block>) -> Option<LightHeader<Block>> {
 		match id {
 			BlockId::Hash(hash) => self.hash_to_data.get(&hash).cloned(),
 			BlockId::Number(_) => None,
 		}
 	}
 
-	fn put_data(&mut self, mut data: LightHeader<Block>) {
-		if data.number % NumberFor::<Block>::from(LIGHT_HEADER_SECTION_SIZE) == NumberFor::<Block>::zero() {
-			data.parent_section = Some(data.parent);
-		} else {
-			if let Some(parent) = self.hash_to_data.get_mut(&data.parent) {
-				data.parent_section = parent.parent_section;
-				// info!("@@@@@ setting section parent of {:?} {:?} to {:?}", data.hash, data.number, data.parent_section);
-			}
-		}
+	fn put_data(&mut self, data: LightHeader<Block>) {
 		self.hash_to_data.put(data.hash, data);
 	}
 }
@@ -340,11 +332,22 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		} else {
 			self.header(id).and_then(|maybe_header| match maybe_header {
 				Some(header) => {
+					let mut parent_section = None;
+					if *header.number() % NumberFor::<Block>::from(LIGHT_HEADER_SECTION_SIZE)
+						== NumberFor::<Block>::zero() {
+						parent_section = Some(header.parent_hash().clone());
+					} else {
+						if let Some(parent) = header_cache.get_data(
+							BlockId::hash(header.parent_hash().clone())
+						) {
+							parent_section = parent.parent_section;
+						}
+					}
 					let light_header = LightHeader {
 						hash: header.hash(),
 						number: *header.number(),
 						parent: *header.parent_hash(),
-						parent_section: None,
+						parent_section,
 					};
 					header_cache.put_data(light_header.clone());
 					Ok(Some(light_header))
