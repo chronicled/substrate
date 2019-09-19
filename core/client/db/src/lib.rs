@@ -341,6 +341,8 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 							BlockId::hash(header.parent_hash().clone())
 						) {
 							parent_section = parent.parent_section;
+						} else {
+							info!("@@@@ missing parent section of {:?} on light_header()", header.number().clone());
 						}
 					}
 					let light_header = LightHeader {
@@ -1115,18 +1117,19 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 				hash,
 			)?;
 			let mut parent_section = None;
-			let mut header_cache = self.blockchain.header_cache.write();
 			if *pending_block.header.number() % NumberFor::<Block>::from(LIGHT_HEADER_SECTION_SIZE)
 				== NumberFor::<Block>::zero() {
 				parent_section = Some(pending_block.header.parent_hash().clone());
 			} else {
-				if let Some(parent) = header_cache.get_data(
+				if let Some(parent) = self.blockchain.header_cache.write().get_data(
 					BlockId::hash(pending_block.header.parent_hash().clone())
 				) {
 					parent_section = parent.parent_section;
+				} else {
+					info!("@@@@ missing parent section of {:?} on insert", pending_block.header.number().clone());
 				}
 			}
-			header_cache.put_data(
+			self.blockchain.header_cache.write().put_data(
 				LightHeader {
 					hash: pending_block.header.hash().clone(),
 					number: pending_block.header.number().clone(),
