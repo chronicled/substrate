@@ -263,7 +263,7 @@ impl<Block: BlockT> HeaderCache<Block> {
 		}
 	}
 
-	fn get_data(&self, id: BlockId<Block>) -> Option<LightHeader<Block>> {
+	fn get_data(&mut self, id: BlockId<Block>) -> Option<LightHeader<Block>> {
 		match id {
 			BlockId::Hash(hash) => self.hash_to_data.get(&hash).cloned(),
 			BlockId::Number(_) => None,
