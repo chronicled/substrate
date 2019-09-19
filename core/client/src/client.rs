@@ -1885,14 +1885,20 @@ pub mod utils {
 				}
 			}
 
-			let tree_route = blockchain::tree_route(
+			// let tree_route = blockchain::tree_route(
+			// 	#[allow(deprecated)]
+			// 	client.backend().blockchain(),
+			// 	BlockId::Hash(*hash),
+			// 	BlockId::Hash(*base),
+			// )?;
+			let ancestor = blockchain::lca(
 				#[allow(deprecated)]
 				client.backend().blockchain(),
 				BlockId::Hash(*hash),
 				BlockId::Hash(*base),
 			)?;
-
-			Ok(tree_route.common_block().hash == *base)
+			Ok(ancestor == *base)
+			// Ok(tree_route.common_block().hash == *base)
 		}
 	}
 }

@@ -295,16 +295,7 @@ impl<Block: BlockT> HeaderBackend<Block> for Blockchain<Block> {
 	}
 
 	fn light_header(&self, id: BlockId<Block>) -> error::Result<Option<LightHeader<Block>>> {
-		Ok(self.id(id).and_then(|hash| {
-			self.storage.read().blocks.get(&hash).map(|b| {
-				let header = b.header();
-				LightHeader {
-					hash: header.hash(),
-					number: *header.number(),
-					parent: *header.parent_hash(),
-				}
-			})
-		}))
+		unimplemented!()
 	}
 
 	fn info(&self) -> blockchain::Info<Block> {

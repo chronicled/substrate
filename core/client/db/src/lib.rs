@@ -82,6 +82,9 @@ const DEFAULT_CHILD_RATIO: (usize, usize) = (1, 10);
 /// Size of light header LRU cache.
 const LIGHT_HEADER_CACHE_SIZE: usize = 1_000_000;
 
+/// Section size. 
+const LIGHT_HEADER_SECTION_SIZE: u32 = 1_0;
+
 /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
 pub type DbState = state_machine::TrieBackend<Arc<dyn state_machine::Storage<Blake2Hasher>>, Blake2Hasher>;
 
@@ -267,8 +270,15 @@ impl<Block: BlockT> HeaderCache<Block> {
 		}
 	}
 
-	fn put_data(&mut self, data: LightHeader<Block>) {
-		info!("LRU CACHE SIZE {}", self.hash_to_data.len());
+	fn put_data(&mut self, mut data: LightHeader<Block>) {
+		if data.number % NumberFor::<Block>::from(LIGHT_HEADER_SECTION_SIZE) == NumberFor::<Block>::zero() {
+			data.parent_section = Some(data.parent);
+		} else {
+			if let Some(parent) = self.hash_to_data.get_mut(&data.parent) {
+				data.parent_section = parent.parent_section;
+				// info!("@@@@@ setting section parent of {:?} {:?} to {:?}", data.hash, data.number, data.parent_section);
+			}
+		}
 		self.hash_to_data.put(data.hash, data);
 	}
 }
@@ -334,6 +344,7 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 						hash: header.hash(),
 						number: *header.number(),
 						parent: *header.parent_hash(),
+						parent_section: None,
 					};
 					header_cache.put_data(light_header.clone());
 					Ok(Some(light_header))

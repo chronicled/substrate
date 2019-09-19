@@ -17,11 +17,14 @@
 //! Substrate blockchain trait
 
 use std::sync::Arc;
+use std::collections::HashSet;
 
 use sr_primitives::traits::{Block as BlockT, Header as HeaderT, NumberFor};
 use sr_primitives::generic::BlockId;
 use sr_primitives::Justification;
 use consensus::well_known_cache_keys;
+
+use log::info;
 
 use crate::error::{Error, Result};
 
@@ -30,6 +33,7 @@ pub struct LightHeader<Block: BlockT> {
 	pub hash: Block::Hash,
 	pub number: NumberFor<Block>,
 	pub parent: Block::Hash,
+	pub parent_section: Option<Block::Hash>,
 }
 
 /// Blockchain database header backend. Does not perform any validation.
@@ -207,6 +211,53 @@ impl<Block: BlockT> TreeRoute<Block> {
 	pub fn enacted(&self) -> &[RouteEntry<Block>] {
 		&self.route[self.pivot + 1 ..]
 	}
+}
+
+/// Compute Lowest Common Ancestor between two blocks.
+pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
+	backend: &Backend,
+	b0: BlockId<Block>,
+	b1: BlockId<Block>,
+) -> Result<Block::Hash> {
+	use sr_primitives::traits::Header;
+
+	let load_light_header = |id: BlockId<Block>| {
+		match backend.light_header(id) {
+			Ok(Some(hdr)) => Ok(hdr),
+			Ok(None) => Err(Error::UnknownBlock(format!("Unknown block {:?}", id))),
+			Err(e) => Err(e),
+		}
+	};
+
+	let mut b0 = load_light_header(b0)?;
+	let mut b1 = load_light_header(b1)?;
+	
+	let diff = if b0.number > b1.number {
+		b0.number - b1.number
+	} else {
+		b1.number - b0.number
+	};
+
+	while b0.parent_section.is_some() && b1.parent_section.is_some()
+		&& b0.parent_section.unwrap() != b1.parent_section.unwrap() {
+
+		info!("@@@@@ using section parent b0 {:?} {:?} b1 {:?} {:?}", b0.number, b0.hash, b1.number, b1.hash);
+		if b0.number > b1.number {
+			b0 = load_light_header(BlockId::hash(b0.parent_section.unwrap()))?;
+		} else {
+			b1 = load_light_header(BlockId::hash(b1.parent_section.unwrap()))?;
+		}
+	}
+
+	while b0 != b1 {
+		if b0.number > b1.number {
+			b0 = load_light_header(BlockId::hash(b0.parent))?;
+		} else {
+			b1 = load_light_header(BlockId::hash(b1.parent))?;
+		}
+	}
+
+	Ok(b0.hash)
 }
 
 /// Compute a tree-route between two blocks. See tree-route docs for more details.
