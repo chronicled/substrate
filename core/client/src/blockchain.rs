@@ -237,11 +237,11 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	} else {
 		b1.number - b0.number
 	};
+	let mut i = 0;
 
 	while b0.parent_section.is_some() && b1.parent_section.is_some()
 		&& b0.parent_section.unwrap() != b1.parent_section.unwrap() {
-
-		info!("@@@@@ using section parent b0 {:?} {:?} b1 {:?} {:?}", b0.number, b0.hash, b1.number, b1.hash);
+		i += 1;
 		if b0.number > b1.number {
 			b0 = load_light_header(BlockId::hash(b0.parent_section.unwrap()))?;
 		} else {
@@ -250,12 +250,15 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	}
 
 	while b0 != b1 {
+		i += 1;
 		if b0.number > b1.number {
 			b0 = load_light_header(BlockId::hash(b0.parent))?;
 		} else {
 			b1 = load_light_header(BlockId::hash(b1.parent))?;
 		}
 	}
+
+	info!("diff {} ite {} lca {}", diff, i, b0.hash);
 
 	Ok(b0.hash)
 }
