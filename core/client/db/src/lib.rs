@@ -1114,7 +1114,26 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 				number,
 				hash,
 			)?;
-
+			let mut parent_section = None;
+			let mut header_cache = self.blockchain.header_cache.write();
+			if *pending_block.header.number() % NumberFor::<Block>::from(LIGHT_HEADER_SECTION_SIZE)
+				== NumberFor::<Block>::zero() {
+				parent_section = Some(pending_block.header.parent_hash().clone());
+			} else {
+				if let Some(parent) = header_cache.get_data(
+					BlockId::hash(pending_block.header.parent_hash().clone())
+				) {
+					parent_section = parent.parent_section;
+				}
+			}
+			header_cache.put_data(
+				LightHeader {
+					hash: pending_block.header.hash().clone(),
+					number: pending_block.header.number().clone(),
+					parent: pending_block.header.parent_hash().clone(),
+					parent_section,
+				}
+			);
 			transaction.put(columns::HEADER, &lookup_key, &pending_block.header.encode());
 			if let Some(body) = pending_block.body {
 				transaction.put(columns::BODY, &lookup_key, &body.encode());
