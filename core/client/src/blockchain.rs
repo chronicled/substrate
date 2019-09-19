@@ -258,7 +258,7 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 		}
 	}
 
-	info!("diff {} ite {} lca {}", diff, i, b0.hash);
+	// info!("diff {} ite {} lca {}", diff, i, b0.hash);
 
 	Ok(b0.hash)
 }
