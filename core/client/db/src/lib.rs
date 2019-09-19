@@ -83,7 +83,7 @@ const DEFAULT_CHILD_RATIO: (usize, usize) = (1, 10);
 const LIGHT_HEADER_CACHE_SIZE: usize = 1_000_000;
 
 /// Section size. 
-const LIGHT_HEADER_SECTION_SIZE: u32 = 1_0;
+const LIGHT_HEADER_SECTION_SIZE: u32 = 1_000;
 
 /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
 pub type DbState = state_machine::TrieBackend<Arc<dyn state_machine::Storage<Blake2Hasher>>, Blake2Hasher>;
