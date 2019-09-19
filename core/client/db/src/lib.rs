@@ -79,7 +79,7 @@ const MIN_BLOCKS_TO_KEEP_CHANGES_TRIES_FOR: u32 = 32768;
 const DEFAULT_CHILD_RATIO: (usize, usize) = (1, 10);
 
 /// Size of light header LRU cache.
-const LIGHT_HEADER_CACHE_SIZE: usize = 10_000;
+const LIGHT_HEADER_CACHE_SIZE: usize = 20_000;
 
 /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
 pub type DbState = state_machine::TrieBackend<Arc<dyn state_machine::Storage<Blake2Hasher>>, Blake2Hasher>;
