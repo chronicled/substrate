@@ -44,7 +44,8 @@ use client::ExecutionStrategies;
 use client::backend::{StorageCollection, ChildStorageCollection};
 use codec::{Decode, Encode};
 use hash_db::{Hasher, Prefix};
-use lru_cache::LruCache;
+// use lru_cache::LruCache;
+use lru::LruCache;
 use kvdb::{KeyValueDB, DBTransaction};
 use trie::{MemoryDB, PrefixedMemoryDB, prefixed_key};
 use parking_lot::{Mutex, RwLock};
@@ -66,7 +67,7 @@ use client::children;
 use state_db::StateDb;
 use consensus_common::well_known_cache_keys;
 use crate::storage_cache::{CachingState, SharedCache, new_shared_cache};
-use log::{trace, debug, warn};
+use log::{trace, debug, warn, info};
 pub use state_db::PruningMode;
 
 #[cfg(feature = "test-helpers")]
@@ -261,13 +262,14 @@ impl<Block: BlockT> HeaderCache<Block> {
 
 	fn get_data(&mut self, id: BlockId<Block>) -> Option<LightHeader<Block>> {
 		match id {
-			BlockId::Hash(hash) => self.hash_to_data.get_mut(&hash).cloned(),
+			BlockId::Hash(hash) => self.hash_to_data.get(&hash).cloned(),
 			BlockId::Number(_) => None,
 		}
 	}
 
 	fn put_data(&mut self, data: LightHeader<Block>) {
-		self.hash_to_data.insert(data.hash, data);
+		info!("LRU CACHE SIZE {}", self.hash_to_data.len());
+		self.hash_to_data.put(data.hash, data);
 	}
 }
 
