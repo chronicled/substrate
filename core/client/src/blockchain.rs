@@ -243,7 +243,7 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	let mut i = 0;
 	let mut j = 0;
 
-	while b0.number > NumberFor::<Block>::zero() && b1.number > NumberFor::<Block>::zero() {
+	while b0 != b1 {
 		i += 1;
 		let b0_ancestor = load_light_header(BlockId::hash(b0.ancestor))?;
 		let b1_ancestor = load_light_header(BlockId::hash(b1.ancestor))?;
