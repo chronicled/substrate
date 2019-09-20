@@ -231,16 +231,14 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 		}
 	};
 
+	
 	let mut b0 = load_light_header(b0)?;
 	let mut b1 = load_light_header(b1)?;
-	
+	let mut b0_ori = b0.clone();
+	let mut b1_ori = b1.clone();
+
 	let b0_num = b0.number;
 	let b1_num = b1.number;
-	let diff = if b0_num < b1_num {
-		b1_num - b0_num
-	} else {
-		b0_num - b1_num
-	};
 
 	let mut i = 0;
 	let mut j = 0;
@@ -267,7 +265,15 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 			b1 = load_light_header(BlockId::hash(b1.parent))?;
 		}
 	}
-
+	let diff = if b0_num < b1_num {
+		b0_ori.ancestor = b0.hash;
+		backend.set_light_header(b0_ori);
+		b1_num - b0_num
+	} else {
+		b1_ori.ancestor = b0.hash;
+		backend.set_light_header(b1_ori);
+		b0_num - b1_num
+	};
 	info!("b0 {} b1 {} diff {} ancestor_ite {} parent_ite {} lca {}", b0_num, b1_num, diff, i, j, b0.number);
 
 	Ok(b0.hash)
