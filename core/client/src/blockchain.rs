@@ -251,7 +251,7 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 
 		info!("before 0");
 		let b0_ancestor = load_light_header(BlockId::hash(b0.ancestor))?;
-		info!("after 0");
+		info!("after 0 b0_ancestor={:?} b0={:?} b1={:?}", b0_ancestor, b0, b1);
 		
 		if b0_ancestor.number >= b1.number {
 			b0 = b0_ancestor;
