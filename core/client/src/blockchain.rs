@@ -231,9 +231,12 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 		}
 	};
 
-	
+	info!("before -1");
+		
 	let mut b0 = load_light_header(b0)?;
 	let mut b1 = load_light_header(b1)?;
+	info!("after -1");
+		
 	let mut b0_ori = b0.clone();
 	let mut b1_ori = b1.clone();
 
@@ -246,7 +249,9 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	while b0.number > b1.number {
 		i += 1;
 
+		info!("before 0");
 		let b0_ancestor = load_light_header(BlockId::hash(b0.ancestor))?;
+		info!("after 0");
 		
 		if b0_ancestor.number >= b1.number {
 			b0 = b0_ancestor;
@@ -257,8 +262,10 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 
 	while b0.number < b1.number {
 		i += 1;
+		info!("before 1");
 		
 		let b1_ancestor = load_light_header(BlockId::hash(b1.ancestor))?;
+		info!("after 1");
 		
 		if b1_ancestor.number >= b0.number {
 			b1 = b1_ancestor;
@@ -267,12 +274,20 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 		}
 	}
 
-	while b0 != b1 {
+	while b0.hash != b1.hash {
 		j += 1;
 		if b0.number > b1.number {
+			info!("before 2");
+		
 			b0 = load_light_header(BlockId::hash(b0.parent))?;
+			info!("after 2");
+		
 		} else {
+			info!("before 3");
+		
 			b1 = load_light_header(BlockId::hash(b1.parent))?;
+			info!("after 3");
+		
 		}
 	}
 
