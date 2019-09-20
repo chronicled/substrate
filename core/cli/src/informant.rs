@@ -57,19 +57,19 @@ where C: Components {
 		// detect and log reorganizations.
 		if let Some((ref last_num, ref last_hash)) = last_best {
 			if n.header.parent_hash() != last_hash && n.is_new_best  {
-				let tree_route = ::client::blockchain::tree_route(
+				let maybe_ancestor = ::client::blockchain::lca(
 					#[allow(deprecated)]
 					client.backend().blockchain(),
 					BlockId::Hash(last_hash.clone()),
 					BlockId::Hash(n.hash),
 				);
 
-				match tree_route {
-					Ok(ref t) if !t.retracted().is_empty() => info!(
+				match maybe_ancestor {
+					Ok(ancestor) if ancestor != *last_hash => info!(
 						"Reorg from #{},{} to #{},{}, common ancestor #{},{}",
 						last_num, last_hash,
 						n.header.number(), n.hash,
-						t.common_block().number, t.common_block().hash,
+						42, ancestor,
 					),
 					Ok(_) => {},
 					Err(e) => warn!("Error computing tree route: {}", e),

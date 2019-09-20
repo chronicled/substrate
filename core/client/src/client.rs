@@ -924,8 +924,8 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 			return Err(error::Error::NotInFinalizedChain);
 		}
 
-		// find tree route from last finalized to given block.
-		let route_from_finalized = crate::blockchain::tree_route(
+		// find lowest common ancestor from last finalized to given block.
+		let ancestor = crate::blockchain::lca(
 			self.backend.blockchain(),
 			BlockId::Hash(info.finalized_hash),
 			BlockId::Hash(parent_hash),
@@ -933,7 +933,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 
 		// the block being imported retracts the last finalized block, refusing to
 		// import.
-		if !route_from_finalized.retracted().is_empty() {
+		if ancestor != info.finalized_hash {
 			return Err(error::Error::NotInFinalizedChain);
 		}
 

@@ -134,13 +134,13 @@ impl<B, E, Block, RA> Client<Block> for SubstrateClient<B, E, Block, RA> where
 			return Ok(false);
 		}
 
-		let tree_route = ::client::blockchain::tree_route(
+		let ancestor = ::client::blockchain::lca(
 			#[allow(deprecated)]
 			self.backend().blockchain(),
 			BlockId::Hash(*block),
 			BlockId::Hash(*base),
 		)?;
 
-		Ok(tree_route.common_block().hash == *base)
+		Ok(ancestor == *base)
 	}
 }
