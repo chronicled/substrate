@@ -80,7 +80,7 @@ const MIN_BLOCKS_TO_KEEP_CHANGES_TRIES_FOR: u32 = 32768;
 const DEFAULT_CHILD_RATIO: (usize, usize) = (1, 10);
 
 /// Size of light header LRU cache.
-const LIGHT_HEADER_CACHE_SIZE: usize = 50_000;
+const LIGHT_HEADER_CACHE_SIZE: usize = 5_000;
 
 /// Section size. 
 const LIGHT_HEADER_SECTION_SIZE: u32 = 100;

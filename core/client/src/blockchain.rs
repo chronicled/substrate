@@ -274,7 +274,7 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 		backend.set_light_header(b1_ori);
 		b1_num - b0_num
 	};
-	info!("b0 {} b1 {} diff {} ancestor_ite {} parent_ite {} lca {}", b0_num, b1_num, diff, i, j, b0.number);
+	// info!("b0 {} b1 {} diff {} ancestor_ite {} parent_ite {} lca {}", b0_num, b1_num, diff, i, j, b0.number);
 
 	Ok(b0.hash)
 }
