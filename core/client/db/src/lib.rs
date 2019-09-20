@@ -81,7 +81,7 @@ const DEFAULT_CHILD_RATIO: (usize, usize) = (1, 10);
 
 /// Size of light header LRU cache.
 /// Set to the maximum estimated difference between best and finalized block.
-const LIGHT_HEADER_CACHE_SIZE: usize = 100;
+const LIGHT_HEADER_CACHE_SIZE: usize = 1_000_000;
 
 /// Section size. 
 const LIGHT_HEADER_SECTION_SIZE: u32 = 100;
