@@ -270,17 +270,9 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	while b0.hash != b1.hash {
 		j += 1;
 		if b0.number > b1.number {
-			info!("before 2");
-		
 			b0 = load_light_header(BlockId::hash(b0.parent))?;
-			info!("after 2");
-		
-		} else {
-			info!("before 3");
-		
+		} else {		
 			b1 = load_light_header(BlockId::hash(b1.parent))?;
-			info!("after 3");
-		
 		}
 	}
 
