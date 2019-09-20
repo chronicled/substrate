@@ -243,14 +243,24 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	let mut i = 0;
 	let mut j = 0;
 
-	while b0 != b1 {
+	while b0.number > b1.number {
 		i += 1;
+
 		let b0_ancestor = load_light_header(BlockId::hash(b0.ancestor))?;
-		let b1_ancestor = load_light_header(BlockId::hash(b1.ancestor))?;
 		
 		if b0_ancestor.number >= b1.number {
 			b0 = b0_ancestor;
-		} else if b1_ancestor.number >= b0.number {
+		} else {
+			break
+		}
+	}
+
+	while b0.number < b1.number {
+		i += 1;
+		
+		let b1_ancestor = load_light_header(BlockId::hash(b1.ancestor))?;
+		
+		if b1_ancestor.number >= b0.number {
 			b1 = b1_ancestor;
 		} else {
 			break
@@ -265,6 +275,7 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 			b1 = load_light_header(BlockId::hash(b1.parent))?;
 		}
 	}
+
 	let diff = if b0_num > b1_num {
 		b0_ori.ancestor = b0.hash;
 		backend.set_light_header(b0_ori);
