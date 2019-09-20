@@ -39,11 +39,12 @@ use std::io;
 use std::collections::HashMap;
 
 use client::backend::NewBlockState;
-use client::blockchain::HeaderBackend;
+use client::blockchain::{HeaderBackend, LightHeader};
 use client::ExecutionStrategies;
 use client::backend::{StorageCollection, ChildStorageCollection};
 use codec::{Decode, Encode};
 use hash_db::{Hasher, Prefix};
+use lru::LruCache;
 use kvdb::{KeyValueDB, DBTransaction};
 use trie::{MemoryDB, PrefixedMemoryDB, prefixed_key};
 use parking_lot::{Mutex, RwLock};
@@ -76,6 +77,13 @@ const MIN_BLOCKS_TO_KEEP_CHANGES_TRIES_FOR: u32 = 32768;
 
 /// Default value for storage cache child ratio.
 const DEFAULT_CHILD_RATIO: (usize, usize) = (1, 10);
+
+/// Size of light header LRU cache.
+/// Set to the maximum estimated difference between best and finalized block.
+const LIGHT_HEADER_CACHE_SIZE: usize = 1_000_000;
+
+/// Section size. 
+const LIGHT_HEADER_SECTION_SIZE: u32 = 100;
 
 /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
 pub type DbState = state_machine::TrieBackend<Arc<dyn state_machine::Storage<Blake2Hasher>>, Blake2Hasher>;
@@ -244,11 +252,35 @@ impl<'a> state_db::MetaDb for StateMetaDb<'a> {
 	}
 }
 
+struct HeaderCache<Block: BlockT> {
+	hash_to_data: LruCache<Block::Hash, LightHeader<Block>>,
+}
+
+impl<Block: BlockT> HeaderCache<Block> {
+	fn new(capacity: usize) -> Self {
+		HeaderCache {
+			hash_to_data: LruCache::new(capacity),
+		}
+	}
+
+	fn get_data(&mut self, id: BlockId<Block>) -> Option<LightHeader<Block>> {
+		match id {
+			BlockId::Hash(hash) => self.hash_to_data.get(&hash).cloned(),
+			BlockId::Number(_) => None,
+		}
+	}
+
+	fn put_data(&mut self, data: LightHeader<Block>) {
+		self.hash_to_data.put(data.hash, data);
+	}
+}
+
 /// Block database
 pub struct BlockchainDb<Block: BlockT> {
 	db: Arc<dyn KeyValueDB>,
 	meta: Arc<RwLock<Meta<NumberFor<Block>, Block::Hash>>>,
 	leaves: RwLock<LeafSet<Block::Hash, NumberFor<Block>>>,
+	header_cache: RwLock<HeaderCache<Block>>,
 }
 
 impl<Block: BlockT> BlockchainDb<Block> {
@@ -259,6 +291,7 @@ impl<Block: BlockT> BlockchainDb<Block> {
 			db,
 			leaves: RwLock::new(leaves),
 			meta: Arc::new(RwLock::new(meta)),
+			header_cache: RwLock::new(HeaderCache::new(LIGHT_HEADER_CACHE_SIZE)),
 		})
 	}
 
@@ -292,6 +325,31 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		utils::read_header(&*self.db, columns::KEY_LOOKUP, columns::HEADER, id)
 	}
 
+	fn set_light_header(&self, data: LightHeader<Block>) {
+		self.header_cache.write().put_data(data)
+	}
+
+	fn get_light_header(&self, id: BlockId<Block>) -> Result<Option<LightHeader<Block>>, client::error::Error> {
+		let mut header_cache = self.header_cache.write();
+		if let Some(header_data) = header_cache.get_data(id) {
+			Ok(Some(header_data))
+		} else {
+			self.header(id).and_then(|maybe_header| match maybe_header {
+				Some(header) => {
+					let light_header = LightHeader {
+						hash: header.hash(),
+						number: *header.number(),
+						parent: *header.parent_hash(),
+						ancestor: *header.parent_hash(),
+					};
+					header_cache.put_data(light_header.clone());
+					Ok(Some(light_header))
+				},
+				None => Ok(None),
+			})
+		}
+	}
+
 	fn info(&self) -> client::blockchain::Info<Block> {
 		let meta = self.meta.read();
 		client::blockchain::Info {
@@ -320,18 +378,18 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 	}
 
 	fn number(&self, hash: Block::Hash) -> Result<Option<NumberFor<Block>>, client::error::Error> {
-		if let Some(lookup_key) = block_id_to_lookup_key::<Block>(&*self.db, columns::KEY_LOOKUP, BlockId::Hash(hash))? {
-			let number = utils::lookup_key_to_number(&lookup_key)?;
-			Ok(Some(number))
-		} else {
-			Ok(None)
-		}
+		self.get_light_header(BlockId::Hash(hash))
+			.and_then(|maybe_light_header| match maybe_light_header {
+				Some(light_header) => Ok(Some(light_header.number)),
+				None => Ok(None),
+		})
 	}
 
 	fn hash(&self, number: NumberFor<Block>) -> Result<Option<Block::Hash>, client::error::Error> {
-		self.header(BlockId::Number(number)).and_then(|maybe_header| match maybe_header {
-			Some(header) => Ok(Some(header.hash().clone())),
-			None => Ok(None),
+		self.get_light_header(BlockId::Number(number))
+			.and_then(|maybe_light_header| match maybe_light_header {
+				Some(light_header) => Ok(Some(light_header.hash)),
+				None => Ok(None),
 		})
 	}
 }
@@ -1041,6 +1099,15 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 				number,
 				hash,
 			)?;
+
+			self.blockchain.set_light_header(
+				LightHeader {
+					hash: pending_block.header.hash().clone(),
+					number: pending_block.header.number().clone(),
+					parent: pending_block.header.parent_hash().clone(),
+					ancestor: pending_block.header.parent_hash().clone(),
+				}
+			);
 
 			transaction.put(columns::HEADER, &lookup_key, &pending_block.header.encode());
 			if let Some(body) = pending_block.body {

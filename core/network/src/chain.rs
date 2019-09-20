@@ -19,6 +19,7 @@
 use client::{self, Client as SubstrateClient, ClientInfo, BlockStatus, CallExecutor};
 use client::error::Error;
 use client::light::fetcher::ChangesProof;
+use client::blockchain::HeaderBackend;
 use consensus::{BlockImport, Error as ConsensusError};
 use sr_primitives::traits::{Block as BlockT, Header as HeaderT};
 use sr_primitives::generic::{BlockId};
@@ -133,13 +134,14 @@ impl<B, E, Block, RA> Client<Block> for SubstrateClient<B, E, Block, RA> where
 			return Ok(false);
 		}
 
-		let tree_route = ::client::blockchain::tree_route(
-			#[allow(deprecated)]
-			self.backend().blockchain(),
+		let ancestor = ::client::blockchain::lowest_common_ancestor(
+			|id| self.get_light_header(&id)?
+				.ok_or_else(|| client::error::Error::UnknownBlock(format!("{:?}", id))),
+			|data| self.set_light_header(data),
 			BlockId::Hash(*block),
 			BlockId::Hash(*base),
 		)?;
 
-		Ok(tree_route.common_block().hash == *base)
+		Ok(ancestor.0 == *base)
 	}
 }
