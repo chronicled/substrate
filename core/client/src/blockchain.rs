@@ -221,7 +221,7 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	b0: BlockId<Block>,
 	b1: BlockId<Block>,
 ) -> Result<Block::Hash> {
-	use sr_primitives::traits::Header;
+	use sr_primitives::traits::{Header, Zero};
 
 	let load_light_header = |id: BlockId<Block>| {
 		match backend.light_header(id) {
@@ -243,10 +243,10 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	let mut i = 0;
 	let mut j = 0;
 
-	loop {
+	while b0.number > NumberFor::<Block>::zero() && b1.number > NumberFor::<Block>::zero() {
 		i += 1;
-		let mut b0_ancestor = load_light_header(BlockId::hash(b0.ancestor))?;
-		let mut b1_ancestor = load_light_header(BlockId::hash(b1.ancestor))?;
+		let b0_ancestor = load_light_header(BlockId::hash(b0.ancestor))?;
+		let b1_ancestor = load_light_header(BlockId::hash(b1.ancestor))?;
 		
 		if b0_ancestor.number >= b1.number {
 			b0 = b0_ancestor;
