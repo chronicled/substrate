@@ -151,6 +151,10 @@ impl<Block> BlockchainHeaderBackend<Block> for LightStorage<Block>
 		utils::read_header(&*self.db, columns::KEY_LOOKUP, columns::HEADER, id)
 	}
 
+	fn set_light_header(&self, data: LightHeader<Block>) {
+		unimplemented!()
+	}
+
 	fn light_header(&self, id: BlockId<Block>) -> ClientResult<Option<LightHeader<Block>>> {
 		unimplemented!()
 	}

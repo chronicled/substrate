@@ -325,6 +325,10 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		utils::read_header(&*self.db, columns::KEY_LOOKUP, columns::HEADER, id)
 	}
 
+	fn set_light_header(&self, data: LightHeader<Block>) {
+		self.header_cache.write().put_data(data)
+	}
+
 	fn light_header(&self, id: BlockId<Block>) -> Result<Option<LightHeader<Block>>, client::error::Error> {
 		let mut header_cache = self.header_cache.write();
 		if let Some(header_data) = header_cache.get_data(id) {
@@ -332,24 +336,11 @@ impl<Block: BlockT> client::blockchain::HeaderBackend<Block> for BlockchainDb<Bl
 		} else {
 			self.header(id).and_then(|maybe_header| match maybe_header {
 				Some(header) => {
-					let mut parent_section = None;
-					if *header.number() % NumberFor::<Block>::from(LIGHT_HEADER_SECTION_SIZE)
-						== NumberFor::<Block>::zero() {
-						parent_section = Some(header.parent_hash().clone());
-					} else {
-						if let Some(parent) = header_cache.get_data(
-							BlockId::hash(header.parent_hash().clone())
-						) {
-							parent_section = parent.parent_section;
-						} else {
-							info!("@@@@ missing parent section of {:?} on light_header()", header.number().clone());
-						}
-					}
 					let light_header = LightHeader {
 						hash: header.hash(),
 						number: *header.number(),
 						parent: *header.parent_hash(),
-						parent_section,
+						ancestor: *header.parent_hash(),
 					};
 					header_cache.put_data(light_header.clone());
 					Ok(Some(light_header))
@@ -1116,27 +1107,16 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 				number,
 				hash,
 			)?;
-			let mut parent_section = None;
-			if *pending_block.header.number() % NumberFor::<Block>::from(LIGHT_HEADER_SECTION_SIZE)
-				== NumberFor::<Block>::zero() {
-				parent_section = Some(pending_block.header.parent_hash().clone());
-			} else {
-				if let Some(parent) = self.blockchain.header_cache.write().get_data(
-					BlockId::hash(pending_block.header.parent_hash().clone())
-				) {
-					parent_section = parent.parent_section;
-				} else {
-					info!("@@@@ missing parent section of {:?} on insert", pending_block.header.number().clone());
-				}
-			}
-			self.blockchain.header_cache.write().put_data(
+
+			self.blockchain.set_light_header(
 				LightHeader {
 					hash: pending_block.header.hash().clone(),
 					number: pending_block.header.number().clone(),
 					parent: pending_block.header.parent_hash().clone(),
-					parent_section,
+					ancestor: pending_block.header.parent_hash().clone(),
 				}
 			);
+
 			transaction.put(columns::HEADER, &lookup_key, &pending_block.header.encode());
 			if let Some(body) = pending_block.body {
 				transaction.put(columns::BODY, &lookup_key, &body.encode());

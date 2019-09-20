@@ -33,7 +33,7 @@ pub struct LightHeader<Block: BlockT> {
 	pub hash: Block::Hash,
 	pub number: NumberFor<Block>,
 	pub parent: Block::Hash,
-	pub parent_section: Option<Block::Hash>,
+	pub ancestor: Block::Hash,
 }
 
 /// Blockchain database header backend. Does not perform any validation.
@@ -50,6 +50,8 @@ pub trait HeaderBackend<Block: BlockT>: Send + Sync {
 	fn hash(&self, number: NumberFor<Block>) -> Result<Option<Block::Hash>>;
 	/// Get id of parent block. Returns `None` if the header is not in the chain.
 	fn parent(&self, id: BlockId<Block>) -> Result<Option<BlockId<Block>>>;
+
+	fn set_light_header(&self, data: LightHeader<Block>);
 
 	/// Get light header, usually without hitting database.
 	/// Returns `None` if the header is not in the chain.
@@ -232,25 +234,33 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 	let mut b0 = load_light_header(b0)?;
 	let mut b1 = load_light_header(b1)?;
 	
-	let diff = if b0.number > b1.number {
-		b0.number - b1.number
+	let b0_num = b0.number;
+	let b1_num = b1.number;
+	let diff = if b0_num < b1_num {
+		b1_num - b0_num
 	} else {
-		b1.number - b0.number
+		b0_num - b1_num
 	};
-	let mut i = 0;
 
-	while b0.parent_section.is_some() && b1.parent_section.is_some()
-		&& b0.parent_section.unwrap() != b1.parent_section.unwrap() {
+	let mut i = 0;
+	let mut j = 0;
+
+	loop {
 		i += 1;
-		if b0.number > b1.number {
-			b0 = load_light_header(BlockId::hash(b0.parent_section.unwrap()))?;
+		let mut b0_ancestor = load_light_header(BlockId::hash(b0.ancestor))?;
+		let mut b1_ancestor = load_light_header(BlockId::hash(b1.ancestor))?;
+		
+		if b0_ancestor.number > b1.number {
+			b0 = b0_ancestor;
+		} else if b1_ancestor.number > b0.number {
+			b1 = b1_ancestor;
 		} else {
-			b1 = load_light_header(BlockId::hash(b1.parent_section.unwrap()))?;
+			break
 		}
 	}
 
 	while b0 != b1 {
-		i += 1;
+		j += 1;
 		if b0.number > b1.number {
 			b0 = load_light_header(BlockId::hash(b0.parent))?;
 		} else {
@@ -258,7 +268,7 @@ pub fn lca<Block: BlockT, Backend: HeaderBackend<Block>>(
 		}
 	}
 
-	// info!("diff {} ite {} lca {}", diff, i, b0.hash);
+	info!("b0 {} b1 {} diff {} ancestor_ite {} parent_ite {} lca {}", b0_num, b1_num, diff, i, j, b0.number);
 
 	Ok(b0.hash)
 }

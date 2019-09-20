@@ -1415,6 +1415,10 @@ impl<B, E, Block, RA> ChainHeaderBackend<Block> for Client<B, E, Block, RA> wher
 		self.backend.blockchain().header(id)
 	}
 
+	fn set_light_header(&self, data: LightHeader<Block>) {
+		self.backend.blockchain().set_light_header(data)
+	}
+
 	fn light_header(&self, id: BlockId<Block>) -> error::Result<Option<LightHeader<Block>>> {
 		self.backend.blockchain().light_header(id)
 	}

@@ -294,6 +294,11 @@ impl<Block: BlockT> HeaderBackend<Block> for Blockchain<Block> {
 		}))
 	}
 
+	fn set_light_header(&self, data: LightHeader<Block>) {
+		unimplemented!()
+	}
+	
+
 	fn light_header(&self, id: BlockId<Block>) -> error::Result<Option<LightHeader<Block>>> {
 		unimplemented!()
 	}

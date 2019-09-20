@@ -136,6 +136,10 @@ impl<S, F, Block> BlockchainHeaderBackend<Block> for Blockchain<S, F> where Bloc
 		}
 	}
 
+	fn set_light_header(&self, data: LightHeader<Block>) {
+		self.storage.set_light_header(data)
+	}
+
 	fn light_header(&self, id: BlockId<Block>) -> ClientResult<Option<LightHeader<Block>>> {
 		self.storage.light_header(id)
 	}
