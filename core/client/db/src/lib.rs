@@ -80,10 +80,7 @@ const DEFAULT_CHILD_RATIO: (usize, usize) = (1, 10);
 
 /// Size of light header LRU cache.
 /// Set to the maximum estimated difference between best and finalized block.
-const LIGHT_HEADER_CACHE_SIZE: usize = 1_000_000;
-
-/// Section size. 
-const LIGHT_HEADER_SECTION_SIZE: u32 = 100;
+const LIGHT_HEADER_CACHE_SIZE: usize = 20_000;
 
 /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
 pub type DbState = state_machine::TrieBackend<Arc<dyn state_machine::Storage<Blake2Hasher>>, Blake2Hasher>;
