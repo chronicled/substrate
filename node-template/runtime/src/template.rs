@@ -8,8 +8,39 @@
 /// For more guidance on Substrate modules, see the example module
 /// https://github.com/paritytech/substrate/blob/master/srml/example/src/lib.rs
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, dispatch::Result};
+// Dave's starting balance 1000000000000  Difference
+// simple_fixed_2m		  999998999890
+// simple_fixed_5		   999998999775
+// custom_5				 999998999660
+
+use support::{decl_module, decl_storage, decl_event, StorageValue, dispatch::{ Result, WeighData }};
 use system::ensure_signed;
+use sr_primitives::weights::{ DispatchClass, Weight, ClassifyDispatch, SimpleDispatchInfo };
+use rstd::{if_std};
+
+#[derive(Clone, Copy)]
+pub struct CustomDispatchInfo {}
+
+impl<T> WeighData<T> for CustomDispatchInfo {
+	// Is transaction even the right name to give here?
+	// Can my calculations depend on runtime storage at time of call?
+	fn weigh_data(&self, _transaction: T) -> Weight {
+		if_std! {
+			println!("We're weighing a transaction")
+		}
+		//TODO make this more interesting
+		// First goal:  O(n) in transaction param
+		// Second gaol: O(n) in storage contents
+		5
+	}
+}
+
+impl<T> ClassifyDispatch<T> for CustomDispatchInfo {
+	fn classify_dispatch(&self, _: T) -> DispatchClass {
+		// Calls I make here will always be normal
+		DispatchClass::Normal
+	}
+}
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -37,10 +68,54 @@ decl_module! {
 		// this is needed only if you are using events in your module
 		fn deposit_event() = default;
 
-		// Just a dummy entry point.
-		// function that can be called by the external world as an extrinsics call
-		// takes a parameter of the type `AccountId`, stores it and emits an event
-		pub fn do_something(origin, something: u32) -> Result {
+		// Actual cost: 1000110
+		#[weight = SimpleDispatchInfo::FixedNormal(2_000_000_000)]
+		pub fn simple_fixed_2m(origin, something: u32) -> Result {
+			// TODO: You only need this if you want to check it was signed.
+			let who = ensure_signed(origin)?;
+
+			// TODO: Code to execute when something calls this.
+			// For example: the following line stores the passed in u32 in the storage
+			Something::put(something);
+
+			// here we are raising the Something event
+			Self::deposit_event(RawEvent::SomethingStored(something, who));
+			Ok(())
+		}
+
+		// Actual cost: 115
+		#[weight = SimpleDispatchInfo::FixedNormal(5)]
+		pub fn simple_fixed_5(origin, something: u32) -> Result {
+			// TODO: You only need this if you want to check it was signed.
+			let who = ensure_signed(origin)?;
+
+			// TODO: Code to execute when something calls this.
+			// For example: the following line stores the passed in u32 in the storage
+			Something::put(something);
+
+			// here we are raising the Something event
+			Self::deposit_event(RawEvent::SomethingStored(something, who));
+			Ok(())
+		}
+
+		// Actual cost: 115 same as FixedNormal(5)
+		#[weight = CustomDispatchInfo{}]
+		pub fn custom_5(origin, something: u32) -> Result {
+			// TODO: You only need this if you want to check it was signed.
+			let who = ensure_signed(origin)?;
+
+			// TODO: Code to execute when something calls this.
+			// For example: the following line stores the passed in u32 in the storage
+			Something::put(something);
+
+			// here we are raising the Something event
+			Self::deposit_event(RawEvent::SomethingStored(something, who));
+			Ok(())
+		}
+
+		// Actual cost: 111
+		#[weight = SimpleDispatchInfo::FixedNormal(1)]
+		pub fn simple_fixed_1(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
 			let who = ensure_signed(origin)?;
 
