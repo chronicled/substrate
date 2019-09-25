@@ -70,7 +70,7 @@ decl_module! {
 
 		// Actual cost: 1000110
 		#[weight = SimpleDispatchInfo::FixedNormal(2_000_000_000)]
-		pub fn simple_fixed_2m(origin, something: u32) -> Result {
+		pub fn fixed_normal_2m(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
 			let who = ensure_signed(origin)?;
 
@@ -85,7 +85,7 @@ decl_module! {
 
 		// Actual cost: 115
 		#[weight = SimpleDispatchInfo::FixedNormal(5)]
-		pub fn simple_fixed_5(origin, something: u32) -> Result {
+		pub fn fixed_normal_5(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
 			let who = ensure_signed(origin)?;
 
@@ -115,7 +115,7 @@ decl_module! {
 
 		// Actual cost: 111
 		#[weight = SimpleDispatchInfo::FixedNormal(1)]
-		pub fn simple_fixed_1(origin, something: u32) -> Result {
+		pub fn fixed_normal_1(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
 			let who = ensure_signed(origin)?;
 
