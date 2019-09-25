@@ -1,0 +1,12 @@
+{
+  "name": "doublemap-query",
+  "version": "1.0.0",
+  "description": "queries and displays some basic storage state from a blockchain",
+  "main": "index.js",
+  "author": "Joshy Orndorff",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "@polkadot/api": "^0.93.0-beta.17"
+  }
+}
