@@ -16,22 +16,24 @@
 use support::{decl_module, decl_storage, decl_event, StorageValue, dispatch::{ Result, WeighData }};
 use system::ensure_signed;
 use sr_primitives::weights::{ DispatchClass, Weight, ClassifyDispatch, SimpleDispatchInfo };
-use rstd::{if_std};
+use rstd::if_std;
 
 #[derive(Clone, Copy)]
-pub struct CustomDispatchInfo {}
+pub struct CustomDispatchInfo {
+    width: u64,
+    length: u64,
+}
 
 impl<T> WeighData<T> for CustomDispatchInfo {
 	// Is transaction even the right name to give here?
 	// Can my calculations depend on runtime storage at time of call?
-	fn weigh_data(&self, _transaction: T) -> Weight {
+	fn weigh_data(&self, info: T) -> Weight {
 		if_std! {
-			println!("We're weighing a transaction")
+			println!("We're weighing a transaction");
+            println!("{:?}", transaction)
 		}
-		//TODO make this more interesting
 		// First goal:  O(n) in transaction param
-		// Second gaol: O(n) in storage contents
-		5
+		info.width * info.length
 	}
 }
 
@@ -68,7 +70,6 @@ decl_module! {
 		// this is needed only if you are using events in your module
 		fn deposit_event() = default;
 
-		// Actual cost: 1000110
 		#[weight = SimpleDispatchInfo::FixedNormal(2_000_000_000)]
 		pub fn fixed_normal_2m(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
@@ -83,7 +84,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// Actual cost: 115
 		#[weight = SimpleDispatchInfo::FixedNormal(5)]
 		pub fn fixed_normal_5(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
@@ -98,8 +98,7 @@ decl_module! {
 			Ok(())
 		}
 
-		// Actual cost: 115 same as FixedNormal(5)
-		#[weight = CustomDispatchInfo{}]
+		#[weight = CustomDispatchInfo{width: 1, length: 5}]
 		pub fn custom_5(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
 			let who = ensure_signed(origin)?;
@@ -113,7 +112,20 @@ decl_module! {
 			Ok(())
 		}
 
-		// Actual cost: 111
+        #[weight = CustomDispatchInfo{width: 2, length: 5}]
+		pub fn custom_10(origin, something: u32) -> Result {
+			// TODO: You only need this if you want to check it was signed.
+			let who = ensure_signed(origin)?;
+
+			// TODO: Code to execute when something calls this.
+			// For example: the following line stores the passed in u32 in the storage
+			Something::put(something);
+
+			// here we are raising the Something event
+			Self::deposit_event(RawEvent::SomethingStored(something, who));
+			Ok(())
+		}
+
 		#[weight = SimpleDispatchInfo::FixedNormal(1)]
 		pub fn fixed_normal_1(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
