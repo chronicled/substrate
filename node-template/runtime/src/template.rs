@@ -20,8 +20,8 @@ use rstd::if_std;
 
 #[derive(Clone, Copy)]
 pub struct CustomDispatchInfo {
-    width: u64,
-    length: u64,
+    width: u32,
+    length: u32,
 }
 
 impl<T> WeighData<T> for CustomDispatchInfo {
@@ -30,10 +30,11 @@ impl<T> WeighData<T> for CustomDispatchInfo {
 	fn weigh_data(&self, info: T) -> Weight {
 		if_std! {
 			println!("We're weighing a transaction");
-            println!("{:?}", transaction)
+            //Grrr I can `use rstd::fmt::Debug`. What's up with that?
+            //println!("{:?}", info)
 		}
 		// First goal:  O(n) in transaction param
-		info.width * info.length
+		self.width * self.length
 	}
 }
 
