@@ -20,28 +20,24 @@ use rstd::if_std;
 
 #[derive(Clone, Copy)]
 pub struct CustomDispatchInfo {
-    width: u32,
-    length: u32,
+	width: u32,
+	length: u32,
 }
 
-impl<T> WeighData<T> for CustomDispatchInfo {
-	// Is transaction even the right name to give here?
-	// Can my calculations depend on runtime storage at time of call?
-	fn weigh_data(&self, info: T) -> Weight {
+impl WeighData<(&u32,)> for CustomDispatchInfo {
+	fn weigh_data(&self, target: (&u32,)) -> Weight {
 		if_std! {
 			println!("We're weighing a transaction");
-            //Grrr I can `use rstd::fmt::Debug`. What's up with that?
-            //println!("{:?}", info)
 		}
 		// First goal:  O(n) in transaction param
-		self.width * self.length
+		self.width * self.length * target.0
 	}
 }
 
 impl<T> ClassifyDispatch<T> for CustomDispatchInfo {
 	fn classify_dispatch(&self, _: T) -> DispatchClass {
-		// Calls I make here will always be normal
-		DispatchClass::Normal
+		//DispatchClass::Normal
+		DispatchClass::default()
 	}
 }
 
@@ -113,7 +109,7 @@ decl_module! {
 			Ok(())
 		}
 
-        #[weight = CustomDispatchInfo{width: 2, length: 5}]
+		#[weight = CustomDispatchInfo{width: 2, length: 5}]
 		pub fn custom_10(origin, something: u32) -> Result {
 			// TODO: You only need this if you want to check it was signed.
 			let who = ensure_signed(origin)?;
