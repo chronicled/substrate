@@ -8,15 +8,12 @@
 /// For more guidance on Substrate modules, see the example module
 /// https://github.com/paritytech/substrate/blob/master/srml/example/src/lib.rs
 
-// Dave's starting balance 1000000000000  Difference
-// simple_fixed_2m		  999998999890
-// simple_fixed_5		   999998999775
-// custom_5				 999998999660
-
 use support::{decl_module, decl_storage, decl_event, StorageValue, dispatch::{ Result, WeighData }};
 use system::ensure_signed;
-use sr_primitives::weights::{ DispatchClass, Weight, ClassifyDispatch, SimpleDispatchInfo };
-use rstd::if_std;
+use sr_primitives::{
+	weights::{ DispatchClass, Weight, ClassifyDispatch, SimpleDispatchInfo },
+	traits::SimpleArithmetic,
+};
 
 #[derive(Clone, Copy)]
 pub struct CustomDispatchInfo {
@@ -24,13 +21,11 @@ pub struct CustomDispatchInfo {
 	length: u32,
 }
 
-impl WeighData<(&u32,)> for CustomDispatchInfo {
-	fn weigh_data(&self, target: (&u32,)) -> Weight {
-		if_std! {
-			println!("We're weighing a transaction");
-		}
-		// First goal:  O(n) in transaction param
-		self.width * self.length * target.0
+impl<T: SimpleArithmetic + Copy> WeighData<(&T,)> for CustomDispatchInfo
+	where u32: core::convert::From<T> {
+	fn weigh_data(&self, target: (&T,)) -> Weight {
+		let area : T = (self.length * self.width).into();
+		(target.0).saturating_mul(area).into()
 	}
 }
 
