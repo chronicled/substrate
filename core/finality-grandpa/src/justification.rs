@@ -27,6 +27,8 @@ use sr_primitives::traits::{NumberFor, Block as BlockT, Header as HeaderT};
 use primitives::{H256, Blake2Hasher};
 use fg_primitives::AuthorityId;
 
+use log::info;
+
 use crate::{Commit, Error};
 use crate::communication;
 
@@ -120,14 +122,17 @@ impl<Block: BlockT<Hash=H256>> GrandpaJustification<Block> {
 		use grandpa::Chain;
 		
 		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
-
+		info!("@@@ validating commit");
 		match grandpa::validate_commit(
 			&self.commit,
 			voters,
 			&ancestry_chain,
 		) {
-			Ok(ref result) if result.ghost().is_some() => {},
+			Ok(ref result) if result.ghost().is_some() => {
+				info!("@@@ commit validated ok {:?}", result.ghost().clone());
+			},
 			_ => {
+				info!("@@@ error validating commit");
 				let msg = "invalid commit in grandpa justification".to_string();
 				return Err(ClientError::BadJustification(msg));
 			}

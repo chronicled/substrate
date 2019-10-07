@@ -92,6 +92,9 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 			},
 		};
 
+
+		info!("@@@ received commit for {:?} {:?}", commit.target_hash, commit.target_number);
+
 		// if the commit we've received targets a block lower or equal to the last
 		// finalized, ignore it and continue with the current state
 		if commit.target_number <= last_finalized_number {
@@ -104,12 +107,17 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 			&ObserverChain(&*client),
 		) {
 			Ok(r) => r,
-			Err(e) => return future::err(e.into()),
+			Err(e) => {
+				info!("@@@ grandpa validation failed {:?}", e);
+				return future::err(e.into())
+			},
 		};
 
 		if let Some(_) = validation_result.ghost() {
 			let finalized_hash = commit.target_hash;
 			let finalized_number = commit.target_number;
+
+			info!("@@@ commit is valid going to finalize", );
 
 			// commit is valid, finalize the block it targets
 			match environment::finalize_block(
@@ -121,8 +129,13 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 				finalized_number,
 				(round, commit).into(),
 			) {
-				Ok(_) => {},
-				Err(e) => return future::err(e),
+				Ok(_) => {
+					info!("@@@ finalization is ok");
+				},
+				Err(e) => {
+					info!("@@@ got finalization error {:?}", e);
+					return future::err(e)
+				},
 			};
 
 			// note that we've observed completion of this round through the commit,
