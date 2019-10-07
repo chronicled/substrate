@@ -190,7 +190,7 @@ macro_rules! new_full {
 
 		match (is_authority, disable_grandpa) {
 			(false, false) => {
-				info!("@@@ STARTING GRANDPA OBSERVER");
+				info!(target: "afg", "@@@ STARTING GRANDPA OBSERVER");
 				// start the lightweight GRANDPA observer
 				service.spawn_task(Box::new(grandpa::run_grandpa_observer(
 					config,
@@ -200,7 +200,7 @@ macro_rules! new_full {
 				)?));
 			},
 			(true, false) => {
-				info!("@@@ STARTING GRANDPA FULL");
+				info!(target: "afg", "@@@ STARTING GRANDPA FULL");
 				// start the full GRANDPA voter
 				let grandpa_config = grandpa::GrandpaParams {
 					config: config,
