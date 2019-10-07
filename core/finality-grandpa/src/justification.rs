@@ -122,17 +122,17 @@ impl<Block: BlockT<Hash=H256>> GrandpaJustification<Block> {
 		use grandpa::Chain;
 		
 		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
-		info!("@@@ validating commit");
+		info!(target: "afg", "@@@ validating commit");
 		match grandpa::validate_commit(
 			&self.commit,
 			voters,
 			&ancestry_chain,
 		) {
 			Ok(ref result) if result.ghost().is_some() => {
-				info!("@@@ commit validated ok {:?}", result.ghost().clone());
+				info!(target: "afg", "@@@ commit validated ok {:?}", result.ghost().clone());
 			},
 			_ => {
-				info!("@@@ error validating commit");
+				info!(target: "afg", "@@@ error validating commit");
 				let msg = "invalid commit in grandpa justification".to_string();
 				return Err(ClientError::BadJustification(msg));
 			}

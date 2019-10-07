@@ -548,7 +548,7 @@ where
 		justification: Justification,
 		enacts_change: bool,
 	) -> Result<(), ConsensusError> {
-		info!("@@@ importing justifcation for {:?} {:?}", hash, number);
+		info!(target: "afg", "@@@ importing justifcation for {:?} {:?}", hash, number);
 
 		let justification = GrandpaJustification::decode_and_verify_finalizes(
 			&justification,
@@ -559,13 +559,13 @@ where
 
 		let justification = match justification {
 			Err(e) => {
-				info!("@@@ Error in justification {:?}", e);
+				info!(target: "afg", "@@@ Error in justification {:?}", e);
 				return Err(ConsensusError::ClientImport(e.to_string()).into())
 			},
 			Ok(justification) => justification,
 		};
 
-		info!("@@@ justification decoded and verified ok");
+		info!(target: "afg", "@@@ justification decoded and verified ok");
 				
 
 		let result = finalize_block(

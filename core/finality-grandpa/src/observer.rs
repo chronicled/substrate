@@ -93,7 +93,7 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 		};
 
 
-		info!("@@@ received commit for {:?} {:?}", commit.target_hash, commit.target_number);
+		info!(target: "afg", "@@@ received commit for {:?} {:?}", commit.target_hash, commit.target_number);
 
 		// if the commit we've received targets a block lower or equal to the last
 		// finalized, ignore it and continue with the current state
@@ -108,7 +108,7 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 		) {
 			Ok(r) => r,
 			Err(e) => {
-				info!("@@@ grandpa validation failed {:?}", e);
+				info!(target: "afg", "@@@ grandpa validation failed {:?}", e);
 				return future::err(e.into())
 			},
 		};
@@ -117,7 +117,7 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 			let finalized_hash = commit.target_hash;
 			let finalized_number = commit.target_number;
 
-			info!("@@@ commit is valid going to finalize", );
+			info!(target: "afg", "@@@ commit is valid going to finalize", );
 
 			// commit is valid, finalize the block it targets
 			match environment::finalize_block(
@@ -130,10 +130,10 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 				(round, commit).into(),
 			) {
 				Ok(_) => {
-					info!("@@@ finalization is ok");
+					info!(target: "afg", "@@@ finalization is ok");
 				},
 				Err(e) => {
-					info!("@@@ got finalization error {:?}", e);
+					info!(target: "afg", "@@@ got finalization error {:?}", e);
 					return future::err(e)
 				},
 			};
