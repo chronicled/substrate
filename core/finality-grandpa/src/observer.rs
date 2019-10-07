@@ -104,8 +104,13 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 			&ObserverChain(&*client),
 		) {
 			Ok(r) => r,
-			Err(e) => return future::err(e.into()),
+			Err(e) => {
+				info!("validation failed {:?}", e);
+				return future::err(e.into())
+			},
 		};
+
+		info!("validation result ghost was {:?}", validation_result.ghost());
 
 		if let Some(_) = validation_result.ghost() {
 			let finalized_hash = commit.target_hash;
@@ -121,8 +126,13 @@ fn grandpa_observer<B, E, Block: BlockT<Hash=H256>, RA, S, F>(
 				finalized_number,
 				(round, commit).into(),
 			) {
-				Ok(_) => {},
-				Err(e) => return future::err(e),
+				Ok(_) => {
+					info!("finalized block {:?} {:?}", finalized_hash, finalized_number);
+				},
+				Err(e) => {
+					info!("error finalizing block {:?}", e);
+					return future::err(e)
+				},
 			};
 
 			// note that we've observed completion of this round through the commit,

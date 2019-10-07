@@ -1101,6 +1101,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 			return Ok(());
 		}
 
+		info!("last_finalized {:?} block {:?}", last_finalized, block);
 		let route_from_finalized = header_metadata::tree_route(self.backend.blockchain(), last_finalized, block)?;
 
 		if let Some(retracted) = route_from_finalized.retracted().get(0) {
