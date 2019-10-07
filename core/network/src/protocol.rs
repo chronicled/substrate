@@ -51,7 +51,7 @@ use crate::chain::{Client, FinalityProofProvider};
 use client::light::fetcher::{FetchChecker, ChangesProof};
 use crate::error;
 use util::LruHashSet;
-
+use log::info;
 mod util;
 pub mod consensus_gossip;
 pub mod message;
@@ -1249,6 +1249,7 @@ impl<B: BlockT, S: NetworkSpecialization<B>, H: ExHashT> Protocol<B, S, H> {
 	/// Uses `protocol` to queue a new justification request and tries to dispatch all pending
 	/// requests.
 	pub fn request_justification(&mut self, hash: &B::Hash, number: NumberFor<B>) {
+		info!("@@@ requesting justification for {:?} {:?}", hash, number);
 		self.sync.request_justification(&hash, number)
 	}
 

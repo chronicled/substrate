@@ -164,6 +164,7 @@ impl<B: BlockT> BlockImportWorker<B> {
 		}
 		if let Some(finality_proof_import) = worker.finality_proof_import.as_mut() {
 			for (hash, number) in finality_proof_import.on_start() {
+				info!("@@@ requesting finality proof {:?} {:?}", hash, number);
 				worker.result_sender.request_finality_proof(&hash, number);
 			}
 		}
@@ -259,6 +260,7 @@ impl<B: BlockT> BlockImportWorker<B> {
 		number: NumberFor<B>,
 		finality_proof: Vec<u8>
 	) {
+		info!("@@@ on import_finality_proof");
 		let result = self.finality_proof_import.as_mut().map(|finality_proof_import| {
 			finality_proof_import.import_finality_proof(hash, number, finality_proof, verifier)
 				.map_err(|e| {
@@ -283,6 +285,8 @@ impl<B: BlockT> BlockImportWorker<B> {
 		number: NumberFor<B>,
 		justification: Justification
 	) {
+		info!("@@@ on import_justification");
+		
 		let success = self.justification_import.as_mut().map(|justification_import| {
 			justification_import.import_justification(hash, number, justification)
 				.map_err(|e| {

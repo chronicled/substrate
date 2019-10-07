@@ -721,10 +721,14 @@ impl<B: BlockT + 'static, S: NetworkSpecialization<B>, H: ExHashT> Stream for Ne
 			match outcome {
 				CustomMessageOutcome::BlockImport(origin, blocks) =>
 					self.import_queue.import_blocks(origin, blocks),
-				CustomMessageOutcome::JustificationImport(origin, hash, nb, justification) =>
-					self.import_queue.import_justification(origin, hash, nb, justification),
-				CustomMessageOutcome::FinalityProofImport(origin, hash, nb, proof) =>
-					self.import_queue.import_finality_proof(origin, hash, nb, proof),
+				CustomMessageOutcome::JustificationImport(origin, hash, nb, justification) => {
+					info!("@@@ got justification import {:?} {:?}", hash, nb);
+					self.import_queue.import_justification(origin, hash, nb, justification)
+				},
+				CustomMessageOutcome::FinalityProofImport(origin, hash, nb, proof) => {
+					info!("@@@ got finality proof import {:?} {:?}", hash, nb);
+					self.import_queue.import_finality_proof(origin, hash, nb, proof)
+				},
 				CustomMessageOutcome::None => {}
 			}
 		}
