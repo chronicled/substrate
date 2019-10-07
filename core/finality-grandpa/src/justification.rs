@@ -118,7 +118,7 @@ impl<Block: BlockT<Hash=H256>> GrandpaJustification<Block> {
 		NumberFor<Block>: grandpa::BlockNumberOps,
 	{
 		use grandpa::Chain;
-
+		
 		let ancestry_chain = AncestryChain::<Block>::new(&self.votes_ancestries);
 
 		match grandpa::validate_commit(
