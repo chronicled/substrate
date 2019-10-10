@@ -25,7 +25,7 @@ use sr_primitives::traits::{Bounded, CheckedAdd, CheckedSub, Zero};
 use runtime_io::twox_128;
 use support::{
 	storage,
-	traits::{WithdrawReason, Currency, Time},
+	traits::{WithdrawReason, Currency, Time, Randomness},
 };
 
 pub type AccountIdOf<T> = <T as system::Trait>::AccountId;
@@ -766,7 +766,7 @@ where
 	}
 
 	fn random(&self, subject: &[u8]) -> SeedOf<T> {
-		system::Module::<T>::random(subject)
+		T::Randomness::random(subject)
 	}
 
 	fn now(&self) -> &MomentOf<T> {
@@ -816,16 +816,11 @@ mod tests {
 		BalanceOf, ExecFeeToken, ExecutionContext, Ext, Loader, TransferFeeKind, TransferFeeToken,
 		Vm, ExecResult, RawEvent, DeferredAction,
 	};
-	use crate::account_db::AccountDb;
-	use crate::exec::{ExecReturnValue, ExecError, STATUS_SUCCESS};
-	use crate::gas::GasMeter;
-	use crate::tests::{ExtBuilder, Test};
-	use crate::{CodeHash, Config};
-	use runtime_io::with_externalities;
-	use std::cell::RefCell;
-	use std::rc::Rc;
-	use std::collections::HashMap;
-	use std::marker::PhantomData;
+	use crate::{
+		account_db::AccountDb, gas::GasMeter, tests::{ExtBuilder, Test},
+		exec::{ExecReturnValue, ExecError, STATUS_SUCCESS}, CodeHash, Config,
+	};
+	use std::{cell::RefCell, rc::Rc, collections::HashMap, marker::PhantomData};
 	use assert_matches::assert_matches;
 
 	const ALICE: u64 = 1;
@@ -950,7 +945,7 @@ mod tests {
 			exec_success()
 		});
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
 			ctx.overlay.instantiate_contract(&BOB, exec_ch).unwrap();
@@ -970,7 +965,7 @@ mod tests {
 		let dest = BOB;
 
 		// This test verifies that base fee for call is taken.
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let vm = MockVm::new();
 			let loader = MockLoader::empty();
 			let cfg = Config::preload();
@@ -988,7 +983,7 @@ mod tests {
 		});
 
 		// This test verifies that base fee for instantiation is taken.
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let mut loader = MockLoader::empty();
 			let code = loader.insert(|_| exec_success());
 
@@ -1018,7 +1013,7 @@ mod tests {
 		let vm = MockVm::new();
 		let loader = MockLoader::empty();
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
 			ctx.overlay.set_balance(&origin, 100);
@@ -1050,7 +1045,7 @@ mod tests {
 			|_| Ok(ExecReturnValue { status: 1, data: Vec::new() })
 		);
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
 			ctx.overlay.instantiate_contract(&BOB, return_ch).unwrap();
@@ -1078,93 +1073,84 @@ mod tests {
 		// This test sends 50 units of currency to a non-existent account.
 		// This should lead to creation of a new account thus
 		// a fee should be charged.
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let vm = MockVm::new();
-				let loader = MockLoader::empty();
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
-				ctx.overlay.set_balance(&origin, 100);
-				ctx.overlay.set_balance(&dest, 0);
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let vm = MockVm::new();
+			let loader = MockLoader::empty();
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
+			ctx.overlay.set_balance(&origin, 100);
+			ctx.overlay.set_balance(&dest, 0);
 
-				let mut gas_meter = GasMeter::<Test>::with_limit(1000, 1);
+			let mut gas_meter = GasMeter::<Test>::with_limit(1000, 1);
 
-				let result = ctx.call(dest, 50, &mut gas_meter, vec![]);
-				assert_matches!(result, Ok(_));
+			let result = ctx.call(dest, 50, &mut gas_meter, vec![]);
+			assert_matches!(result, Ok(_));
 
-				let mut toks = gas_meter.tokens().iter();
-				match_tokens!(
-					toks,
-					ExecFeeToken::Call,
-					TransferFeeToken {
-						kind: TransferFeeKind::AccountCreate,
-						gas_price: 1u64
-					},
-				);
-			},
-		);
+			let mut toks = gas_meter.tokens().iter();
+			match_tokens!(
+				toks,
+				ExecFeeToken::Call,
+				TransferFeeToken {
+					kind: TransferFeeKind::AccountCreate,
+					gas_price: 1u64
+				},
+			);
+		});
 
 		// This one is similar to the previous one but transfer to an existing account.
 		// In this test we expect that a regular transfer fee is charged.
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let vm = MockVm::new();
-				let loader = MockLoader::empty();
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
-				ctx.overlay.set_balance(&origin, 100);
-				ctx.overlay.set_balance(&dest, 15);
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let vm = MockVm::new();
+			let loader = MockLoader::empty();
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
+			ctx.overlay.set_balance(&origin, 100);
+			ctx.overlay.set_balance(&dest, 15);
 
-				let mut gas_meter = GasMeter::<Test>::with_limit(1000, 1);
+			let mut gas_meter = GasMeter::<Test>::with_limit(1000, 1);
 
-				let result = ctx.call(dest, 50, &mut gas_meter, vec![]);
-				assert_matches!(result, Ok(_));
+			let result = ctx.call(dest, 50, &mut gas_meter, vec![]);
+			assert_matches!(result, Ok(_));
 
-				let mut toks = gas_meter.tokens().iter();
-				match_tokens!(
-					toks,
-					ExecFeeToken::Call,
-					TransferFeeToken {
-						kind: TransferFeeKind::Transfer,
-						gas_price: 1u64
-					},
-				);
-			},
-		);
+			let mut toks = gas_meter.tokens().iter();
+			match_tokens!(
+				toks,
+				ExecFeeToken::Call,
+				TransferFeeToken {
+					kind: TransferFeeKind::Transfer,
+					gas_price: 1u64
+				},
+			);
+		});
 
 		// This test sends 50 units of currency as an endownment to a newly
 		// instantiated contract.
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let mut loader = MockLoader::empty();
-				let code = loader.insert(|_| exec_success());
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let mut loader = MockLoader::empty();
+			let code = loader.insert(|_| exec_success());
 
-				let vm = MockVm::new();
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
+			let vm = MockVm::new();
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
 
-				ctx.overlay.set_balance(&origin, 100);
-				ctx.overlay.set_balance(&dest, 15);
+			ctx.overlay.set_balance(&origin, 100);
+			ctx.overlay.set_balance(&dest, 15);
 
-				let mut gas_meter = GasMeter::<Test>::with_limit(1000, 1);
+			let mut gas_meter = GasMeter::<Test>::with_limit(1000, 1);
 
-				let result = ctx.instantiate(50, &mut gas_meter, &code, vec![]);
-				assert_matches!(result, Ok(_));
+			let result = ctx.instantiate(50, &mut gas_meter, &code, vec![]);
+			assert_matches!(result, Ok(_));
 
-				let mut toks = gas_meter.tokens().iter();
-				match_tokens!(
-					toks,
-					ExecFeeToken::Instantiate,
-					TransferFeeToken {
-						kind: TransferFeeKind::ContractInstantiate,
-						gas_price: 1u64
-					},
-				);
-			},
-		);
+			let mut toks = gas_meter.tokens().iter();
+			match_tokens!(
+				toks,
+				ExecFeeToken::Instantiate,
+				TransferFeeToken {
+					kind: TransferFeeKind::ContractInstantiate,
+					gas_price: 1u64
+				},
+			);
+		});
 	}
 
 	#[test]
@@ -1177,7 +1163,7 @@ mod tests {
 		let vm = MockVm::new();
 		let loader = MockLoader::empty();
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
 			ctx.overlay.set_balance(&origin, 0);
@@ -1211,7 +1197,7 @@ mod tests {
 			|_| Ok(ExecReturnValue { status: STATUS_SUCCESS, data: vec![1, 2, 3, 4] })
 		);
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
 			ctx.overlay.instantiate_contract(&BOB, return_ch).unwrap();
@@ -1242,7 +1228,7 @@ mod tests {
 			|_| Ok(ExecReturnValue { status: 1, data: vec![1, 2, 3, 4] })
 		);
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
 			ctx.overlay.instantiate_contract(&BOB, return_ch).unwrap();
@@ -1270,7 +1256,7 @@ mod tests {
 		});
 
 		// This one tests passing the input data into a contract via call.
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
 			ctx.overlay.instantiate_contract(&BOB, input_data_ch).unwrap();
@@ -1295,7 +1281,7 @@ mod tests {
 		});
 
 		// This one tests passing the input data into a contract via instantiate.
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
 
@@ -1339,7 +1325,7 @@ mod tests {
 			exec_success()
 		});
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
 			ctx.overlay.instantiate_contract(&BOB, recurse_ch).unwrap();
@@ -1383,7 +1369,7 @@ mod tests {
 			exec_success()
 		});
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 
 			let mut ctx = ExecutionContext::top_level(origin, &cfg, &vm, &loader);
@@ -1425,7 +1411,7 @@ mod tests {
 			exec_success()
 		});
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
 			ctx.overlay.instantiate_contract(&BOB, bob_ch).unwrap();
@@ -1449,23 +1435,20 @@ mod tests {
 		let mut loader = MockLoader::empty();
 		let dummy_ch = loader.insert(|_| exec_success());
 
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
 
-				assert_matches!(
-					ctx.instantiate(
-						0, // <- zero endowment
-						&mut GasMeter::<Test>::with_limit(10000, 1),
-						&dummy_ch,
-						vec![],
-					),
-					Err(_)
-				);
-			}
-		);
+			assert_matches!(
+				ctx.instantiate(
+					0, // <- zero endowment
+					&mut GasMeter::<Test>::with_limit(10000, 1),
+					&dummy_ch,
+					vec![],
+				),
+				Err(_)
+			);
+		});
 	}
 
 	#[test]
@@ -1477,38 +1460,35 @@ mod tests {
 			|_| Ok(ExecReturnValue { status: STATUS_SUCCESS, data: vec![80, 65, 83, 83] })
 		);
 
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
-				ctx.overlay.set_balance(&ALICE, 1000);
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
+			ctx.overlay.set_balance(&ALICE, 1000);
 
-				let instantiated_contract_address = assert_matches!(
-					ctx.instantiate(
-						100,
-						&mut GasMeter::<Test>::with_limit(10000, 1),
-						&dummy_ch,
-						vec![],
-					),
-					Ok((address, ref output)) if output.data == vec![80, 65, 83, 83] => address
-				);
+			let instantiated_contract_address = assert_matches!(
+				ctx.instantiate(
+					100,
+					&mut GasMeter::<Test>::with_limit(10000, 1),
+					&dummy_ch,
+					vec![],
+				),
+				Ok((address, ref output)) if output.data == vec![80, 65, 83, 83] => address
+			);
 
-				// Check that the newly created account has the expected code hash and
-				// there are instantiation event.
-				assert_eq!(ctx.overlay.get_code_hash(&instantiated_contract_address).unwrap(), dummy_ch);
-				assert_eq!(&ctx.events(), &[
-					DeferredAction::DepositEvent {
-						event: RawEvent::Transfer(ALICE, instantiated_contract_address, 100),
-						topics: Vec::new(),
-					},
-					DeferredAction::DepositEvent {
-						event: RawEvent::Instantiated(ALICE, instantiated_contract_address),
-						topics: Vec::new(),
-					}
-				]);
-			}
-		);
+			// Check that the newly created account has the expected code hash and
+			// there are instantiation event.
+			assert_eq!(ctx.overlay.get_code_hash(&instantiated_contract_address).unwrap(), dummy_ch);
+			assert_eq!(&ctx.events(), &[
+				DeferredAction::DepositEvent {
+					event: RawEvent::Transfer(ALICE, instantiated_contract_address, 100),
+					topics: Vec::new(),
+				},
+				DeferredAction::DepositEvent {
+					event: RawEvent::Instantiated(ALICE, instantiated_contract_address),
+					topics: Vec::new(),
+				}
+			]);
+		});
 	}
 
 	#[test]
@@ -1520,28 +1500,25 @@ mod tests {
 			|_| Ok(ExecReturnValue { status: 1, data: vec![70, 65, 73, 76] })
 		);
 
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
-				ctx.overlay.set_balance(&ALICE, 1000);
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
+			ctx.overlay.set_balance(&ALICE, 1000);
 
-				let instantiated_contract_address = assert_matches!(
-					ctx.instantiate(
-						100,
-						&mut GasMeter::<Test>::with_limit(10000, 1),
-						&dummy_ch,
-						vec![],
-					),
-					Ok((address, ref output)) if output.data == vec![70, 65, 73, 76] => address
-				);
+			let instantiated_contract_address = assert_matches!(
+				ctx.instantiate(
+					100,
+					&mut GasMeter::<Test>::with_limit(10000, 1),
+					&dummy_ch,
+					vec![],
+				),
+				Ok((address, ref output)) if output.data == vec![70, 65, 73, 76] => address
+			);
 
-				// Check that the account has not been created.
-				assert!(ctx.overlay.get_code_hash(&instantiated_contract_address).is_none());
-				assert!(ctx.events().is_empty());
-			}
-		);
+			// Check that the account has not been created.
+			assert!(ctx.overlay.get_code_hash(&instantiated_contract_address).is_none());
+			assert!(ctx.events().is_empty());
+		});
 	}
 
 	#[test]
@@ -1568,40 +1545,37 @@ mod tests {
 			}
 		});
 
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
-				ctx.overlay.set_balance(&ALICE, 1000);
-				ctx.overlay.instantiate_contract(&BOB, instantiator_ch).unwrap();
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
+			ctx.overlay.set_balance(&ALICE, 1000);
+			ctx.overlay.instantiate_contract(&BOB, instantiator_ch).unwrap();
 
-				assert_matches!(
-					ctx.call(BOB, 20, &mut GasMeter::<Test>::with_limit(1000, 1), vec![]),
-					Ok(_)
-				);
+			assert_matches!(
+				ctx.call(BOB, 20, &mut GasMeter::<Test>::with_limit(1000, 1), vec![]),
+				Ok(_)
+			);
 
-				let instantiated_contract_address = instantiated_contract_address.borrow().as_ref().unwrap().clone();
+			let instantiated_contract_address = instantiated_contract_address.borrow().as_ref().unwrap().clone();
 
-				// Check that the newly created account has the expected code hash and
-				// there are instantiation event.
-				assert_eq!(ctx.overlay.get_code_hash(&instantiated_contract_address).unwrap(), dummy_ch);
-				assert_eq!(&ctx.events(), &[
-					DeferredAction::DepositEvent {
-						event: RawEvent::Transfer(ALICE, BOB, 20),
-						topics: Vec::new(),
-					},
-					DeferredAction::DepositEvent {
-						event: RawEvent::Transfer(BOB, instantiated_contract_address, 15),
-						topics: Vec::new(),
-					},
-					DeferredAction::DepositEvent {
-						event: RawEvent::Instantiated(BOB, instantiated_contract_address),
-						topics: Vec::new(),
-					},
-				]);
-			}
-		);
+			// Check that the newly created account has the expected code hash and
+			// there are instantiation event.
+			assert_eq!(ctx.overlay.get_code_hash(&instantiated_contract_address).unwrap(), dummy_ch);
+			assert_eq!(&ctx.events(), &[
+				DeferredAction::DepositEvent {
+					event: RawEvent::Transfer(ALICE, BOB, 20),
+					topics: Vec::new(),
+				},
+				DeferredAction::DepositEvent {
+					event: RawEvent::Transfer(BOB, instantiated_contract_address, 15),
+					topics: Vec::new(),
+				},
+				DeferredAction::DepositEvent {
+					event: RawEvent::Instantiated(BOB, instantiated_contract_address),
+					topics: Vec::new(),
+				},
+			]);
+		});
 	}
 
 	#[test]
@@ -1630,29 +1604,26 @@ mod tests {
 			}
 		});
 
-		with_externalities(
-			&mut ExtBuilder::default().existential_deposit(15).build(),
-			|| {
-				let cfg = Config::preload();
-				let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
-				ctx.overlay.set_balance(&ALICE, 1000);
-				ctx.overlay.instantiate_contract(&BOB, instantiator_ch).unwrap();
+		ExtBuilder::default().existential_deposit(15).build().execute_with(|| {
+			let cfg = Config::preload();
+			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
+			ctx.overlay.set_balance(&ALICE, 1000);
+			ctx.overlay.instantiate_contract(&BOB, instantiator_ch).unwrap();
 
-				assert_matches!(
-					ctx.call(BOB, 20, &mut GasMeter::<Test>::with_limit(1000, 1), vec![]),
-					Ok(_)
-				);
+			assert_matches!(
+				ctx.call(BOB, 20, &mut GasMeter::<Test>::with_limit(1000, 1), vec![]),
+				Ok(_)
+			);
 
-				// The contract wasn't instantiated so we don't expect to see an instantiation
-				// event here.
-				assert_eq!(&ctx.events(), &[
-					DeferredAction::DepositEvent {
-						event: RawEvent::Transfer(ALICE, BOB, 20),
-						topics: Vec::new(),
-					},
-				]);
-			}
-		);
+			// The contract wasn't instantiated so we don't expect to see an instantiation
+			// event here.
+			assert_eq!(&ctx.events(), &[
+				DeferredAction::DepositEvent {
+					event: RawEvent::Transfer(ALICE, BOB, 20),
+					topics: Vec::new(),
+				},
+			]);
+		});
 	}
 
 	#[test]
@@ -1666,7 +1637,7 @@ mod tests {
 			exec_success()
 		});
 
-		with_externalities(&mut ExtBuilder::default().build(), || {
+		ExtBuilder::default().build().execute_with(|| {
 			let cfg = Config::preload();
 			let mut ctx = ExecutionContext::top_level(ALICE, &cfg, &vm, &loader);
 
