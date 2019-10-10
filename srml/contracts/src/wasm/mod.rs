@@ -191,6 +191,7 @@ mod tests {
 	#[derive(Default)]
 	pub struct MockExt {
 		storage: HashMap<StorageKey, Vec<u8>>,
+		runtime_storage: HashMap<Vec<u8>, Vec<u8>>,
 		rent_allowance: u64,
 		instantiates: Vec<InstantiateEntry>,
 		transfers: Vec<TransferEntry>,
@@ -212,6 +213,9 @@ mod tests {
 		{
 			*self.storage.entry(key).or_insert(Vec::new()) = value.unwrap_or(Vec::new());
 			Ok(())
+		}
+		fn runtime_get_storage(&self, key: &[u8]) -> Option<Vec<u8>> {
+			self.runtime_storage.get(key).cloned()
 		}
 		fn instantiate(
 			&mut self,
@@ -317,6 +321,9 @@ mod tests {
 			-> Result<(), &'static str>
 		{
 			(**self).set_storage(key, value)
+		}
+		fn runtime_get_storage(&self, key: &[u8]) -> Option<Vec<u8>> {
+			(**self).runtime_get_storage(key)
 		}
 		fn instantiate(
 			&mut self,

@@ -22,7 +22,11 @@ use crate::rent;
 
 use rstd::prelude::*;
 use sr_primitives::traits::{Bounded, CheckedAdd, CheckedSub, Zero};
-use support::traits::{WithdrawReason, Currency, Time};
+use runtime_io::twox_128;
+use support::{
+	storage,
+	traits::{WithdrawReason, Currency, Time},
+};
 
 pub type AccountIdOf<T> = <T as system::Trait>::AccountId;
 pub type CallOf<T> = <T as Trait>::Call;
@@ -103,6 +107,11 @@ pub trait Ext {
 	/// Sets the storage entry by the given key to the specified value. If `value` is `None` then
 	/// the storage entry is deleted. Returns an Err if the value size is too large.
 	fn set_storage(&mut self, key: StorageKey, value: Option<Vec<u8>>) -> Result<(), &'static str>;
+
+	/// Returns the *runtime* storage entry at the given key
+	///
+	/// Returns `None` if no storage entry was found at the key
+	fn runtime_get_storage(&self, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// Instantiate a contract from the given code.
 	///
@@ -691,6 +700,10 @@ where
 			.overlay
 			.set_storage(&self.ctx.self_account, key, value);
 		Ok(())
+	}
+
+	fn runtime_get_storage(&self, key: &[u8]) -> Option<Vec<u8>> {
+		storage::hashed::get_raw(&twox_128, key)
 	}
 
 	fn instantiate(

@@ -835,6 +835,23 @@ define_env!(Env, <E: Ext>,
 		ctx.ext.block_number().encode_to(&mut ctx.scratch_buf);
 		Ok(())
 	},
+
+	// Retrieve the value at the given location from the *runtime* storage and return 0.
+	// If there is no entry at the given location then this function will return 1 and
+	// clear the scratch buffer.
+	//
+	// `key_ptr` - pointer to a buffer containing the runtime storage key.
+	// `key_len` - length of the key buffer
+	ext_runtime_get_storage(ctx, key_ptr: u32, key_len: u32) -> u32 => {
+		let key = read_sandbox_memory(ctx, key_ptr, key_len)?;
+		if let Some(value) = ctx.ext.runtime_get_storage(&key) {
+			ctx.scratch_buf = value;
+			Ok(0)
+		} else {
+			ctx.scratch_buf.clear();
+			Ok(1)
+		}
+	},
 );
 
 /// Finds duplicates in a given vector.
