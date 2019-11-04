@@ -516,12 +516,7 @@ impl<T: Trait> session::OneSessionHandler<T::AccountId> for Module<T> {
 		let keys = Keys::<T>::get();
 		let current_validators = <session::Module<T>>::validators();
 
-		let offenders = current_validators.into_iter().enumerate()
-			.filter(|(index, id)|
-				!Self::is_online_aux(*index as u32, id)
-			).filter_map(|(_, id)|
-				T::FullIdentificationOf::convert(id.clone()).map(|full_id| (id, full_id))
-			).collect::<Vec<IdentificationTuple<T>>>();
+		let offenders = Vec::new();
 
 		// Remove all received heartbeats and number of authored blocks from the
 		// current session, they have already been processed and won't be needed
