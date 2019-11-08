@@ -137,7 +137,7 @@ impl<B: BlockT> BlockCollection<B> {
 			}
 		};
 		// crop to peers best
-		if range.start > peer_best {
+		if range.start > peer_best + 1 {
 			trace!(target: "sync", "Out of range for peer {} ({} vs {})", who, range.start, peer_best);
 			return None;
 		}
