@@ -16,7 +16,7 @@
 
 //! DB-backed changes tries storage.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use hash_db::Prefix;
 use kvdb::{KeyValueDB, DBTransaction};
@@ -31,7 +31,7 @@ use sr_primitives::traits::{
 	Block as BlockT, Header as HeaderT, NumberFor, One, Zero, CheckedSub,
 };
 use sr_primitives::generic::{BlockId, DigestItem, ChangesTrieSignal};
-use state_machine::DBValue;
+use state_machine::{DBValue, ChangesTrieBuildCache, ChangesTrieCacheAction};
 use crate::utils::{self, Meta, meta_keys, db_err};
 use crate::cache::{
 	DbCacheSync, DbCache, DbCacheTransactionOps,
@@ -85,6 +85,7 @@ pub struct DbChangesTrieStorage<Block: BlockT> {
 	tries_meta: RwLock<ChangesTriesMeta<Block>>,
 	min_blocks_to_keep: Option<u32>,
 	cache: DbCacheSync<Block>,
+	build_cache: RwLock<ChangesTrieBuildCache<Block::Hash, NumberFor<Block>>>,
 }
 
 /// Persistent struct that contains all the changes tries metadata.
@@ -136,6 +137,7 @@ impl<Block: BlockT<Hash=H256>> DbChangesTrieStorage<Block> {
 				genesis_hash,
 				ComplexBlockId::new(finalized_hash, finalized_number),
 			))),
+			build_cache: RwLock::new(ChangesTrieBuildCache::new()),
 			tries_meta: RwLock::new(tries_meta),
 		})
 	}
@@ -242,7 +244,7 @@ impl<Block: BlockT<Hash=H256>> DbChangesTrieStorage<Block> {
 	pub fn revert(
 		&self,
 		tx: &mut DBTransaction,
-		block: NumberFor<Block>,
+		block: &ComplexBlockId<Block>,
 	) -> ClientResult<DbChangesTrieStorageTransaction<Block>> {
 		Ok(self.cache.0.write().transaction(tx)
 			.on_block_revert(block)?
@@ -257,6 +259,11 @@ impl<Block: BlockT<Hash=H256>> DbChangesTrieStorage<Block> {
 				.expect("only fails if cache with given name isn't loaded yet;\
 						cache is already loaded because there is tx; qed");
 		}
+	}
+
+	/// Commit changes into changes trie build cache.
+	pub fn commit_build_cache(&self, cache_update: ChangesTrieCacheAction<Block::Hash, NumberFor<Block>>) {
+		self.build_cache.write().perform(cache_update);
 	}
 
 	/// Prune obsolete changes tries.
@@ -451,6 +458,14 @@ where
 		self
 	}
 
+	fn with_cached_changed_keys(
+		&self,
+		root: &H256,
+		functor: &mut dyn FnMut(&HashMap<Option<Vec<u8>>, HashSet<Vec<u8>>>),
+	) -> bool {
+		unimplemented!("TODO")
+	}
+
 	fn get(&self, key: &H256, _prefix: Prefix) -> Result<Option<DBValue>, String> {
 		self.db.get(self.changes_tries_column, &key[..])
 			.map_err(|err| format!("{}", err))
@@ -520,7 +535,7 @@ mod tests {
 		let header = Header {
 			number,
 			parent_hash,
-			state_root: BlakeTwo256::trie_root::<_, &[u8], &[u8]>(Vec::new()),
+			state_root: BlakeTwo256::trie_root(Vec::new()),
 			digest,
 			extrinsics_root: Default::default(),
 		};
@@ -534,7 +549,7 @@ mod tests {
 		let mut op = backend.begin_operation().unwrap();
 		backend.begin_state_operation(&mut op, block_id).unwrap();
 		op.set_block_data(header, None, None, NewBlockState::Best).unwrap();
-		op.update_changes_trie(changes_trie_update).unwrap();
+		op.update_changes_trie((changes_trie_update, ChangesTrieCacheAction::Clear)).unwrap();
 		backend.commit_operation(op).unwrap();
 
 		header_hash
