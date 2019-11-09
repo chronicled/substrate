@@ -219,7 +219,7 @@ fn propagate<'a, B: BlockT, I>(
 				continue
 			}
 			peer.known_messages.insert(message_hash.clone());
-			trace!(target: "gossip", "Propagating to {}: {:?}", id, message);
+			trace!(target: "gossip", "Propagating message for topic {} to {}: {:?}", topic, id, message);
 			batch.push(message.clone())
 		}
 		protocol.send_consensus(id.clone(), batch);
@@ -544,7 +544,7 @@ impl<B: BlockT> ConsensusGossip<B> {
 					continue
 				}
 				peer.known_messages.insert(entry.message_hash.clone());
-				trace!(target: "gossip", "Sending topic message to {}: {:?}", who, entry.message);
+				trace!(target: "gossip", "Sending topic message for topic {} to {}: {:?}", topic, who, entry.message);
 				batch.push(ConsensusMessage {
 					engine_id: engine_id.clone(),
 					data: entry.message.data.clone(),
