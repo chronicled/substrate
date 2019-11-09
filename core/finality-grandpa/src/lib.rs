@@ -741,11 +741,19 @@ where
 
 				let last_completed_round = completed_rounds.last();
 
+				// HACK: fix kusama stall by forcing nodes to the latest round
+				let last_completed_round_number =
+					if last_completed_round.number == 3306 && self.env.set_id == 67 {
+						3307
+					} else {
+						last_completed_round.number
+					};
+
 				let voter = voter::Voter::new(
 					self.env.clone(),
 					(*self.env.voters).clone(),
 					global_comms,
-					last_completed_round.number,
+					last_completed_round_number,
 					last_completed_round.state.clone(),
 					last_finalized,
 				);
