@@ -694,6 +694,41 @@ where
 		work
 	}
 
+	fn apply_kusama_fix(&mut self) -> Option<u64> {
+		let needs_fix = match &*self.env.voter_set_state.read() {
+			VoterSetState::Live { completed_rounds, .. } => {
+				let last_completed_round = completed_rounds.last();
+				last_completed_round.number == 3306 && self.env.set_id == 67
+			},
+			_ => false,
+		};
+
+		if needs_fix {
+			let _ = self.env.update_voter_set_state(|voter_set_state| {
+				match voter_set_state {
+					VoterSetState::Live { completed_rounds, current_rounds } => {
+						let mut current_rounds = current_rounds.clone();
+
+						current_rounds.remove(&3307);
+						current_rounds.insert(3308, environment::HasVoted::No);
+
+						let set_state = VoterSetState::<Block>::Live {
+							completed_rounds: completed_rounds.clone(),
+							current_rounds,
+						};
+
+						Ok(Some(set_state))
+					},
+					_ => Ok(None),
+				}
+			});
+
+			Some(3307)
+		} else {
+			None
+		}
+	}
+
 	/// Rebuilds the `self.voter` field using the current authority set
 	/// state. This method should be called when we know that the authority set
 	/// has changed (e.g. as signalled by a voter command).
@@ -724,6 +759,8 @@ where
 			},
 		);
 
+		let last_round_number = self.apply_kusama_fix();
+
 		match &*self.env.voter_set_state.read() {
 			VoterSetState::Live { completed_rounds, .. } => {
 				let last_finalized = (
@@ -745,7 +782,7 @@ where
 					self.env.clone(),
 					(*self.env.voters).clone(),
 					global_comms,
-					last_completed_round.number,
+					last_round_number.unwrap_or(last_completed_round.number),
 					last_completed_round.state.clone(),
 					last_finalized,
 				);
