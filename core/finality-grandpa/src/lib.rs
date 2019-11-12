@@ -741,6 +741,26 @@ where
 
 				let last_completed_round = completed_rounds.last();
 
+				log::trace!(target: "afg",
+					"CompletedRounds {{ set_id: {:?}, voters: {:?} }}",
+					completed_rounds.set_id,
+					completed_rounds.voters,
+				);
+
+				for round in completed_rounds.iter() {
+					log::trace!(target: "afg",
+						"CompletedRound {{ number: {:?}, state: {:?}, base: {:?} }}",
+						round.number,
+						round.state,
+						round.base,
+					);
+					log::trace!(target: "afg", "Votes:");
+					for vote in &round.votes {
+						log::trace!(target: "afg", "{:?}", vote.message);
+					}
+					log::trace!(target: "afg", "-----------------------------------");
+				}
+
 				let voter = voter::Voter::new(
 					self.env.clone(),
 					(*self.env.voters).clone(),

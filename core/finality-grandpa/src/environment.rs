@@ -81,9 +81,9 @@ pub struct CompletedRound<Block: BlockT> {
 // (genesis).
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompletedRounds<Block: BlockT> {
-	rounds: Vec<CompletedRound<Block>>,
-	set_id: SetId,
-	voters: Vec<AuthorityId>,
+	pub rounds: Vec<CompletedRound<Block>>,
+	pub set_id: SetId,
+	pub voters: Vec<AuthorityId>,
 }
 
 // NOTE: the current strategy for persisting completed rounds is very naive
