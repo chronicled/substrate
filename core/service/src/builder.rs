@@ -24,6 +24,7 @@ use client::{
 use chain_spec::{RuntimeGenesis, Extension};
 use codec::{Decode, Encode, IoReader};
 use consensus_common::import_queue::ImportQueue;
+use futures_diagnose_exec::{FutureExt as _, Future01Ext as _};
 use futures::{prelude::*, sync::mpsc};
 use futures03::{
 	compat::Compat,
@@ -906,14 +907,14 @@ ServiceBuilder<
 							&*txpool,
 							&notification.retracted,
 						).map_err(|e| warn!("Pool error processing new block: {:?}", e))?;
-						let _ = to_spawn_tx_.unbounded_send(future);
+						let _ = to_spawn_tx_.unbounded_send(Box::new(future.with_diagnostics("maintain-tx-pool")));
 					}
 
 					let offchain = offchain.as_ref().and_then(|o| o.upgrade());
 					if let (Some(txpool), Some(offchain)) = (txpool, offchain) {
 						let future = offchain.on_block_imported(&number, &txpool, network_state_info.clone(), is_validator)
 							.map(|()| Ok(()));
-						let _ = to_spawn_tx_.unbounded_send(Box::new(Compat::new(future)));
+						let _ = to_spawn_tx_.unbounded_send(Box::new(Compat::new(future.with_diagnostics("offchain-workers"))));
 					}
 
 					Ok(())
@@ -943,7 +944,7 @@ ServiceBuilder<
 				.select(exit.clone())
 				.then(|_| Ok(()));
 
-			let _ = to_spawn_tx.unbounded_send(Box::new(events));
+			let _ = to_spawn_tx.unbounded_send(Box::new(events.with_diagnostics("block-import-notification")));
 		}
 
 		// Periodically notify the telemetry.
@@ -995,7 +996,7 @@ ServiceBuilder<
 
 			Ok(())
 		}).select(exit.clone()).then(|_| Ok(()));
-		let _ = to_spawn_tx.unbounded_send(Box::new(tel_task));
+		let _ = to_spawn_tx.unbounded_send(Box::new(tel_task.with_diagnostics("telemetry-periodic-send")));
 
 		// Periodically send the network state to the telemetry.
 		let (netstat_tx, netstat_rx) = mpsc::unbounded::<(NetworkStatus<_>, NetworkState)>();
@@ -1080,6 +1081,7 @@ ServiceBuilder<
 			has_bootnodes,
 			dht_event_tx,
 		)
+			.with_diagnostics("network")
 			.map_err(|_| ())
 			.select(exit.clone())
 			.then(|_| Ok(()))));
@@ -1126,6 +1128,7 @@ ServiceBuilder<
 					Ok(())
 				});
 			let _ = to_spawn_tx.unbounded_send(Box::new(future
+				.with_diagnostics("telemetry")
 				.select(exit.clone())
 				.then(|_| Ok(()))));
 			telemetry

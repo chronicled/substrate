@@ -17,6 +17,7 @@
 use std::{mem, pin::Pin, time::Duration};
 use futures::{prelude::*, channel::mpsc, task::Context, task::Poll};
 use futures_timer::Delay;
+use futures_diagnose_exec::{FutureExt as _};
 use sr_primitives::{Justification, traits::{Block as BlockT, Header as HeaderT, NumberFor}};
 
 use crate::block_import::BlockOrigin;
@@ -70,7 +71,7 @@ impl<B: BlockT> BasicQueue<B> {
 
 		let manual_poll;
 		if let Some(pool) = &mut pool {
-			pool.spawn_ok(future);
+			pool.spawn_ok(future.with_diagnostics("import-queue"));
 			manual_poll = None;
 		} else {
 			manual_poll = Some(Box::pin(future) as Pin<Box<_>>);

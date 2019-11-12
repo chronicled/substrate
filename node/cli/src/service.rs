@@ -174,7 +174,7 @@ macro_rules! new_full {
 			};
 
 			let babe = babe::start_babe(babe_config)?;
-			service.spawn_essential_task(babe);
+			service.spawn_essential_task("babe", babe);
 		}
 
 		// if the node isn't actively participating in consensus then it doesn't
@@ -198,12 +198,12 @@ macro_rules! new_full {
 		match (is_authority, disable_grandpa) {
 			(false, false) => {
 				// start the lightweight GRANDPA observer
-				service.spawn_task(grandpa::run_grandpa_observer(
+				service.spawn_task("grandpa-observer", Box::new(grandpa::run_grandpa_observer(
 					config,
 					grandpa_link,
 					service.network(),
 					service.on_exit(),
-				)?);
+				)?));
 			},
 			(true, false) => {
 				// start the full GRANDPA voter
@@ -218,7 +218,7 @@ macro_rules! new_full {
 				};
 				// the GRANDPA voter task is considered infallible, i.e.
 				// if it fails we take down the service with it.
-				service.spawn_essential_task(grandpa::run_grandpa_voter(grandpa_config)?);
+				service.spawn_task("grandpa-voter", Box::new(grandpa::run_grandpa_voter(grandpa_config)?));
 			},
 			(_, true) => {
 				grandpa::setup_disabled_grandpa(

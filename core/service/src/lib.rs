@@ -39,6 +39,7 @@ use parking_lot::Mutex;
 use client::Client;
 use exit_future::Signal;
 use futures::prelude::*;
+use futures_diagnose_exec::{FutureExt as _, Future01Ext as _};
 use futures03::{
 	future::{ready, FutureExt as _, TryFutureExt as _},
 	stream::{StreamExt as _, TryStreamExt as _},
@@ -155,12 +156,12 @@ pub trait AbstractService: 'static + Future<Item = (), Error = Error> +
 	fn telemetry(&self) -> Option<tel::Telemetry>;
 
 	/// Spawns a task in the background that runs the future passed as parameter.
-	fn spawn_task(&self, task: impl Future<Item = (), Error = ()> + Send + 'static);
+	fn spawn_task(&self, name: &str, task: impl Future<Item = (), Error = ()> + Send + 'static);
 
 	/// Spawns a task in the background that runs the future passed as
 	/// parameter. The given task is considered essential, i.e. if it errors we
 	/// trigger a service exit.
-	fn spawn_essential_task(&self, task: impl Future<Item = (), Error = ()> + Send + 'static);
+	fn spawn_essential_task(&self, name: &str, task: impl Future<Item = (), Error = ()> + Send + 'static);
 
 	/// Returns a handle for spawning tasks.
 	fn spawn_task_handle(&self) -> SpawnTaskHandle;
@@ -233,12 +234,12 @@ where
 		self.keystore.clone()
 	}
 
-	fn spawn_task(&self, task: impl Future<Item = (), Error = ()> + Send + 'static) {
+	fn spawn_task(&self, name: &str, task: impl Future<Item = (), Error = ()> + Send + 'static) {
 		let task = task.select(self.on_exit()).then(|_| Ok(()));
-		let _ = self.to_spawn_tx.unbounded_send(Box::new(task));
+		let _ = self.to_spawn_tx.unbounded_send(Box::new(task.with_diagnostics(name.to_string())));
 	}
 
-	fn spawn_essential_task(&self, task: impl Future<Item = (), Error = ()> + Send + 'static) {
+	fn spawn_essential_task(&self, name: &str, task: impl Future<Item = (), Error = ()> + Send + 'static) {
 		let essential_failed = self.essential_failed.clone();
 		let essential_task = task.map_err(move |_| {
 			error!("Essential task failed. Shutting down service.");
@@ -246,7 +247,7 @@ where
 		});
 		let task = essential_task.select(self.on_exit()).then(|_| Ok(()));
 
-		let _ = self.to_spawn_tx.unbounded_send(Box::new(task));
+		let _ = self.to_spawn_tx.unbounded_send(Box::new(task.with_diagnostics(name.to_string())));
 	}
 
 	fn spawn_task_handle(&self) -> SpawnTaskHandle {
@@ -327,7 +328,7 @@ impl<TBl, TCl, TSc, TNetStatus, TNet, TTxPool, TOc> Executor<Box<dyn Future<Item
 		&self,
 		future: Box<dyn Future<Item = (), Error = ()> + Send>
 	) -> Result<(), futures::future::ExecuteError<Box<dyn Future<Item = (), Error = ()> + Send>>> {
-		if let Err(err) = self.to_spawn_tx.unbounded_send(future) {
+		if let Err(err) = self.to_spawn_tx.unbounded_send(Box::new(future.with_diagnostics("unnamed-task"))) {
 			let kind = futures::future::ExecuteErrorKind::Shutdown;
 			Err(futures::future::ExecuteError::new(kind, err.into_inner()))
 		} else {

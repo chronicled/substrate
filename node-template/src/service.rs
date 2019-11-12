@@ -121,7 +121,7 @@ pub fn new_full<C: Send + Default + 'static>(config: Configuration<C, GenesisCon
 
 		// the AURA authoring task is considered essential, i.e. if it
 		// fails we take down the service with it.
-		service.spawn_essential_task(aura);
+		// service.spawn_essential_task("babe", select);
 	}
 
 	// if the node isn't actively participating in consensus then it doesn't
@@ -145,12 +145,12 @@ pub fn new_full<C: Send + Default + 'static>(config: Configuration<C, GenesisCon
 	match (is_authority, disable_grandpa) {
 		(false, false) => {
 			// start the lightweight GRANDPA observer
-			service.spawn_task(grandpa::run_grandpa_observer(
+			service.spawn_task("grandpa-observer", Box::new(grandpa::run_grandpa_observer(
 				grandpa_config,
 				grandpa_link,
 				service.network(),
 				service.on_exit(),
-			)?);
+			)?));
 		},
 		(true, false) => {
 			// start the full GRANDPA voter
@@ -166,7 +166,7 @@ pub fn new_full<C: Send + Default + 'static>(config: Configuration<C, GenesisCon
 
 			// the GRANDPA voter task is considered infallible, i.e.
 			// if it fails we take down the service with it.
-			service.spawn_essential_task(grandpa::run_grandpa_voter(voter_config)?);
+			service.spawn_essential_task("grandpa-voter", grandpa::run_grandpa_voter(voter_config)?);
 		},
 		(_, true) => {
 			grandpa::setup_disabled_grandpa(
