@@ -696,7 +696,7 @@ where
 
 	config.database = DatabaseConfig::Path {
 		path: config.in_chain_config_dir(DEFAULT_DB_CONFIG_PATH).expect("We provided a base_path."),
-		cache_size: cli.database_cache_size,
+		cache_size: Some(0),
 	};
 	config.state_cache_size = cli.state_cache_size;
 
@@ -829,7 +829,7 @@ where
 	let mut config = service::Configuration::default_with_spec_and_base_path(spec.clone(), Some(base_path));
 	config.database = DatabaseConfig::Path {
 		path: config.in_chain_config_dir(DEFAULT_DB_CONFIG_PATH).expect("We provided a base_path."),
-		cache_size: None,
+		cache_size: Some(0),
 	};
 
 	Ok(config)

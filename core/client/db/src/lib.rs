@@ -802,7 +802,6 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	pub fn new_test(keep_blocks: u32, canonicalization_delay: u64) -> Self {
 		let db = Arc::new(kvdb_memorydb::create(crate::utils::NUM_COLUMNS));
 		let db_setting = DatabaseSettings {
-			cache_size: None,
 			state_cache_size: 16777216,
 			state_cache_child_ratio: Some((50, 100)),
 			pruning: PruningMode::keep_blocks(keep_blocks),
