@@ -874,38 +874,25 @@ fn init_logger(pattern: &str) {
 	let enable_color = isatty;
 
 	builder.format(move |buf, record| {
-		let now = time::now();
-		let timestamp =
-			time::strftime("%Y-%m-%d %H:%M:%S", &now)
-				.expect("Error formatting log timestamp");
+		buf.write(::std::thread::current().name().unwrap_or_default().as_bytes());
+		buf.write(b" ");
+	    buf.write_fmt(*record.args());
+	    buf.write(b"\n");
 
-		let mut output = if log::max_level() <= log::LevelFilter::Info {
-			format!("{} {}", Colour::Black.bold().paint(timestamp), record.args())
-		} else {
-			let name = ::std::thread::current()
-				.name()
-				.map_or_else(Default::default, |x| format!("{}", Colour::Blue.bold().paint(x)));
-			let millis = (now.tm_nsec as f32 / 1000000.0).round() as usize;
-			let timestamp = format!("{}.{:03}", timestamp, millis);
-			format!(
-				"{} {} {} {}  {}",
-				Colour::Black.bold().paint(timestamp),
-				name,
-				record.level(),
-				record.target(),
-				record.args()
-			)
-		};
-
-		if !enable_color {
-			output = kill_color(output.as_ref());
-		}
+		//if !enable_color {
+		//	output = kill_color(output.as_ref());
+		//}
 
 		if !isatty && record.level() <= log::Level::Info && atty::is(atty::Stream::Stdout) {
-			// duplicate INFO/WARN output to console
-			println!("{}", output);
+			println!(
+				"{} {} {}",
+				::std::thread::current().name().unwrap_or_default(),
+				record.level(),
+				record.args()
+			);
 		}
-		writeln!(buf, "{}", output)
+		Ok(())
+
 	});
 
 	if builder.try_init().is_err() {

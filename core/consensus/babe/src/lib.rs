@@ -714,12 +714,13 @@ impl<B, E, Block, RA, PRA> Verifier<Block> for BabeVerifier<B, E, Block, RA, PRA
 				if let Some(inner_body) = body.take() {
 					inherent_data.babe_replace_inherent_data(slot_number);
 					let block = Block::new(pre_header.clone(), inner_body);
-
+					/*
 					self.check_inherents(
 						block.clone(),
 						BlockId::Hash(parent_hash),
 						inherent_data,
 					)?;
+					*/
 
 					let (_, inner_body) = block.deconstruct();
 					body = Some(inner_body);
