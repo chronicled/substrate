@@ -142,3 +142,12 @@ subcommands:
             help: The prior block hash, hex-encoded.
             takes_value: true
             required: true
+  - balance-key:
+      about: Generate the raw key to fetch a balance for an account
+      args:
+        - suri:
+            long: suri
+            short: s
+            help: The secret key URI.
+            takes_value: true
+            required: true

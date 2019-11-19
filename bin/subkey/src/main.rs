@@ -20,7 +20,7 @@ extern crate test;
 
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::{load_yaml, App, ArgMatches};
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, KeyedVec};
 use hex_literal::hex;
 use node_primitives::{Balance, Hash, Index, AccountId, Signature};
 use node_runtime::{BalancesCall, Call, Runtime, SignedPayload, UncheckedExtrinsic, VERSION};
@@ -247,6 +247,13 @@ where
 			let extrinsic = create_extrinsic::<C>(function, index, signer, genesis_hash);
 
 			print_extrinsic(extrinsic);
+		}
+		("balance-key", Some(matches)) => {
+			const BALANCE_OF: &[u8] = b"balance:";
+			let signer = read_pair::<C>(matches.value_of("suri"), password);
+			let who: AccountId = signer.public().into_runtime().into_account();
+			let key = who.to_keyed_vec(BALANCE_OF);
+			println!("{}", hex::encode(key))
 		}
 		_ => print_usage(&matches),
 	}
