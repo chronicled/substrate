@@ -383,6 +383,16 @@ mod tests {
 	}
 
 	#[test]
+	fn alice_balance_key() {
+		let account_id = AccountKeyring::Alice.to_raw_public();
+		let unhashed = account_id.to_keyed_vec(b"balance:");
+		println!("account_id: {:?}", account_id);
+		println!("unhashed: {:?}", unhashed);
+		println!("hashed: {:?}", blake2_256(&unhashed));
+		assert!(false)
+	}
+
+	#[test]
 	fn block_import_works_native() {
 		block_import_works(|b, ext| ext.execute_with(|| execute_block(b)));
 	}

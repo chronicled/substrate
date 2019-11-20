@@ -26,6 +26,7 @@ use node_primitives::{Balance, Hash, Index, AccountId, Signature};
 use node_runtime::{BalancesCall, Call, Runtime, SignedPayload, UncheckedExtrinsic, VERSION};
 use primitives::{
 	crypto::{set_default_ss58_version, Ss58AddressFormat, Ss58Codec},
+	hashing::blake2_256,
 	ed25519, sr25519, ecdsa, Pair, Public, H256, hexdisplay::HexDisplay,
 };
 use sr_primitives::{traits::{IdentifyAccount, Verify}, generic::Era};
@@ -252,8 +253,9 @@ where
 			const BALANCE_OF: &[u8] = b"balance:";
 			let signer = read_pair::<C>(matches.value_of("suri"), password);
 			let who: AccountId = signer.public().into_runtime().into_account();
-			let key = who.to_keyed_vec(BALANCE_OF);
-			println!("{}", hex::encode(key))
+			let key = blake2_256(&who.to_keyed_vec(BALANCE_OF));
+			println!("{}", hex::encode(key));
+			println!("{:?}", key);
 		}
 		_ => print_usage(&matches),
 	}
