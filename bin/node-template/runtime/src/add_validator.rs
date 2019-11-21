@@ -40,7 +40,7 @@ decl_module! {
 		// Queue a new validator to be added at the next session end.
 		pub fn queue_validator(origin, n00b: T::AccountId) -> Result {
 
-			let who = ensure_root(origin)?;
+			let _ = ensure_root(origin)?;
 
 			// TODO check that you aren't overwriting another validaotr first
 			// Write the new validator to storage
@@ -61,7 +61,7 @@ decl_module! {
 // );
 
 impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T> {
-	fn on_session_ending(_ending: SessionIndex, start_session: SessionIndex) -> Option<Vec<T::AccountId>> {
+	fn on_session_ending(_ending: SessionIndex, _start_session: SessionIndex) -> Option<Vec<T::AccountId>> {
 		unimplemented!();
 	}
 }
