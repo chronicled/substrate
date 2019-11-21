@@ -15,7 +15,8 @@ use system::ensure_root;
 use session::{ OnSessionEnding, SelectInitialValidators };
 //TODO Why is this part of staking primitives. It feels more session-y.
 use sr_staking_primitives::SessionIndex;
-use rstd::vec::Vec;
+use rstd::{vec::Vec, convert::{From, Into}};
+use sr_primitives::traits::Convert;
 
 /// The module's configuration trait.
 //TODO For now I'm tightly coupling to the session module
@@ -68,8 +69,8 @@ impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T> {
 			Some(n00b) => {
 				// Get the list of current validators from the session module
 				let mut validators = session::Module::<T>::validators();
-				validators.push(n00b);
-				Some(validators)
+				validators.push(T::ValidatorIdOf::convert(n00b.clone()).unwrap());
+				Some(validators.into())
 			}
 			None => None
 		}
@@ -81,8 +82,7 @@ impl<T: Trait> SelectInitialValidators<T::AccountId> for Module<T> {
 	fn select_initial_validators() -> Option<Vec<T::AccountId>> {
 		// From https://crates.parity.io/pallet_session/trait.SelectInitialValidators.html
 		// If None is returned all accounts that have session keys set in the genesis block will be validators.
-		// So I think I'm just telling it to read the initial validators from
-		// The genesis config. But what field? Is there a field for tsession module?
+		// So I think I'm just telling it to read the initial validators from the genesis config.
 		None
 	}
 }

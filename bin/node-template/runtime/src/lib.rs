@@ -256,7 +256,7 @@ impl session::Trait for Runtime {
 	type Event = Event;
 	type Keys = SessionKeys;
 	type ValidatorId = <Self as system::Trait>::AccountId;
-	type ValidatorIdOf = ();
+	type ValidatorIdOf = ConvertInto;
 	type SelectInitialValidators = AddValidator;
 	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 }
