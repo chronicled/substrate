@@ -249,14 +249,14 @@ parameter_types! {
 
 impl session::Trait for Runtime {
 	type OnSessionEnding = AddValidator;
-	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders; // Probably Okay
+	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
 	// ShouldEndSession Was originally Babe. I wondered if Aura had it, or I could make
 	// A trivial implementation that had fixed ten blocks. But that was already done :)
 	type ShouldEndSession = PeriodicSessions<SessionPeriod, SessionOffset>;
 	type Event = Event;
-	type Keys = SessionKeys; // Probably Okay
-	type ValidatorId = <Self as system::Trait>::AccountId; // Probably Okay
-	type ValidatorIdOf = (); // Maybe switch to unit?
+	type Keys = SessionKeys;
+	type ValidatorId = <Self as system::Trait>::AccountId;
+	type ValidatorIdOf = ();
 	type SelectInitialValidators = AddValidator;
 	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 }

@@ -7,6 +7,7 @@
 // * Adding multiple validators per session
 // * Removing validators
 // * Events
+// * Loosely couple to session module?
 
 
 use support::{decl_module, decl_storage, /*decl_event,*/ dispatch::Result};
@@ -17,7 +18,8 @@ use sr_staking_primitives::SessionIndex;
 use rstd::vec::Vec;
 
 /// The module's configuration trait.
-pub trait Trait: system::Trait {
+//TODO For now I'm tightly coupling to the session module
+pub trait Trait: system::Trait + session::Trait {
 	// The overarching event type.
 	//type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -61,8 +63,17 @@ decl_module! {
 // );
 
 impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T> {
-	fn on_session_ending(_ending: SessionIndex, _start_session: SessionIndex) -> Option<Vec<T::AccountId>> {
-		unimplemented!();
+	fn on_session_ending(_ending_index: SessionIndex, _will_apply_at: SessionIndex) -> Option<Vec<T::AccountId>> {
+		match <QueuedValidator<T>>::get() {
+			Some(n00b) => {
+				// Get the list of current validators from the session module
+				let mut validators = session::Module::<T>::validators();
+				validators.push(n00b);
+				Some(validators)
+			}
+			None => None
+		}
+
 	}
 }
 
