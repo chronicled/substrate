@@ -31,6 +31,9 @@ timestamp = { package = "pallet-timestamp", path = "../../../palette/timestamp",
 transaction-payment = { package = "pallet-transaction-payment", path = "../../../palette/transaction-payment", default-features = false }
 tx-pool-api = { package = "substrate-transaction-pool-runtime-api", path = "../../../primitives/transaction-pool/runtime-api", default-features = false }
 version = { package = "sr-version", path = "../../../primitives/sr-version", default-features = false }
+# TODO Do I still need historical in there?
+session = { package = "pallet-session", path = "../../../palette/session", default-features = false, features = ["historical"] }
+sr-staking-primitives = { path = "../../../primitives/sr-staking-primitives", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", path = "../../../client/utils/wasm-builder-runner", version = "1.0.4" }
@@ -64,4 +67,6 @@ std = [
 	"transaction-payment/std",
 	"tx-pool-api/std",
 	"version/std",
+	"session/std",
+	"sr-staking-primitives/std",
 ]

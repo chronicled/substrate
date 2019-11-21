@@ -15,7 +15,7 @@ use sr_primitives::{
 	impl_opaque_keys, MultiSignature
 };
 use sr_primitives::traits::{
-	NumberFor, BlakeTwo256, Block as BlockT, StaticLookup, Verify, ConvertInto, IdentifyAccount
+	NumberFor, BlakeTwo256, Block as BlockT, StaticLookup, Verify, ConvertInto, IdentifyAccount, OpaqueKeys,
 };
 use sr_primitives::weights::Weight;
 use sr_api::impl_runtime_apis;
@@ -25,6 +25,7 @@ use grandpa::fg_primitives;
 use version::RuntimeVersion;
 #[cfg(feature = "std")]
 use version::NativeVersion;
+use session::PeriodicSessions;
 
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
@@ -61,7 +62,7 @@ pub type Hash = primitives::H256;
 pub type DigestItem = generic::DigestItem<Hash>;
 
 /// Used for the module template in `./template.rs`
-mod template;
+mod add_validator;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -79,12 +80,7 @@ pub mod opaque {
 	/// Opaque block identifier type.
 	pub type BlockId = generic::BlockId<Block>;
 
-	impl_opaque_keys! {
-		pub struct SessionKeys {
-			pub aura: Aura,
-			pub grandpa: Grandpa,
-		}
-	}
+	// Moved impl opaque keys from here
 }
 
 /// This runtime version.
@@ -228,9 +224,41 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
-/// Used for the module template in `./template.rs`
-impl template::Trait for Runtime {
+impl add_validator::Trait for Runtime {
 	type Event = Event;
+}
+
+// Moved this from mod opaque
+impl_opaque_keys! {
+	pub struct SessionKeys {
+		pub aura: Aura,
+		pub grandpa: Grandpa,
+	}
+}
+
+parameter_types! {
+	// Parameter copied directly from main Substrate node
+	// TODO figure out consequences of exceeding the threshold
+	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
+
+	// I've added these to use PeriodicSessions
+	// Simple 10-block sessions, no offset
+	pub const SessionPeriod: BlockNumber = 10;
+	pub const SessionOffset: BlockNumber = 0;
+}
+
+impl session::Trait for Runtime {
+	type OnSessionEnding = AddValidator;
+	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders; // Probably Okay
+	// ShouldEndSession Was originally Babe. I wondered if Aura had it, or I could make
+	// A trivial implementation that had fixed ten blocks. But that was already done :)
+	type ShouldEndSession = PeriodicSessions<SessionPeriod, SessionOffset>;
+	type Event = Event;
+	type Keys = SessionKeys; // Probably Okay
+	type ValidatorId = <Self as system::Trait>::AccountId; // Probably Okay
+	type ValidatorIdOf = (); // Maybe switch to unit?
+	type SelectInitialValidators = AddValidator;
+	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 }
 
 construct_runtime!(
@@ -247,9 +275,9 @@ construct_runtime!(
 		Balances: balances::{default, Error},
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo,
-		// Used for the module template in `./template.rs`
-		TemplateModule: template::{Module, Call, Storage, Event<T>},
 		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
+		Session: session::{Module, Call, Storage, Event, Config<T>},
+		AddValidator: add_validator::{Module, Call, Storage},
 	}
 );
 
@@ -349,7 +377,7 @@ impl_runtime_apis! {
 
 	impl substrate_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
-			opaque::SessionKeys::generate(seed)
+			SessionKeys::generate(seed)
 		}
 	}
 
