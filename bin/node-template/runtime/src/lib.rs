@@ -225,7 +225,7 @@ impl sudo::Trait for Runtime {
 }
 
 impl add_validator::Trait for Runtime {
-	type Event = Event;
+	//type Event = Event;
 }
 
 // Moved this from mod opaque
@@ -277,7 +277,7 @@ construct_runtime!(
 		Sudo: sudo,
 		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
 		Session: session::{Module, Call, Storage, Event, Config<T>},
-		AddValidator: add_validator::{Module, Call, Storage},
+		AddValidator: add_validator::{Module, Call, /*Event,*/ Storage},
 	}
 );
 

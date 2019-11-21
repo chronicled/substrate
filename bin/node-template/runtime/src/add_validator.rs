@@ -9,7 +9,7 @@
 // * Events
 
 
-use support::{decl_module, decl_storage, decl_event, dispatch::Result};
+use support::{decl_module, decl_storage, /*decl_event,*/ dispatch::Result};
 use system::ensure_root;
 use session::{ OnSessionEnding, SelectInitialValidators };
 //TODO Why is this part of staking primitives. It feels more session-y.
@@ -18,10 +18,8 @@ use rstd::vec::Vec;
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
-	// TODO: Add other types and constants required configure this module.
-
-	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	// The overarching event type.
+	//type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 // This module's storage items.
@@ -37,7 +35,7 @@ decl_module! {
 	/// The module declaration.
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		// Initializing events
-		fn deposit_event() = default;
+		//fn deposit_event() = default;
 
 		// Queue a new validator to be added at the next session end.
 		pub fn queue_validator(origin, n00b: T::AccountId) -> Result {
@@ -56,11 +54,11 @@ decl_module! {
 }
 
 // Not Actually Used
-decl_event!(
-	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
-		SomethingStored(u32, AccountId),
-	}
-);
+// decl_event!(
+// 	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
+// 		SomethingStored(u32, AccountId),
+// 	}
+// );
 
 impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T> {
 	fn on_session_ending(_ending: SessionIndex, start_session: SessionIndex) -> Option<Vec<T::AccountId>> {
