@@ -138,6 +138,10 @@ impl PeersState {
 	// Note: this method could theoretically return a `Peer`, but implementing that
 	// isn't simple.
 	pub fn peers(&self) -> impl Iterator<Item = &PeerId> {
+		println!(">>> Num of peers: {}", self.nodes.len());
+		for peer in self.nodes.iter() {
+			println!(">> peer {:?}", peer);
+		}
 		self.nodes.keys()
 	}
 
