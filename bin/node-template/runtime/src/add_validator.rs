@@ -15,7 +15,7 @@ use system::ensure_root;
 use session::{ OnSessionEnding, SelectInitialValidators };
 //TODO Why is this part of staking primitives. It feels more session-y.
 use sr_staking_primitives::SessionIndex;
-use rstd::{vec::Vec, convert::{From, Into}};
+use rstd::{vec::Vec, vec, convert::{From, Into}};
 use sr_primitives::traits::Convert;
 
 /// The module's configuration trait.
@@ -63,18 +63,27 @@ decl_module! {
 // 	}
 // );
 
-impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T> {
-	fn on_session_ending(_ending_index: SessionIndex, _will_apply_at: SessionIndex) -> Option<Vec<T::AccountId>> {
-		match <QueuedValidator<T>>::get() {
-			Some(n00b) => {
-				// Get the list of current validators from the session module
-				let mut validators = session::Module::<T>::validators();
-				validators.push(T::ValidatorIdOf::convert(n00b.clone()).unwrap());
-				Some(validators.into())
-			}
-			None => None
-		}
+// Something kinda similar in the Staking module. They make a whole trait called SessionInterface It has a `validators` function which gives back the validators as the correct type.
+impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T>
+{
+	// This is the correct logic that I'd like to use, but it doesn't typecheck.
+	// fn on_session_ending(_ending_index: SessionIndex, _will_apply_at: SessionIndex) -> Option<Vec<T::AccountId>> {
+	// 	match <QueuedValidator<T>>::get() {
+	// 		Some(n00b) => {
+	// 			// Get the list of current validators from the session module
+	// 			let mut validators = session::Module::<T>::validators();
+	// 			validators.push(T::ValidatorIdOf::convert(n00b.clone()).unwrap());
+	// 			Some(validators.into())
+	// 		}
+	// 		None => None
+	// 	}
+	// }
 
+	fn on_session_ending(_: SessionIndex, _: SessionIndex) -> Option<Vec<T::AccountId>> {
+		match <QueuedValidator<T>>::get() {
+			Some(n00b) => Some(vec![n00b.clone(), n00b.clone()]),
+			None => None,
+		}
 	}
 }
 
