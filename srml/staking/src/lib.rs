@@ -1274,6 +1274,8 @@ impl<T: Trait> Module<T> {
 		}).collect::<Vec<T::AccountId>>();
 		all_nominators.extend(<Nominators<T>>::enumerate());
 
+		print("all_validators_len = {} all_nominators = {}", all_validators.len(), all_nominators.len());
+
 		let maybe_phragmen_result = elect::<_, _, _, T::CurrencyToVote>(
 			Self::validator_count() as usize,
 			Self::minimum_validator_count().max(1) as usize,
