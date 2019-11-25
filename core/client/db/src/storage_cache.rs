@@ -443,26 +443,26 @@ impl<H: Hasher, S: StateBackend<H>, B: BlockT> CachingState<H, S, B> {
 		// We search for our parent in that list first and then for
 		// all its parents until we hit the canonical block,
 		// checking against all the intermediate modifications.
-		for m in modifications {
-			if &m.hash == parent {
-				if m.is_canon {
-					return true;
-				}
-				parent = &m.parent;
-			}
-			if let Some(key) = key {
-				if m.storage.contains(key) {
-					trace!("Cache lookup skipped for {:?}: modified in a later block", HexDisplay::from(&key));
-					return false;
-				}
-			}
-			if let Some(child_key) = child_key {
-				if m.child_storage.contains(child_key) {
-					trace!("Cache lookup skipped for {:?}: modified in a later block", child_key);
-					return false;
-				}
-			}
-		}
+		// for m in modifications {
+		// 	if &m.hash == parent {
+		// 		if m.is_canon {
+		// 			return true;
+		// 		}
+		// 		parent = &m.parent;
+		// 	}
+		// 	if let Some(key) = key {
+		// 		if m.storage.contains(key) {
+		// 			trace!("Cache lookup skipped for {:?}: modified in a later block", HexDisplay::from(&key));
+		// 			return false;
+		// 		}
+		// 	}
+		// 	if let Some(child_key) = child_key {
+		// 		if m.child_storage.contains(child_key) {
+		// 			trace!("Cache lookup skipped for {:?}: modified in a later block", child_key);
+		// 			return false;
+		// 		}
+		// 	}
+		// }
 		trace!("Cache lookup skipped for {:?}: parent hash is unknown", key.as_ref().map(HexDisplay::from));
 		false
 	}
@@ -479,22 +479,22 @@ impl<H: Hasher, S: StateBackend<H>, B: BlockT> StateBackend<H> for CachingState<
 	type TrieBackendStorage = S::TrieBackendStorage;
 
 	fn storage(&self, key: &[u8]) -> Result<Option<Vec<u8>>, Self::Error> {
-		let local_cache = self.cache.local_cache.upgradable_read();
-		// Note that local cache makes that lru is not refreshed
-		if let Some(entry) = local_cache.storage.get(key).cloned() {
-			trace!("Found in local cache: {:?}", HexDisplay::from(&key));
-			return Ok(entry)
-		}
-		let mut cache = self.cache.shared_cache.lock();
-		if Self::is_allowed(Some(key), None, &self.cache.parent_hash, &cache.modifications) {
-			if let Some(entry) = cache.lru_storage.get(key).map(|a| a.clone()) {
-				trace!("Found in shared cache: {:?}", HexDisplay::from(&key));
-				return Ok(entry)
-			}
-		}
+		// let local_cache = self.cache.local_cache.upgradable_read();
+		// // Note that local cache makes that lru is not refreshed
+		// if let Some(entry) = local_cache.storage.get(key).cloned() {
+		// 	trace!("Found in local cache: {:?}", HexDisplay::from(&key));
+		// 	return Ok(entry)
+		// }
+		// let mut cache = self.cache.shared_cache.lock();
+		// if Self::is_allowed(Some(key), None, &self.cache.parent_hash, &cache.modifications) {
+		// 	if let Some(entry) = cache.lru_storage.get(key).map(|a| a.clone()) {
+		// 		trace!("Found in shared cache: {:?}", HexDisplay::from(&key));
+		// 		return Ok(entry)
+		// 	}
+		// }
 		trace!("Cache miss: {:?}", HexDisplay::from(&key));
 		let value = self.state.storage(key)?;
-		RwLockUpgradableReadGuard::upgrade(local_cache).storage.insert(key.to_vec(), value.clone());
+		// RwLockUpgradableReadGuard::upgrade(local_cache).storage.insert(key.to_vec(), value.clone());
 		Ok(value)
 	}
 
