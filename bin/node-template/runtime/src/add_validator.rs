@@ -28,26 +28,27 @@ pub trait Trait: system::Trait + session::Trait {
 // This module's storage items.
 decl_storage! {
 	trait Store for Module<T: Trait> as AddValidator {
-		// Stores possible validator to be added to the set next time
-		QueuedValidator: Option<T::AccountId>;
+		// Validators for very next session
+		Validators: Vec<T::AccountId>;
 	}
 }
 
-// The module's dispatchable functions.
+
 decl_module! {
-	/// The module declaration.
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		// Initializing events
 		//fn deposit_event() = default;
 
 		// Queue a new validator to be added at the next session end.
-		pub fn queue_validator(origin, n00b: T::AccountId) -> Result {
+		pub fn add_validator(origin, n00b: T::AccountId) -> Result {
 
 			let _ = ensure_root(origin)?;
 
-			// TODO check that you aren't overwriting another validaotr first
-			// Write the new validator to storage
-			<QueuedValidator<T>>::put(n00b);
+			// TODO check for dupes?
+			// TODO better performance when this vector gets large
+			let mut validators = <Validators<T>>::get();
+			validators.push(n00b);
+			<Validators<T>>::put(validators);
 
 			// TODO Event
 			// Self::deposit_event(RawEvent::SomethingStored(something, who));
@@ -66,7 +67,10 @@ decl_module! {
 // Something kinda similar in the Staking module. They make a whole trait called SessionInterface It has a `validators` function which gives back the validators as the correct type.
 impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T>
 {
-	// This is the correct logic that I'd like to use, but it doesn't typecheck.
+	// This was my original logic. It doesn't compile because of typechecking errors
+	// between ValidatorId and SessionId.
+	// https://stackoverflow.com/questions/59012154/substrate-how-to-integrate-with-the-session-module
+	// Might be useful to take something like the SessionInterface Trait from staking module
 	// fn on_session_ending(_ending_index: SessionIndex, _will_apply_at: SessionIndex) -> Option<Vec<T::AccountId>> {
 	// 	match <QueuedValidator<T>>::get() {
 	// 		Some(n00b) => {
@@ -80,10 +84,7 @@ impl<T: Trait> OnSessionEnding<T::AccountId> for Module<T>
 	// }
 
 	fn on_session_ending(_: SessionIndex, _: SessionIndex) -> Option<Vec<T::AccountId>> {
-		match <QueuedValidator<T>>::get() {
-			Some(n00b) => Some(vec![n00b.clone(), n00b.clone()]),
-			None => None,
-		}
+		Some(<Validators<T>>::get())
 	}
 }
 
