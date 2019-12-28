@@ -48,7 +48,7 @@ use sp_blockchain::{
 };
 use codec::{Decode, Encode};
 use hash_db::{Hasher, Prefix};
-use kvdb::{KeyValueDB, DBTransaction};
+use kvdb::{KeyValueDB, DBSmartTransaction};
 use sp_trie::{MemoryDB, PrefixedMemoryDB, prefixed_key};
 use parking_lot::{Mutex, RwLock};
 use sp_core::{H256, Blake2Hasher, ChangesTrieConfiguration, convert_hash, traits::CodeExecutor};
@@ -519,10 +519,10 @@ pub struct BlockImportOperation<Block: BlockT, H: Hasher> {
 }
 
 impl<Block: BlockT, H: Hasher> BlockImportOperation<Block, H> {
-	fn apply_aux(&mut self, transaction: &mut DBTransaction) {
+	fn apply_aux(&mut self, transaction: &mut DBSmartTransaction) {
 		for (key, maybe_val) in self.aux_ops.drain(..) {
 			match maybe_val {
-				Some(val) => transaction.put_vec(columns::AUX, &key, val),
+				Some(val) => transaction.put(columns::AUX, &key, &val),
 				None => transaction.delete(columns::AUX, &key),
 			}
 		}
@@ -688,7 +688,7 @@ pub struct DbChangesTrieStorage<Block: BlockT> {
 
 impl<Block: BlockT<Hash=H256>> DbChangesTrieStorage<Block> {
 	/// Commit new changes trie.
-	pub fn commit(&self, tx: &mut DBTransaction, mut changes_trie: MemoryDB<Blake2Hasher>) {
+	pub fn commit(&self, tx: &mut DBSmartTransaction, mut changes_trie: MemoryDB<Blake2Hasher>) {
 		for (key, (val, _)) in changes_trie.drain() {
 			tx.put(columns::CHANGES_TRIE, &key[..], &val);
 		}
@@ -703,7 +703,7 @@ impl<Block: BlockT<Hash=H256>> DbChangesTrieStorage<Block> {
 	pub fn prune(
 		&self,
 		config: &ChangesTrieConfiguration,
-		tx: &mut DBTransaction,
+		tx: &mut DBSmartTransaction,
 		block_hash: Block::Hash,
 		block_num: NumberFor<Block>,
 	) {
@@ -1007,7 +1007,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	/// to be best, `route_to` should equal to `best_to`.
 	fn set_head_with_transaction(
 		&self,
-		transaction: &mut DBTransaction,
+		transaction: &mut DBSmartTransaction,
 		route_to: Block::Hash,
 		best_to: (NumberFor<Block>, Block::Hash),
 	) -> ClientResult<(Vec<Block::Hash>, Vec<Block::Hash>)> {
@@ -1084,7 +1084,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 
 	fn finalize_block_with_transaction(
 		&self,
-		transaction: &mut DBTransaction,
+		transaction: &mut DBSmartTransaction,
 		hash: &Block::Hash,
 		header: &Block::Header,
 		last_finalized: Option<Block::Hash>,
@@ -1114,7 +1114,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	// performs forced canonicaliziation with a delay after importing a non-finalized block.
 	fn force_delayed_canonicalize(
 		&self,
-		transaction: &mut DBTransaction,
+		transaction: &mut DBSmartTransaction,
 		hash: Block::Hash,
 		number: NumberFor<Block>,
 	)
@@ -1148,7 +1148,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	fn try_commit_operation(&self, mut operation: BlockImportOperation<Block, Blake2Hasher>)
 		-> ClientResult<()>
 	{
-		let mut transaction = DBTransaction::new();
+		let mut transaction = DBSmartTransaction::new();
 		let mut finalization_displaced_leaves = None;
 
 		operation.apply_aux(&mut transaction);
@@ -1293,7 +1293,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 			None
 		};
 
-		let write_result = self.storage.db.write(transaction).map_err(db_err);
+		let write_result = self.storage.db.smart_write(transaction).map_err(db_err);
 
 		if let Some(changes_trie_cache_update) = operation.changes_trie_cache_update {
 			self.changes_tries_storage.commit_cache(changes_trie_cache_update);
@@ -1342,7 +1342,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	// was not a child of the last finalized block.
 	fn note_finalized(
 		&self,
-		transaction: &mut DBTransaction,
+		transaction: &mut DBSmartTransaction,
 		f_header: &Block::Header,
 		f_hash: Block::Hash,
 		displaced: &mut Option<FinalizationDisplaced<Block::Hash, NumberFor<Block>>>
@@ -1377,7 +1377,7 @@ impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	}
 }
 
-fn apply_state_commit(transaction: &mut DBTransaction, commit: sc_state_db::CommitSet<Vec<u8>>) {
+fn apply_state_commit(transaction: &mut DBSmartTransaction, commit: sc_state_db::CommitSet<Vec<u8>>) {
 	for (key, val) in commit.data.inserted.into_iter() {
 		transaction.put(columns::STATE, &key[..], &val);
 	}
@@ -1400,14 +1400,14 @@ impl<Block> sc_client_api::backend::AuxStore for Backend<Block> where Block: Blo
 		I: IntoIterator<Item=&'a(&'c [u8], &'c [u8])>,
 		D: IntoIterator<Item=&'a &'b [u8]>,
 	>(&self, insert: I, delete: D) -> ClientResult<()> {
-		let mut transaction = DBTransaction::new();
+		let mut transaction = DBSmartTransaction::new();
 		for (k, v) in insert {
 			transaction.put(columns::AUX, k, v);
 		}
 		for k in delete {
 			transaction.delete(columns::AUX, k);
 		}
-		self.storage.db.write(transaction).map_err(db_err)?;
+		self.storage.db.smart_write(transaction).map_err(db_err)?;
 		Ok(())
 	}
 
@@ -1468,7 +1468,7 @@ impl<Block> sc_client_api::backend::Backend<Block, Blake2Hasher> for Backend<Blo
 	fn finalize_block(&self, block: BlockId<Block>, justification: Option<Justification>)
 		-> ClientResult<()>
 	{
-		let mut transaction = DBTransaction::new();
+		let mut transaction = DBSmartTransaction::new();
 		let hash = self.blockchain.expect_block_hash_from_id(&block)?;
 		let header = self.blockchain.expect_header(block)?;
 		let mut displaced = None;
@@ -1481,7 +1481,7 @@ impl<Block> sc_client_api::backend::Backend<Block, Blake2Hasher> for Backend<Blo
 				justification,
 				displaced,
 			)?;
-			self.storage.db.write(transaction).map_err(db_err)?;
+			self.storage.db.smart_write(transaction).map_err(db_err)?;
 			self.blockchain.update_meta(hash, number, is_best, is_finalized);
 			Ok(())
 		};
@@ -1516,7 +1516,7 @@ impl<Block> sc_client_api::backend::Backend<Block, Blake2Hasher> for Backend<Blo
 			if best.is_zero() {
 				return Ok(c.saturated_into::<NumberFor<Block>>())
 			}
-			let mut transaction = DBTransaction::new();
+			let mut transaction = DBSmartTransaction::new();
 			match self.storage.state_db.revert_one() {
 				Some(commit) => {
 					apply_state_commit(&mut transaction, commit);
@@ -1532,7 +1532,7 @@ impl<Block> sc_client_api::backend::Backend<Block, Blake2Hasher> for Backend<Blo
 					transaction.put(columns::META, meta_keys::BEST_BLOCK, &key);
 					transaction.delete(columns::KEY_LOOKUP, removed.hash().as_ref());
 					children::remove_children(&mut transaction, columns::META, meta_keys::CHILDREN_PREFIX, hash);
-					self.storage.db.write(transaction).map_err(db_err)?;
+					self.storage.db.smart_write(transaction).map_err(db_err)?;
 					self.blockchain.update_meta(hash, best, true, false);
 					self.blockchain.leaves.write().revert(removed.hash().clone(), removed.number().clone(), removed.parent_hash().clone());
 				}
@@ -2129,9 +2129,9 @@ mod tests {
 		let root12 = read_changes_trie_root(&backend, 12); assert_eq!(backend.changes_tries_storage.root(&anchor, 12).unwrap(), Some(root12));
 
 		// now simulate finalization of block#12, causing prune of tries at #1..#4
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 		backend.changes_tries_storage.prune(&config, &mut tx, Default::default(), 12);
-		backend.storage.db.write(tx).unwrap();
+		backend.storage.db.smart_write(tx).unwrap();
 		assert!(backend.changes_tries_storage.get(&root1, EMPTY_PREFIX).unwrap().is_none());
 		assert!(backend.changes_tries_storage.get(&root2, EMPTY_PREFIX).unwrap().is_none());
 		assert!(backend.changes_tries_storage.get(&root3, EMPTY_PREFIX).unwrap().is_none());
@@ -2142,9 +2142,9 @@ mod tests {
 		assert!(backend.changes_tries_storage.get(&root8, EMPTY_PREFIX).unwrap().is_some());
 
 		// now simulate finalization of block#16, causing prune of tries at #5..#8
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 		backend.changes_tries_storage.prune(&config, &mut tx, Default::default(), 16);
-		backend.storage.db.write(tx).unwrap();
+		backend.storage.db.smart_write(tx).unwrap();
 		assert!(backend.changes_tries_storage.get(&root5, EMPTY_PREFIX).unwrap().is_none());
 		assert!(backend.changes_tries_storage.get(&root6, EMPTY_PREFIX).unwrap().is_none());
 		assert!(backend.changes_tries_storage.get(&root7, EMPTY_PREFIX).unwrap().is_none());
@@ -2153,9 +2153,9 @@ mod tests {
 		// now "change" pruning mode to archive && simulate finalization of block#20
 		// => no changes tries are pruned, because we never prune in archive mode
 		backend.changes_tries_storage.min_blocks_to_keep = None;
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 		backend.changes_tries_storage.prune(&config, &mut tx, Default::default(), 20);
-		backend.storage.db.write(tx).unwrap();
+		backend.storage.db.smart_write(tx).unwrap();
 		assert!(backend.changes_tries_storage.get(&root9, EMPTY_PREFIX).unwrap().is_some());
 		assert!(backend.changes_tries_storage.get(&root10, EMPTY_PREFIX).unwrap().is_some());
 		assert!(backend.changes_tries_storage.get(&root11, EMPTY_PREFIX).unwrap().is_some());
@@ -2195,16 +2195,16 @@ mod tests {
 		let root6 = read_changes_trie_root(&backend, 6); assert_eq!(backend.changes_tries_storage.root(&anchor, 6).unwrap(), Some(root6));
 
 		// now simulate finalization of block#5, causing prune of trie at #1
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 		backend.changes_tries_storage.prune(&config, &mut tx, block5, 5);
-		backend.storage.db.write(tx).unwrap();
+		backend.storage.db.smart_write(tx).unwrap();
 		assert!(backend.changes_tries_storage.get(&root1, EMPTY_PREFIX).unwrap().is_none());
 		assert!(backend.changes_tries_storage.get(&root2, EMPTY_PREFIX).unwrap().is_some());
 
 		// now simulate finalization of block#6, causing prune of tries at #2
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 		backend.changes_tries_storage.prune(&config, &mut tx, block6, 6);
-		backend.storage.db.write(tx).unwrap();
+		backend.storage.db.smart_write(tx).unwrap();
 		assert!(backend.changes_tries_storage.get(&root2, EMPTY_PREFIX).unwrap().is_none());
 		assert!(backend.changes_tries_storage.get(&root3, EMPTY_PREFIX).unwrap().is_some());
 	}

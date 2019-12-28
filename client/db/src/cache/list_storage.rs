@@ -18,7 +18,7 @@
 
 use std::sync::Arc;
 
-use kvdb::{KeyValueDB, DBTransaction};
+use kvdb::{KeyValueDB, DBSmartTransaction};
 
 use sp_blockchain::{Error as ClientError, Result as ClientResult};
 use codec::{Encode, Decode};
@@ -167,12 +167,12 @@ impl<Block: BlockT, T: CacheItemT> Storage<Block, T> for DbStorage {
 /// Database-backed list cache storage transaction.
 pub struct DbStorageTransaction<'a> {
 	storage: &'a DbStorage,
-	tx: &'a mut DBTransaction,
+	tx: &'a mut DBSmartTransaction,
 }
 
 impl<'a> DbStorageTransaction<'a> {
 	/// Create new database transaction.
-	pub fn new(storage: &'a DbStorage, tx: &'a mut DBTransaction) -> Self {
+	pub fn new(storage: &'a DbStorage, tx: &'a mut DBSmartTransaction) -> Self {
 		DbStorageTransaction { storage, tx }
 	}
 }

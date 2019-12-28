@@ -61,10 +61,10 @@ impl LocalStorage {
 impl sp_core::offchain::OffchainStorage for LocalStorage {
 	fn set(&mut self, prefix: &[u8], key: &[u8], value: &[u8]) {
 		let key: Vec<u8> = prefix.iter().chain(key).cloned().collect();
-		let mut tx = self.db.transaction();
+		let mut tx = self.db.smart_transaction();
 		tx.put(columns::OFFCHAIN, &key, value);
 
-		if let Err(e) = self.db.write(tx) {
+		if let Err(e) = self.db.smart_write(tx) {
 			log::warn!("Error writing to the offchain DB: {:?}", e);
 		}
 	}

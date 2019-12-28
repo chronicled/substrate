@@ -20,7 +20,7 @@
 use std::sync::Arc;
 use std::{io, convert::TryInto};
 
-use kvdb::{KeyValueDB, DBTransaction};
+use kvdb::{KeyValueDB, DBSmartTransaction};
 #[cfg(feature = "kvdb-rocksdb")]
 use kvdb_rocksdb::{Database, DatabaseConfig};
 use log::debug;
@@ -137,7 +137,7 @@ pub fn lookup_key_to_number<N>(key: &[u8]) -> sp_blockchain::Result<N> where
 
 /// Delete number to hash mapping in DB transaction.
 pub fn remove_number_to_key_mapping<N: TryInto<u32>>(
-	transaction: &mut DBTransaction,
+	transaction: &mut DBSmartTransaction,
 	key_lookup_col: u32,
 	number: N,
 ) -> sp_blockchain::Result<()> {
@@ -147,7 +147,7 @@ pub fn remove_number_to_key_mapping<N: TryInto<u32>>(
 
 /// Remove key mappings.
 pub fn remove_key_mappings<N: TryInto<u32>, H: AsRef<[u8]>>(
-	transaction: &mut DBTransaction,
+	transaction: &mut DBSmartTransaction,
 	key_lookup_col: u32,
 	number: N,
 	hash: H,
@@ -160,7 +160,7 @@ pub fn remove_key_mappings<N: TryInto<u32>, H: AsRef<[u8]>>(
 /// Place a number mapping into the database. This maps number to current perceived
 /// block hash at that position.
 pub fn insert_number_to_key_mapping<N: TryInto<u32> + Clone, H: AsRef<[u8]>>(
-	transaction: &mut DBTransaction,
+	transaction: &mut DBSmartTransaction,
 	key_lookup_col: u32,
 	number: N,
 	hash: H,
@@ -175,7 +175,7 @@ pub fn insert_number_to_key_mapping<N: TryInto<u32> + Clone, H: AsRef<[u8]>>(
 
 /// Insert a hash to key mapping in the database.
 pub fn insert_hash_to_key_mapping<N: TryInto<u32>, H: AsRef<[u8]> + Clone>(
-	transaction: &mut DBTransaction,
+	transaction: &mut DBSmartTransaction,
 	key_lookup_col: u32,
 	number: N,
 	hash: H,
@@ -262,9 +262,9 @@ pub fn open_database(
 			}
 		},
 		None => {
-			let mut transaction = DBTransaction::new();
+			let mut transaction = DBSmartTransaction::new();
 			transaction.put(col_meta, meta_keys::TYPE, db_type.as_bytes());
-			db.write(transaction).map_err(db_err)?;
+			db.smart_write(transaction).map_err(db_err)?;
 		},
 	}
 

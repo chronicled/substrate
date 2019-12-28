@@ -18,7 +18,7 @@
 
 use std::collections::BTreeMap;
 use std::cmp::Reverse;
-use kvdb::{KeyValueDB, DBTransaction};
+use kvdb::{KeyValueDB, DBSmartTransaction};
 use sp_runtime::traits::SimpleArithmetic;
 use codec::{Encode, Decode};
 use sp_blockchain::{Error, Result};
@@ -193,11 +193,11 @@ impl<H, N> LeafSet<H, N> where
 	}
 
 	/// Write the leaf list to the database transaction.
-	pub fn prepare_transaction(&mut self, tx: &mut DBTransaction, column: u32, prefix: &[u8]) {
+	pub fn prepare_transaction(&mut self, tx: &mut DBSmartTransaction, column: u32, prefix: &[u8]) {
 		let mut buf = prefix.to_vec();
 		for LeafSetItem { hash, number } in self.pending_added.drain(..) {
 			hash.using_encoded(|s| buf.extend(s));
-			tx.put_vec(column, &buf[..], number.0.encode());
+			tx.put(column, &buf, &number.0.encode());
 			buf.truncate(prefix.len()); // reuse allocation.
 		}
 		for hash in self.pending_removed.drain(..) {
@@ -306,10 +306,10 @@ mod tests {
 		set.import(2_1, 2, 1_1);
 		set.import(3_1, 3, 2_1);
 
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 
 		set.prepare_transaction(&mut tx, 0, PREFIX);
-		db.write(tx).unwrap();
+		db.smart_write(tx).unwrap();
 
 		let set2 = LeafSet::read_from_db(&db, 0, PREFIX).unwrap();
 		assert_eq!(set, set2);
@@ -341,14 +341,14 @@ mod tests {
 
 		assert!(set.contains(10, 10_1));
 
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 		set.prepare_transaction(&mut tx, 0, PREFIX);
-		db.write(tx).unwrap();
+		db.smart_write(tx).unwrap();
 
 		let _ = set.finalize_height(11);
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 		set.prepare_transaction(&mut tx, 0, PREFIX);
-		db.write(tx).unwrap();
+		db.smart_write(tx).unwrap();
 
 		assert!(set.contains(11, 11_1));
 		assert!(set.contains(11, 11_2));

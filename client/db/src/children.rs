@@ -16,7 +16,7 @@
 
 //! Functionality for reading and storing children hashes from db.
 
-use kvdb::{KeyValueDB, DBTransaction};
+use kvdb::{KeyValueDB, DBSmartTransaction};
 use codec::{Encode, Decode};
 use sp_blockchain;
 use std::hash::Hash;
@@ -53,7 +53,7 @@ pub fn write_children<
 	K: Eq + Hash + Clone + Encode + Decode,
 	V: Eq + Hash + Clone + Encode + Decode,
 >(
-	tx: &mut DBTransaction,
+	tx: &mut DBSmartTransaction,
 	column: u32,
 	prefix: &[u8],
 	parent_hash: K,
@@ -68,7 +68,7 @@ pub fn write_children<
 pub fn remove_children<
 	K: Eq + Hash + Clone + Encode + Decode,
 >(
-	tx: &mut DBTransaction,
+	tx: &mut DBSmartTransaction,
 	column: u32,
 	prefix: &[u8],
 	parent_hash: K,
@@ -77,7 +77,6 @@ pub fn remove_children<
 	parent_hash.using_encoded(|s| key.extend(s));
 	tx.delete(column, &key[..]);
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -88,7 +87,7 @@ mod tests {
 		const PREFIX: &[u8] = b"children";
 		let db = ::kvdb_memorydb::create(0);
 
-		let mut tx = DBTransaction::new();
+		let mut tx = DBSmartTransaction::new();
 
 		let mut children1 = Vec::new();
 		children1.push(1_3);
@@ -100,7 +99,7 @@ mod tests {
 		children2.push(1_6);
 		write_children(&mut tx, 0, PREFIX, 1_2, children2);
 
-		db.write(tx.clone()).unwrap();
+		db.smart_write(tx.clone()).unwrap();
 
 		let r1: Vec<u32> = read_children(&db, 0, PREFIX, 1_1).unwrap();
 		let r2: Vec<u32> = read_children(&db, 0, PREFIX, 1_2).unwrap();
@@ -109,7 +108,7 @@ mod tests {
 		assert_eq!(r2, vec![1_4, 1_6]);
 
 		remove_children(&mut tx, 0, PREFIX, 1_2);
-		db.write(tx).unwrap();
+		db.smart_write(tx).unwrap();
 
 		let r1: Vec<u32> = read_children(&db, 0, PREFIX, 1_1).unwrap();
 		let r2: Vec<u32> = read_children(&db, 0, PREFIX, 1_2).unwrap();

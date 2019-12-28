@@ -20,7 +20,7 @@ use std::{sync::Arc, collections::HashMap};
 use parity_util_mem::MallocSizeOf;
 use parking_lot::RwLock;
 
-use kvdb::{KeyValueDB, DBTransaction};
+use kvdb::{KeyValueDB, DBSmartTransaction};
 
 use sc_client_api::blockchain::{well_known_cache_keys::{self, Id as CacheKeyId}, Cache as BlockchainCache};
 use sp_blockchain::Result as ClientResult;
@@ -119,7 +119,7 @@ impl<Block: BlockT> DbCache<Block> {
 	}
 
 	/// Begin cache transaction.
-	pub fn transaction<'a>(&'a mut self, tx: &'a mut DBTransaction) -> DbCacheTransaction<'a, Block> {
+	pub fn transaction<'a>(&'a mut self, tx: &'a mut DBSmartTransaction) -> DbCacheTransaction<'a, Block> {
 		DbCacheTransaction {
 			cache: self,
 			tx,
@@ -188,7 +188,7 @@ pub struct DbCacheTransactionOps<Block: BlockT> {
 /// Database-backed blockchain data cache transaction valid for single block import.
 pub struct DbCacheTransaction<'a, Block: BlockT> {
 	cache: &'a mut DbCache<Block>,
-	tx: &'a mut DBTransaction,
+	tx: &'a mut DBSmartTransaction,
 	cache_at_op: HashMap<CacheKeyId, self::list_cache::CommitOperation<Block, Vec<u8>>>,
 	best_finalized_block: Option<ComplexBlockId<Block>>,
 }
@@ -309,7 +309,7 @@ impl<Block: BlockT> BlockchainCache<Block> for DbCacheSync<Block> {
 		let genesis_hash = cache.genesis_hash;
 		let cache_contents = vec![(*key, data)].into_iter().collect();
 		let db = cache.db.clone();
-		let mut dbtx = DBTransaction::new();
+		let mut dbtx = DBSmartTransaction::new();
 		let tx = cache.transaction(&mut dbtx);
 		let tx = tx.on_block_insert(
 			ComplexBlockId::new(Default::default(), Zero::zero()),
@@ -318,7 +318,7 @@ impl<Block: BlockT> BlockchainCache<Block> for DbCacheSync<Block> {
 			EntryType::Genesis,
 		)?;
 		let tx_ops = tx.into_ops();
-		db.write(dbtx).map_err(db_err)?;
+		db.smart_write(dbtx).map_err(db_err)?;
 		cache.commit(tx_ops);
 		Ok(())
 	}

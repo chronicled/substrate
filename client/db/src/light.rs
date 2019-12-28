@@ -20,7 +20,7 @@ use std::{sync::Arc, collections::HashMap};
 use std::convert::TryInto;
 use parking_lot::RwLock;
 
-use kvdb::{KeyValueDB, DBTransaction};
+use kvdb::{KeyValueDB, DBSmartTransaction};
 
 use sc_client_api::backend::{AuxStore, NewBlockState};
 use sc_client::blockchain::{
@@ -234,7 +234,7 @@ impl<Block: BlockT> LightStorage<Block> {
 	/// to be best, `route_to` should equal to `best_to`.
 	fn set_head_with_transaction(
 		&self,
-		transaction: &mut DBTransaction,
+		transaction: &mut DBSmartTransaction,
 		route_to: Block::Hash,
 		best_to: (NumberFor<Block>, Block::Hash),
 	) -> ClientResult<()> {
@@ -284,7 +284,7 @@ impl<Block: BlockT> LightStorage<Block> {
 	// Note that a block is finalized. Only call with child of last finalized block.
 	fn note_finalized(
 		&self,
-		transaction: &mut DBTransaction,
+		transaction: &mut DBSmartTransaction,
 		header: &Block::Header,
 		hash: Block::Hash,
 	) -> ClientResult<()> {
@@ -390,14 +390,14 @@ impl<Block> AuxStore for LightStorage<Block>
 		I: IntoIterator<Item=&'a(&'c [u8], &'c [u8])>,
 		D: IntoIterator<Item=&'a &'b [u8]>,
 	>(&self, insert: I, delete: D) -> ClientResult<()> {
-		let mut transaction = DBTransaction::new();
+		let mut transaction = DBSmartTransaction::new();
 		for (k, v) in insert {
 			transaction.put(columns::AUX, k, v);
 		}
 		for k in delete {
 			transaction.delete(columns::AUX, k);
 		}
-		self.db.write(transaction).map_err(db_err)
+		self.db.smart_write(transaction).map_err(db_err)
 	}
 
 	fn get_aux(&self, key: &[u8]) -> ClientResult<Option<Vec<u8>>> {
@@ -415,7 +415,7 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 		leaf_state: NewBlockState,
 		aux_ops: Vec<(Vec<u8>, Option<Vec<u8>>)>,
 	) -> ClientResult<()> {
-		let mut transaction = DBTransaction::new();
+		let mut transaction = DBSmartTransaction::new();
 
 		let hash = header.hash();
 		let number = *header.number();
@@ -423,7 +423,7 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 
 		for (key, maybe_val) in aux_ops {
 			match maybe_val {
-				Some(val) => transaction.put_vec(columns::AUX, &key, val),
+				Some(val) => transaction.put(columns::AUX, &key, &val),
 				None => transaction.delete(columns::AUX, &key),
 			}
 		}
@@ -481,7 +481,7 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 				.into_ops();
 
 			debug!("Light DB Commit {:?} ({})", hash, number);
-			self.db.write(transaction).map_err(db_err)?;
+			self.db.smart_write(transaction).map_err(db_err)?;
 			cache.commit(cache_ops);
 		}
 
@@ -495,9 +495,9 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 			let hash = header.hash();
 			let number = header.number();
 
-			let mut transaction = DBTransaction::new();
+			let mut transaction = DBSmartTransaction::new();
 			self.set_head_with_transaction(&mut transaction, hash.clone(), (number.clone(), hash.clone()))?;
-			self.db.write(transaction).map_err(db_err)?;
+			self.db.smart_write(transaction).map_err(db_err)?;
 			self.update_meta(hash, header.number().clone(), true, false);
 			Ok(())
 		} else {
@@ -523,7 +523,7 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 
 	fn finalize_header(&self, id: BlockId<Block>) -> ClientResult<()> {
 		if let Some(header) = self.header(id)? {
-			let mut transaction = DBTransaction::new();
+			let mut transaction = DBSmartTransaction::new();
 			let hash = header.hash();
 			let number = *header.number();
 			self.note_finalized(&mut transaction, &header, hash.clone())?;
@@ -536,7 +536,7 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 					)?
 					.into_ops();
 
-				self.db.write(transaction).map_err(db_err)?;
+				self.db.smart_write(transaction).map_err(db_err)?;
 				cache.commit(cache_ops);
 			}
 			self.update_meta(hash, header.number().clone(), false, true);
