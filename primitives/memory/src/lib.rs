@@ -19,19 +19,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 
-use parity_util_mem::{MallocSizeOf, MallocSizeOfExt};
+pub use parity_util_mem::{MallocSizeOf as HeapSize, MallocSizeOfExt as HeapSizeExt};
 pub use parity_util_mem::MallocSizeOfOps;
 pub use sp_memory_derive::*;
-
-pub trait HeapSize {
-    fn heap_size(&self, ops: &mut MallocSizeOfOps) -> usize;
-}
-
-impl<T: MallocSizeOf> HeapSize for T {
-    fn heap_size(&self, ops: &mut MallocSizeOfOps) -> usize {
-        self.size_of(ops)
-    }
-}
 
 #[cfg(feature = "std")]
 /// Trait that identifies that object can track its memory footprint (when in std).

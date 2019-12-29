@@ -342,7 +342,7 @@ pub struct InMemory<H: Hasher> {
 }
 
 impl<H: Hasher> sp_memory::HeapSize for InMemory<H> {
-	fn heap_size(&self, _ops: &mut sp_memory::MallocSizeOfOps) -> usize {
+	fn size_of(&self, _ops: &mut sp_memory::MallocSizeOfOps) -> usize {
 		unimplemented!("not used in production, so call here should be error")
 	}
 }

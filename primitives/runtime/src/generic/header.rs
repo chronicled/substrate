@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use crate::codec::{Decode, Encode, Codec, Input, Output, HasCompact, EncodeAsRef, Error};
 use crate::traits::{
 	self, Member, SimpleArithmetic, SimpleBitOps, Hash as HashT,
-	MaybeSerializeDeserialize, MaybeSerialize, MaybeDisplay, MaybeHeapSize,
+	MaybeSerializeDeserialize, MaybeSerialize, MaybeDisplay,
 };
 use crate::generic::Digest;
 use sp_core::U256;

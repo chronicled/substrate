@@ -28,12 +28,12 @@ fn heap_size_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
 		} else if let syn::Type::Array(..) = binding.ast().ty {
 			Some(quote! {
 				for item in #binding.iter() {
-					sum += sp_memory::HeapSize::heap_size(item, ops);
+					sum += sp_memory::HeapSize::size_of(item, ops);
 				}
 			})
 		} else {
 			Some(quote! {
-				sum += sp_memory::HeapSize::heap_size(#binding, ops);
+				sum += sp_memory::HeapSize::size_of(#binding, ops);
 			})
 		}
 	});
@@ -51,7 +51,7 @@ fn heap_size_derive(s: synstructure::Structure) -> proc_macro2::TokenStream {
 		impl #impl_generics sp_memory::HeapSize for #name #ty_generics #where_clause {
 			#[inline]
 			#[allow(unused_variables, unused_mut, unreachable_code)]
-			fn heap_size(&self, ops: &mut sp_memory::MallocSizeOfOps) -> usize {
+			fn size_of(&self, ops: &mut sp_memory::MallocSizeOfOps) -> usize {
 				let mut sum = 0;
 				match *self {
 					#match_body
