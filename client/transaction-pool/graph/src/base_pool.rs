@@ -26,6 +26,7 @@ use std::{
 };
 
 use log::{trace, debug, warn};
+use parity_util_mem::MallocSizeOf;
 use serde::Serialize;
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Member;
@@ -84,7 +85,7 @@ pub struct PruneStatus<Hash, Ex> {
 
 /// Immutable transaction
 #[cfg_attr(test, derive(Clone))]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, MallocSizeOf)]
 pub struct Transaction<Hash, Extrinsic> {
 	/// Raw extrinsic representing that transaction.
 	pub data: Extrinsic,
@@ -1058,6 +1059,26 @@ requires: [03,02], provides: [04], data: [4]}".to_owned()
 		} else {
 			assert!(false, "Invalid error kind: {:?}", err);
 		}
+	}
+
+	#[test]
+	fn memsize() {
+		use parity_util_mem::MallocSizeOfExt;
+
+		let txes = vec![
+			Transaction {
+				data: vec![1u8; 1024],
+				bytes: 1,
+				hash: 5,
+				priority: 5u64,
+				valid_till: 64u64,
+				requires: vec![vec![0]],
+				provides: vec![],
+				propagate: true,
+			}
+		];
+
+		assert!(txes.malloc_size_of() > 1024);
 	}
 
 	#[test]
