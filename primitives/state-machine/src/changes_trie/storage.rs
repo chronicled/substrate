@@ -23,7 +23,6 @@ use sp_trie::MemoryDB;
 use parking_lot::RwLock;
 use crate::changes_trie::{BuildCache, RootsStorage, Storage, AnchorBlockId, BlockNumber};
 use crate::trie_backend_essence::TrieBackendStorage;
-use parity_util_mem::MallocSizeOf;
 
 #[cfg(test)]
 use crate::backend::insert_into_memory_db;
@@ -31,7 +30,7 @@ use crate::backend::insert_into_memory_db;
 use crate::changes_trie::input::{InputPair, ChildIndex};
 
 /// In-memory implementation of changes trie storage.
-#[derive(MallocSizeOf)]
+#[derive(sp_memory::HeapSize)]
 pub struct InMemoryStorage<H: Hasher, Number: BlockNumber> {
 	data: RwLock<InMemoryStorageData<H, Number>>,
 	cache: BuildCache<H::Out, Number>,
@@ -43,7 +42,7 @@ pub struct TrieBackendAdapter<'a, H: Hasher, Number: BlockNumber> {
 	_hasher: ::std::marker::PhantomData<(H, Number)>,
 }
 
-#[derive(MallocSizeOf)]
+#[derive(sp_memory::HeapSize)]
 struct InMemoryStorageData<H: Hasher, Number: BlockNumber> {
 	roots: BTreeMap<Number, H::Out>,
 	mdb: MemoryDB<H>,

@@ -1,0 +1,17 @@
+[package]
+description = "Substrate memory utilities"
+name = "sp-memory"
+version = "2.0.0"
+license = "GPL-3.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+
+[dependencies]
+parity-util-mem = { path = "../../../parity-common/parity-util-mem", default-features = false }
+sp-memory-derive = { version = "2.0.0", path = "derive" }
+
+[features]
+default = ["std"]
+std = [
+	"parity-util-mem/std",
+]

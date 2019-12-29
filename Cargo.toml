@@ -129,6 +129,8 @@ members = [
 	"primitives/api/test",
 	"primitives/arithmetic",
 	"primitives/io",
+	"primitives/memory",
+	"primitives/memory/derive",
 	"primitives/runtime",
 	"primitives/sandbox",
 	"primitives/staking",

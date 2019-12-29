@@ -29,7 +29,6 @@ use crate::{generic, KeyTypeId, ApplyExtrinsicResult};
 pub use sp_core::{H256, sr25519};
 use sp_core::{crypto::{CryptoType, Dummy, key_types, Public}, U256};
 use crate::transaction_validity::{TransactionValidity, TransactionValidityError};
-use parity_util_mem::MallocSizeOf;
 
 /// Authority Id
 #[derive(Default, PartialEq, Eq, Clone, Encode, Decode, Debug, Hash, Serialize, Deserialize, PartialOrd, Ord)]
@@ -145,7 +144,7 @@ pub type DigestItem = generic::DigestItem<H256>;
 pub type Digest = generic::Digest<H256>;
 
 /// Block Header
-#[derive(PartialEq, Eq, Clone, Serialize, Debug, Encode, Decode, Default, MallocSizeOf)]
+#[derive(PartialEq, Eq, Clone, Serialize, Debug, Encode, Decode, Default, sp_memory::HeapSize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Header {
@@ -217,15 +216,8 @@ impl<'a> Deserialize<'a> for Header {
 }
 
 /// An opaque extrinsic wrapper type.
-#[derive(PartialEq, Eq, Clone, Debug, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Debug, Encode, Decode, sp_memory::HeapSize)]
 pub struct ExtrinsicWrapper<Xt>(Xt);
-
-impl<Xt> MallocSizeOf for ExtrinsicWrapper<Xt> {
-	fn size_of(&self, _ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		// TODO: use less verbose statement to not track memory
-		0
-	}
-}
 
 impl<Xt> traits::Extrinsic for ExtrinsicWrapper<Xt> {
 	type Call = ();
@@ -257,7 +249,7 @@ impl<Xt> Deref for ExtrinsicWrapper<Xt> {
 }
 
 /// Testing block
-#[derive(PartialEq, Eq, Clone, Serialize, Debug, Encode, Decode, MallocSizeOf)]
+#[derive(PartialEq, Eq, Clone, Serialize, Debug, Encode, Decode, sp_memory::HeapSize)]
 pub struct Block<Xt> {
 	/// Block header
 	pub header: Header,
@@ -265,7 +257,7 @@ pub struct Block<Xt> {
 	pub extrinsics: Vec<Xt>,
 }
 
-impl<Xt: 'static + Codec + Sized + Send + Sync + Serialize + MallocSizeOf + Clone + Eq + Debug + traits::Extrinsic> traits::Block
+impl<Xt: 'static + Codec + Sized + Send + Sync + Serialize + sp_memory::HeapSize + Clone + Eq + Debug + traits::Extrinsic> traits::Block
 	for Block<Xt>
 {
 	type Extrinsic = Xt;
@@ -301,15 +293,8 @@ impl<'a, Xt> Deserialize<'a> for Block<Xt> where Block<Xt>: Decode {
 /// with index only used if sender is some.
 ///
 /// If sender is some then the transaction is signed otherwise it is unsigned.
-#[derive(PartialEq, Eq, Clone, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, sp_memory::HeapSize)]
 pub struct TestXt<Call, Extra>(pub Option<(u64, Extra)>, pub Call);
-
-impl<Call, Extra> MallocSizeOf for TestXt<Call, Extra> {
-	fn size_of(&self, _ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		// TODO: use less verbose statement to not track memory
-		0
-	}
-}
 
 impl<Call, Extra> Serialize for TestXt<Call, Extra> where TestXt<Call, Extra>: Encode {
 	fn serialize<S>(&self, seq: S) -> Result<S::Ok, S::Error> where S: Serializer {

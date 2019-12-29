@@ -33,7 +33,7 @@ use crate::{
 use sp_blockchain;
 use sp_consensus::BlockOrigin;
 use hash_db::Hasher;
-use parity_util_mem::MallocSizeOf;
+use sp_memory::MallocSizeOf;
 use parking_lot::RwLock;
 
 /// In memory array of storage values.

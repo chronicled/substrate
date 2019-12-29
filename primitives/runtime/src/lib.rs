@@ -54,9 +54,6 @@ pub mod traits;
 pub mod transaction_validity;
 pub mod random_number_generator;
 
-#[cfg(feature = "std")]
-use parity_util_mem::MallocSizeOf;
-
 /// Re-export these since they're only "kind of" generic.
 pub use generic::{DigestItem, Digest};
 
@@ -73,6 +70,9 @@ pub use sp_arithmetic::{Perquintill, Perbill, Permill, Percent, Rational128, Fix
 pub use sp_arithmetic::helpers_128bit;
 /// Re-export big_uint stuff.
 pub use sp_arithmetic::biguint;
+
+/// Re-export memory footprint trait
+pub use sp_memory::MaybeHeapSize;
 
 pub use random_number_generator::RandomNumberGenerator;
 
@@ -648,7 +648,7 @@ macro_rules! assert_eq_error_rate {
 /// Simple blob to hold an extrinsic without committing to its format and ensure it is serialized
 /// correctly.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(MallocSizeOf))]
+#[cfg_attr(feature = "std", derive(sp_memory::HeapSize))]
 pub struct OpaqueExtrinsic(pub Vec<u8>);
 
 impl sp_std::fmt::Debug for OpaqueExtrinsic {

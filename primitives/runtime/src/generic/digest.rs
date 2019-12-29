@@ -19,29 +19,26 @@
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "std")]
-use parity_util_mem::MallocSizeOf;
-
 use sp_std::prelude::*;
 use sp_core::RuntimeDebug;
 
-use crate::{codec::{Decode, Encode, Input, Error}, ConsensusEngineId, traits::MaybeMallocSizeOf};
+use crate::{codec::{Decode, Encode, Input, Error}, ConsensusEngineId, traits::MaybeHeapSize};
 
 /// Generic header digest.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, MallocSizeOf))]
-pub struct Digest<Hash: Encode + Decode + MaybeMallocSizeOf> {
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, sp_memory::HeapSize))]
+pub struct Digest<Hash: Encode + Decode + MaybeHeapSize> {
 	/// A list of logs in the digest.
 	pub logs: Vec<DigestItem<Hash>>,
 }
 
-impl<Item: Encode + Decode + MaybeMallocSizeOf> Default for Digest<Item> {
+impl<Item: Encode + Decode + MaybeHeapSize> Default for Digest<Item> {
 	fn default() -> Self {
 		Digest { logs: Vec::new(), }
 	}
 }
 
-impl<Hash: Encode + Decode + MaybeMallocSizeOf> Digest<Hash> {
+impl<Hash: Encode + Decode + MaybeHeapSize> Digest<Hash> {
 	/// Get reference to all digest items.
 	pub fn logs(&self) -> &[DigestItem<Hash>] {
 		&self.logs
@@ -76,6 +73,7 @@ impl<Hash: Encode + Decode + MaybeMallocSizeOf> Digest<Hash> {
 /// Digest item that is able to encode/decode 'system' digest items and
 /// provide opaque access to other items.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(sp_memory::HeapSize))]
 pub enum DigestItem<Hash> {
 	/// System digest item that contains the root of changes trie at given
 	/// block. It is created for every block iff runtime supports changes
@@ -120,19 +118,6 @@ impl<'a, Hash: Decode> serde::Deserialize<'a> for DigestItem<Hash> {
 		let r = sp_core::bytes::deserialize(de)?;
 		Decode::decode(&mut &r[..])
 			.map_err(|e| serde::de::Error::custom(format!("Decode error: {}", e)))
-	}
-}
-
-#[cfg(feature = "std")]
-impl<Hash: MaybeMallocSizeOf> MallocSizeOf for DigestItem<Hash> {
-	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		match self {
-			DigestItem::ChangesTrieRoot(hash) => hash.size_of(ops),
-			DigestItem::Consensus(_, v) => v.size_of(ops),
-			DigestItem::Other(v) => v.size_of(ops),
-			DigestItem::PreRuntime(_, v) => v.size_of(ops),
-			DigestItem::Seal(_, v) => v.size_of(ops),
-		}
 	}
 }
 

@@ -34,9 +34,9 @@ pub use sp_arithmetic::traits::{
 	Zero, One, Bounded, CheckedAdd, CheckedSub, CheckedMul, CheckedDiv,
 	CheckedShl, CheckedShr, IntegerSquareRoot
 };
+pub use sp_memory::{HeapSize, MaybeHeapSize};
 use sp_application_crypto::AppKey;
 use impl_trait_for_tuples::impl_for_tuples;
-use parity_util_mem::MallocSizeOf;
 
 /// A lazy value.
 pub trait Lazy<T: ?Sized> {
@@ -368,9 +368,9 @@ pub trait OffchainWorker<BlockNumber> {
 /// Abstraction around hashing
 // Stupid bug in the Rust compiler believes derived
 // traits must be fulfilled by all type parameters.
-pub trait Hash: 'static + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug + Clone + Eq + PartialEq {
+pub trait Hash: 'static + MaybeSerializeDeserialize + MaybeHeapSize + Debug + Clone + Eq + PartialEq {
 	/// The hash type produced.
-	type Output: Member + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug + sp_std::hash::Hash
+	type Output: Member + MaybeSerializeDeserialize + MaybeHeapSize + Debug + sp_std::hash::Hash
 		+ AsRef<[u8]> + AsMut<[u8]> + Copy + Default + Encode + Decode;
 
 	/// The associated hash_db Hasher type.
@@ -393,7 +393,7 @@ pub trait Hash: 'static + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug 
 
 /// Blake2-256 Hash implementation.
 #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, MallocSizeOf))]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, HeapSize))]
 pub struct BlakeTwo256;
 
 impl Hash for BlakeTwo256 {
@@ -488,10 +488,7 @@ impl_maybe_marker!(
 	MaybeSerialize: Serialize;
 
 	/// A type that implements Serialize, DeserializeOwned and Debug when in std environment.
-	MaybeSerializeDeserialize: DeserializeOwned, Serialize;
-
-	/// A type that implements MallocSizeOf when in std environment.
-	MaybeMallocSizeOf: parity_util_mem::MallocSizeOf
+	MaybeSerializeDeserialize: DeserializeOwned, Serialize
 );
 
 /// A type that provides a randomness beacon.
@@ -525,14 +522,14 @@ pub trait IsMember<MemberId> {
 /// `parent_hash`, as well as a `digest` and a block `number`.
 ///
 /// You can also create a `new` one from those fields.
-pub trait Header: Clone + Send + Sync + Codec + Eq + MaybeSerialize + MaybeMallocSizeOf +
+pub trait Header: Clone + Send + Sync + Codec + Eq + MaybeSerialize + MaybeHeapSize +
 	Debug + 'static
 {
 	/// Header number.
-	type Number: Member + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug + sp_std::hash::Hash
+	type Number: Member + MaybeSerializeDeserialize + MaybeHeapSize + Debug + sp_std::hash::Hash
 		+ Copy + MaybeDisplay + SimpleArithmetic + Codec + sp_std::str::FromStr;
 	/// Header hash type
-	type Hash: Member + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug + sp_std::hash::Hash
+	type Hash: Member + MaybeSerializeDeserialize + MaybeHeapSize + Debug + sp_std::hash::Hash
 		+ Copy + MaybeDisplay + Default + SimpleBitOps + Codec + AsRef<[u8]> + AsMut<[u8]>;
 	/// Hashing algorithm
 	type Hashing: Hash<Output = Self::Hash>;
@@ -581,15 +578,15 @@ pub trait Header: Clone + Send + Sync + Codec + Eq + MaybeSerialize + MaybeMallo
 /// `Extrinsic` pieces of information as well as a `Header`.
 ///
 /// You can get an iterator over each of the `extrinsics` and retrieve the `header`.
-pub trait Block: Clone + Send + Sync + Codec + Eq + MaybeSerialize + MaybeMallocSizeOf +
+pub trait Block: Clone + Send + Sync + Codec + Eq + MaybeSerialize + MaybeHeapSize +
 	Debug + 'static
 {
 	/// Type for extrinsics.
-	type Extrinsic: Member + Codec + Extrinsic + MaybeSerialize + MaybeMallocSizeOf;
+	type Extrinsic: Member + Codec + Extrinsic + MaybeSerialize + MaybeHeapSize;
 	/// Header type.
 	type Header: Header<Hash=Self::Hash>;
 	/// Block hash type.
-	type Hash: Member + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug + sp_std::hash::Hash
+	type Hash: Member + MaybeSerializeDeserialize + MaybeHeapSize + Debug + sp_std::hash::Hash
 		+ Copy + MaybeDisplay + Default + SimpleBitOps + Codec + AsRef<[u8]> + AsMut<[u8]>;
 
 	/// Returns a reference to the header.

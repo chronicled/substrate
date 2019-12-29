@@ -300,7 +300,7 @@ impl<'a, Block: BlockT> DbCacheTransaction<'a, Block> {
 }
 
 /// Synchronous implementation of database-backed blockchain data cache.
-#[derive(MallocSizeOf)]
+#[derive(sp_memory::MallocSizeOf)]
 pub struct DbCacheSync<Block: BlockT>(pub RwLock<DbCache<Block>>);
 
 impl<Block: BlockT> BlockchainCache<Block> for DbCacheSync<Block> {

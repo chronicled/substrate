@@ -20,10 +20,9 @@
 use serde::{Serialize, Deserialize};
 use codec::{Encode, Decode};
 use num_traits::Zero;
-use parity_util_mem::MallocSizeOf;
 
 /// Substrate changes trie configuration.
-#[cfg_attr(any(feature = "std", test), derive(Serialize, Deserialize, MallocSizeOf))]
+#[cfg_attr(any(feature = "std", test), derive(Serialize, Deserialize, sp_memory::HeapSize))]
 #[derive(Debug, Clone, PartialEq, Eq, Default, Encode, Decode)]
 pub struct ChangesTrieConfiguration {
 	/// Interval (in blocks) at which level1-digests are created. Digests are not

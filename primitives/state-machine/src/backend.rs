@@ -341,8 +341,8 @@ pub struct InMemory<H: Hasher> {
 	_hasher: PhantomData<H>,
 }
 
-impl<H: Hasher> parity_util_mem::MallocSizeOf for InMemory<H> {
-	fn size_of(&self, _ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+impl<H: Hasher> sp_memory::HeapSize for InMemory<H> {
+	fn heap_size(&self, _ops: &mut sp_memory::MallocSizeOfOps) -> usize {
 		unimplemented!("not used in production, so call here should be error")
 	}
 }
