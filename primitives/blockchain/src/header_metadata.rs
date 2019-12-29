@@ -18,7 +18,6 @@
 //! to compute routes efficiently over the tree of headers.
 
 use sp_runtime::traits::{Block as BlockT, NumberFor, Header};
-use parity_util_mem::MallocSizeOf;
 use parking_lot::RwLock;
 use lru::LruCache;
 
@@ -219,7 +218,7 @@ pub trait HeaderMetadata<Block: BlockT> {
 }
 
 /// Caches header metadata in an in-memory LRU cache.
-#[derive(MallocSizeOf)]
+#[derive(sp_memory::HeapSize)]
 pub struct HeaderMetadataCache<Block: BlockT> {
 	cache: RwLock<LruCache<Block::Hash, CachedHeaderMetadata<Block>>>,
 }
@@ -259,7 +258,7 @@ impl<Block: BlockT> HeaderMetadata<Block> for HeaderMetadataCache<Block> {
 }
 
 /// Cached header metadata. Used to efficiently traverse the tree.
-#[derive(Debug, Clone, MallocSizeOf)]
+#[derive(Debug, Clone, sp_memory::HeapSize)]
 pub struct CachedHeaderMetadata<Block: BlockT> {
 	/// Hash of the header.
 	pub hash: Block::Hash,

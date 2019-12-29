@@ -22,23 +22,23 @@ use serde::{Deserialize, Serialize};
 use sp_std::prelude::*;
 use sp_core::RuntimeDebug;
 
-use crate::{codec::{Decode, Encode, Input, Error}, ConsensusEngineId, traits::MaybeHeapSize};
+use crate::{codec::{Decode, Encode, Input, Error}, ConsensusEngineId};
 
 /// Generic header digest.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, sp_memory::HeapSize))]
-pub struct Digest<Hash: Encode + Decode + MaybeHeapSize> {
+pub struct Digest<Hash: Encode + Decode> {
 	/// A list of logs in the digest.
 	pub logs: Vec<DigestItem<Hash>>,
 }
 
-impl<Item: Encode + Decode + MaybeHeapSize> Default for Digest<Item> {
+impl<Item: Encode + Decode> Default for Digest<Item> {
 	fn default() -> Self {
 		Digest { logs: Vec::new(), }
 	}
 }
 
-impl<Hash: Encode + Decode + MaybeHeapSize> Digest<Hash> {
+impl<Hash: Encode + Decode> Digest<Hash> {
 	/// Get reference to all digest items.
 	pub fn logs(&self) -> &[DigestItem<Hash>] {
 		&self.logs

@@ -26,12 +26,9 @@ pub use sp_application_crypto;
 pub use sp_core::{hash::H256, RuntimeDebug};
 use sp_runtime::traits::{BlakeTwo256, Verify, Extrinsic as ExtrinsicT,};
 
-#[cfg(feature = "std")]
-use parity_util_mem::MallocSizeOf;
-
 /// Extrinsic for test-runtime.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(MallocSizeOf))]
+#[cfg_attr(feature = "std", derive(sp_memory::HeapSize))]
 pub enum Extrinsic {
 	IncludeData(Vec<u8>),
 	StorageChange(Vec<u8>, Option<Vec<u8>>),

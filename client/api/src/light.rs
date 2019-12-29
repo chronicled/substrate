@@ -237,7 +237,7 @@ pub trait FetchChecker<Block: BlockT>: Send + Sync {
 
 /// Light client blockchain storage.
 pub trait Storage<Block: BlockT>: AuxStore + HeaderBackend<Block> +
-	HeaderMetadata<Block, Error=ClientError> + sp_memory::MallocSizeOf
+	HeaderMetadata<Block, Error=ClientError> + sp_memory::HeapSize
 {
 	/// Store new header. Should refuse to revert any finalized blocks.
 	///
