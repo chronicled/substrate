@@ -106,7 +106,7 @@ use sp_runtime::{
 	traits::{
 		self, CheckEqual, SimpleArithmetic, Zero, SignedExtension, Lookup, LookupError,
 		SimpleBitOps, Hash, Member, MaybeDisplay, EnsureOrigin, BadOrigin, SaturatedConversion,
-		MaybeSerialize, MaybeSerializeDeserialize, StaticLookup, One, Bounded, MaybeMallocSizeOf,
+		MaybeSerialize, MaybeSerializeDeserialize, StaticLookup, One, Bounded, MaybeHeapSize,
 	},
 };
 
@@ -168,17 +168,17 @@ pub trait Trait: 'static + Eq + Clone {
 	/// Account index (aka nonce) type. This stores the number of previous transactions associated
 	/// with a sender account.
 	type Index:
-		Parameter + Member + MaybeSerialize + MaybeMallocSizeOf + Debug + Default + MaybeDisplay +
+		Parameter + Member + MaybeSerialize + MaybeHeapSize + Debug + Default + MaybeDisplay +
 		SimpleArithmetic + Copy;
 
 	/// The block number type used by the runtime.
 	type BlockNumber:
-		Parameter + Member + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug + MaybeDisplay +
+		Parameter + Member + MaybeSerializeDeserialize + MaybeHeapSize + Debug + MaybeDisplay +
 		SimpleArithmetic + Default + Bounded + Copy + sp_std::hash::Hash + sp_std::str::FromStr;
 
 	/// The output of the `Hashing` function.
 	type Hash:
-		Parameter + Member + MaybeSerializeDeserialize + MaybeMallocSizeOf + Debug + MaybeDisplay +
+		Parameter + Member + MaybeSerializeDeserialize + MaybeHeapSize + Debug + MaybeDisplay +
 		SimpleBitOps + Default + Copy + CheckEqual + sp_std::hash::Hash + AsRef<[u8]> +
 		AsMut<[u8]>;
 
