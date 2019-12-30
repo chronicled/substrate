@@ -113,3 +113,7 @@ pub struct FinalityNotification<Block: BlockT> {
 	/// Imported block header.
 	pub header: Block::Header,
 }
+
+pub trait ProvideUsageInfo<B: BlockT> {
+	fn usage_info(&self) -> ClientInfo<B>;
+}

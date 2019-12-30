@@ -34,7 +34,6 @@ pub use notifications::*;
 
 pub use sp_state_machine::{StorageProof, ExecutionStrategy};
 
-
 /// Utility methods for the client.
 pub mod utils {
     use sp_blockchain::{HeaderBackend, HeaderMetadata, Error};

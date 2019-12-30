@@ -228,6 +228,11 @@ impl<S, Block, H> ClientBackend<Block, H> for Backend<S, H> where
 	fn get_import_lock(&self) -> &RwLock<()> {
 		&self.import_lock
 	}
+
+	fn mem_usage(&self) -> usize {
+		println!("memort usage (light)");
+		0
+	}
 }
 
 impl<S, Block, H> RemoteBackend<Block, H> for Backend<S, H>

@@ -1253,32 +1253,22 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 	}
 }
 
-impl<B, E, Block, RA> MallocSizeOf for Client<B, E, Block, RA>
- 	where B: MallocSizeOf, Block: MallocSizeOf + BlockT, ForkBlocks<Block>: MallocSizeOf
- {
- 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
- 		self.backend.size_of(ops) +
- 			self.fork_blocks.size_of(ops)
- 	}
- }
-
-impl<B, E, Block, RA> Client<B, E, Block, RA>
-	where
-		B: backend::Backend<Block, Blake2Hasher>,
-		E: CallExecutor<Block, Blake2Hasher>,
-		Block: BlockT<Hash=H256>,
+impl<B, E, Block, RA> sc_client_api::ProvideUsageInfo<Block> for Client<B, E, Block, RA>
+where
+	B: backend::Backend<Block, Blake2Hasher>,
+	E: CallExecutor<Block, Blake2Hasher>,
+	Block: BlockT<Hash=H256>,
 {
 	/// Get client info.
-	pub fn usage_info(&self) -> ClientInfo<Block> {
-		use parity_util_mem::MallocSizeOfExt;
+	fn usage_info(&self) -> ClientInfo<Block> {
+		let cache_size = self.backend.mem_usage();
 
 		ClientInfo {
 			chain: self.backend.blockchain().info(),
-			cache_size: self.malloc_size_of(),
+			cache_size,
 		}
 	}
 }
-
 
 impl<B, E, Block, RA> HeaderMetadata<Block> for Client<B, E, Block, RA> where
 	B: backend::Backend<Block, Blake2Hasher>,

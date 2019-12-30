@@ -861,6 +861,28 @@ pub struct Backend<Block: BlockT> {
 	is_archive: bool,
 }
 
+// impl<B: BlockT<Hash=H256>> MallocSizeOf for Backend<B>
+// where
+// 	B: MallocSizeOf,
+// 	B::Hash: MallocSizeOf,
+// 	DbChangesTrieStorage<B>: MallocSizeOf,
+// {
+// 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+// 		self.storage.size_of(ops) +
+// 			self.changes_tries_storage.size_of(ops) +
+// 			self.shared_cache.lock().used_storage_cache_size()
+// 	}
+// }
+
+impl<B: BlockT<Hash=H256>> Backend<B>
+{
+	fn mem_stats(&self) -> usize {
+		use parity_util_mem::MallocSizeOfExt;
+		self.storage.malloc_size_of() +
+			self.shared_cache.lock().used_storage_cache_size()
+	}
+}
+
 impl<Block: BlockT<Hash=H256>> Backend<Block> {
 	/// Create a new instance of database backend.
 	///
@@ -1609,6 +1631,10 @@ impl<Block> sc_client_api::backend::Backend<Block, Blake2Hasher> for Backend<Blo
 
 	fn get_import_lock(&self) -> &RwLock<()> {
 		&self.import_lock
+	}
+
+	fn mem_usage(&self) -> usize {
+		self.mem_stats()
 	}
 }
 

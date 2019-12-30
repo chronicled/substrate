@@ -312,6 +312,11 @@ pub trait Backend<Block, H>: AuxStore + Send + Sync where
 	/// something that the import of a block would interfere with, e.g. importing
 	/// a new block or calculating the best head.
 	fn get_import_lock(&self) -> &RwLock<()>;
+
+	/// Report memory usage.
+	///
+	/// If possible.
+	fn mem_usage(&self) -> usize;
 }
 
 /// Changes trie storage that supports pruning.

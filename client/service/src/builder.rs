@@ -21,7 +21,9 @@ use crate::config::{Configuration, DatabaseConfig};
 use sc_client_api::{
 	self,
 	BlockchainEvents,
-	backend::RemoteBackend, light::RemoteBlockchain,
+	backend::RemoteBackend,
+	light::RemoteBlockchain,
+	ProvideUsageInfo,
 };
 use sc_client::Client;
 use sc_chain_spec::{RuntimeGenesis, Extension};
@@ -710,6 +712,7 @@ ServiceBuilder<
 	TRpc,
 	TBackend,
 > where
+	Client<TBackend, TExec, TBl, TRtApi>: ProvideUsageInfo<TBl>,
 	Client<TBackend, TExec, TBl, TRtApi>: ProvideRuntimeApi,
 	<Client<TBackend, TExec, TBl, TRtApi> as ProvideRuntimeApi>::Api:
 		sp_api::Metadata<TBl> +
@@ -722,8 +725,7 @@ ServiceBuilder<
 	TCfg: Default,
 	TGen: RuntimeGenesis,
 	TCSExt: Extension,
-	TBackend: 'static + sc_client_api::backend::Backend<TBl, Blake2Hasher> + Send +
-		parity_util_mem::MallocSizeOf,
+	TBackend: 'static + sc_client_api::backend::Backend<TBl, Blake2Hasher> + Send,
 	TExec: 'static + sc_client::CallExecutor<TBl, Blake2Hasher> + Send + Sync + Clone,
 	TSc: Clone,
 	TImpQu: 'static + ImportQueue<TBl>,

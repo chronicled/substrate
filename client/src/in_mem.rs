@@ -768,6 +768,11 @@ where
 	fn get_import_lock(&self) -> &RwLock<()> {
 		&self.import_lock
 	}
+
+	fn mem_usage(&self) -> usize {
+		println!("memory usage (in_mem)");
+		0
+	}
 }
 
 impl<Block, H> backend::LocalBackend<Block, H> for Backend<Block, H>
