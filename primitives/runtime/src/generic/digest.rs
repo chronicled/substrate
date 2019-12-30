@@ -30,18 +30,18 @@ use crate::{codec::{Decode, Encode, Input, Error}, ConsensusEngineId, traits::Ma
 /// Generic header digest.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, MallocSizeOf))]
-pub struct Digest<Hash: Encode + Decode + MaybeMallocSizeOf> {
+pub struct Digest<Hash: Encode + Decode> {
 	/// A list of logs in the digest.
 	pub logs: Vec<DigestItem<Hash>>,
 }
 
-impl<Item: Encode + Decode + MaybeMallocSizeOf> Default for Digest<Item> {
+impl<Item: Encode + Decode> Default for Digest<Item> {
 	fn default() -> Self {
 		Digest { logs: Vec::new(), }
 	}
 }
 
-impl<Hash: Encode + Decode + MaybeMallocSizeOf> Digest<Hash> {
+impl<Hash: Encode + Decode> Digest<Hash> {
 	/// Get reference to all digest items.
 	pub fn logs(&self) -> &[DigestItem<Hash>] {
 		&self.logs
@@ -76,7 +76,7 @@ impl<Hash: Encode + Decode + MaybeMallocSizeOf> Digest<Hash> {
 /// Digest item that is able to encode/decode 'system' digest items and
 /// provide opaque access to other items.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
-#[cfg_attr(featuers = "std", derive(MallocSizeOf))]
+#[cfg_attr(feature = "std", derive(MallocSizeOf))]
 pub enum DigestItem<Hash> {
 	/// System digest item that contains the root of changes trie at given
 	/// block. It is created for every block iff runtime supports changes

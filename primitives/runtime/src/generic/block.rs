@@ -35,7 +35,7 @@ use crate::Justification;
 
 /// Something to identify a block.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, MallocSizeOf))]
+#[cfg_attr(feature = "std", derive(Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[cfg_attr(feature = "std", serde(deny_unknown_fields))]
 pub enum BlockId<Block: BlockT> {
@@ -43,6 +43,20 @@ pub enum BlockId<Block: BlockT> {
 	Hash(<<Block as BlockT>::Header as HeaderT>::Hash),
 	/// Identify by block number.
 	Number(<<Block as BlockT>::Header as HeaderT>::Number),
+}
+
+#[cfg(feature = "std")]
+impl<Block: BlockT> MallocSizeOf for BlockId<Block>
+where
+	<<Block as BlockT>::Header as HeaderT>::Hash: MallocSizeOf,
+	<<Block as BlockT>::Header as HeaderT>::Number: MallocSizeOf
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		match self {
+			Self::Hash(v) => v.size_of(ops),
+			Self::Number(v) => v.size_of(ops),
+		}
+	}
 }
 
 impl<Block: BlockT> BlockId<Block> {
@@ -71,14 +85,14 @@ impl<Block: BlockT> fmt::Display for BlockId<Block> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, MallocSizeOf))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[cfg_attr(feature = "std", serde(deny_unknown_fields))]
-pub struct Block<Header, Extrinsic: MaybeSerialize + MaybeMallocSizeOf> {
+pub struct Block<Header, Extrinsic: MaybeSerialize> {
 	/// The block header.
 	pub header: Header,
 	/// The accompanying extrinsics.
 	pub extrinsics: Vec<Extrinsic>,
 }
 
-impl<Header, Extrinsic: MaybeSerialize + MaybeMallocSizeOf> traits::Block for Block<Header, Extrinsic>
+impl<Header, Extrinsic: MaybeSerialize> traits::Block for Block<Header, Extrinsic>
 where
 	Header: HeaderT,
 	Extrinsic: Member + Codec + traits::Extrinsic,

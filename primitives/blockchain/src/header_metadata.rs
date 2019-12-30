@@ -219,9 +219,19 @@ pub trait HeaderMetadata<Block: BlockT> {
 }
 
 /// Caches header metadata in an in-memory LRU cache.
-#[derive(MallocSizeOf)]
 pub struct HeaderMetadataCache<Block: BlockT> {
 	cache: RwLock<LruCache<Block::Hash, CachedHeaderMetadata<Block>>>,
+}
+
+impl<Block: BlockT> MallocSizeOf for HeaderMetadataCache<Block>
+where
+	Block: MallocSizeOf,
+	Block::Hash: MallocSizeOf,
+	CachedHeaderMetadata<Block>: MallocSizeOf
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.cache.size_of(ops)
+	}
 }
 
 impl<Block: BlockT> HeaderMetadataCache<Block> {
@@ -259,7 +269,7 @@ impl<Block: BlockT> HeaderMetadata<Block> for HeaderMetadataCache<Block> {
 }
 
 /// Cached header metadata. Used to efficiently traverse the tree.
-#[derive(Debug, Clone, MallocSizeOf)]
+#[derive(Debug, Clone)]
 pub struct CachedHeaderMetadata<Block: BlockT> {
 	/// Hash of the header.
 	pub hash: Block::Hash,
@@ -269,6 +279,20 @@ pub struct CachedHeaderMetadata<Block: BlockT> {
 	pub parent: Block::Hash,
 	/// Hash of an ancestor header. Used to jump through the tree.
 	ancestor: Block::Hash,
+}
+
+impl<Block: BlockT> MallocSizeOf for CachedHeaderMetadata<Block>
+where
+	Block: MallocSizeOf,
+	Block::Hash: MallocSizeOf,
+	NumberFor<Block>: MallocSizeOf,
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.hash.size_of(ops) +
+			self.number.size_of(ops) +
+			self.parent.size_of(ops) +
+			self.ancestor.size_of(ops)
+	}
 }
 
 impl<Block: BlockT> From<&Block::Header> for CachedHeaderMetadata<Block> {

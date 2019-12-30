@@ -31,10 +31,20 @@ use crate::backend::insert_into_memory_db;
 use crate::changes_trie::input::{InputPair, ChildIndex};
 
 /// In-memory implementation of changes trie storage.
-#[derive(MallocSizeOf)]
 pub struct InMemoryStorage<H: Hasher, Number: BlockNumber> {
 	data: RwLock<InMemoryStorageData<H, Number>>,
 	cache: BuildCache<H::Out, Number>,
+}
+
+impl<H: Hasher, Number: BlockNumber> MallocSizeOf for InMemoryStorage<H, Number>
+where
+	H::Out: MallocSizeOf,
+	H: MallocSizeOf,
+	Number: MallocSizeOf
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.data.size_of(ops) + self.cache.size_of(ops)
+	}
 }
 
 /// Adapter for using changes trie storage as a TrieBackendEssence' storage.
@@ -43,10 +53,20 @@ pub struct TrieBackendAdapter<'a, H: Hasher, Number: BlockNumber> {
 	_hasher: ::std::marker::PhantomData<(H, Number)>,
 }
 
-#[derive(MallocSizeOf)]
 struct InMemoryStorageData<H: Hasher, Number: BlockNumber> {
 	roots: BTreeMap<Number, H::Out>,
 	mdb: MemoryDB<H>,
+}
+
+impl<H: Hasher, Number: BlockNumber> MallocSizeOf for InMemoryStorageData<H, Number>
+where
+	H::Out: MallocSizeOf,
+	H: MallocSizeOf,
+	Number: MallocSizeOf
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.roots.size_of(ops) + self.mdb.size_of(ops)
+	}
 }
 
 impl<H: Hasher, Number: BlockNumber> InMemoryStorage<H, Number> {

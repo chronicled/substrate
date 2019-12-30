@@ -35,7 +35,7 @@ use sp_std::{
 
 /// Abstraction over a block header for a substrate chain.
 #[derive(PartialEq, Eq, Clone, sp_core::RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, MallocSizeOf))]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[cfg_attr(feature = "std", serde(deny_unknown_fields))]
 pub struct Header<Number: Copy + Into<U256> + TryFrom<U256>, Hash: HashT> {
@@ -52,6 +52,21 @@ pub struct Header<Number: Copy + Into<U256> + TryFrom<U256>, Hash: HashT> {
 	pub extrinsics_root: Hash::Output,
 	/// A chain-specific digest of data useful for light clients or referencing auxiliary data.
 	pub digest: Digest<Hash::Output>,
+}
+
+#[cfg(feature = "std")]
+impl<N: Copy + Into<U256> + TryFrom<U256>, H: HashT> MallocSizeOf for Header<N, H>
+where
+	H::Output: MallocSizeOf,
+	N: MallocSizeOf,
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.parent_hash.size_of(ops) +
+			self.number.size_of(ops) +
+			self.state_root.size_of(ops) +
+			self.extrinsics_root.size_of(ops) +
+			self.digest.size_of(ops)
+	}
 }
 
 #[cfg(feature = "std")]
@@ -108,11 +123,10 @@ impl<Number, Hash> codec::EncodeLike for Header<Number, Hash> where
 
 impl<Number, Hash> traits::Header for Header<Number, Hash> where
 	Number: Member + MaybeSerializeDeserialize + Debug + sp_std::hash::Hash + MaybeDisplay +
-		SimpleArithmetic + Codec + Copy + Into<U256> + TryFrom<U256> + sp_std::str::FromStr +
-		MaybeMallocSizeOf,
+		SimpleArithmetic + Codec + Copy + Into<U256> + TryFrom<U256> + sp_std::str::FromStr,
 	Hash: HashT,
 	Hash::Output: Default + sp_std::hash::Hash + Copy + Member +
-		MaybeSerialize + MaybeMallocSizeOf + Debug + MaybeDisplay + SimpleBitOps + Codec,
+		MaybeSerialize + Debug + MaybeDisplay + SimpleBitOps + Codec,
 {
 	type Number = Number;
 	type Hash = <Hash as HashT>::Output;
