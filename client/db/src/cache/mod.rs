@@ -50,10 +50,19 @@ pub enum EntryType {
 }
 
 /// Block identifier that holds both hash and number.
-#[derive(Clone, Debug, Encode, Decode, PartialEq, MallocSizeOf)]
+#[derive(Clone, Debug, Encode, Decode, PartialEq)]
 pub struct ComplexBlockId<Block: BlockT> {
 	hash: Block::Hash,
 	number: NumberFor<Block>,
+}
+
+impl<B: BlockT> MallocSizeOf for ComplexBlockId<B>
+where B::Hash: MallocSizeOf,
+	NumberFor<B>: MallocSizeOf
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.hash.size_of(ops) + self.number.size_of(ops)
+	}
 }
 
 impl<Block: BlockT> ComplexBlockId<Block> {
@@ -85,7 +94,10 @@ pub struct DbCache<Block: BlockT> {
 	best_finalized_block: ComplexBlockId<Block>,
 }
 
-impl<B: BlockT> MallocSizeOf for DbCache<B> {
+impl<B: BlockT> MallocSizeOf for DbCache<B>
+where
+	ListCache<B, Vec<u8>, self::list_storage::DbStorage>: MallocSizeOf
+{
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
 		self.cache_at.size_of(ops) +
 			self.db.size_of(ops)
@@ -300,8 +312,15 @@ impl<'a, Block: BlockT> DbCacheTransaction<'a, Block> {
 }
 
 /// Synchronous implementation of database-backed blockchain data cache.
-#[derive(MallocSizeOf)]
 pub struct DbCacheSync<Block: BlockT>(pub RwLock<DbCache<Block>>);
+
+impl<B: BlockT> MallocSizeOf for DbCacheSync<B>
+where DbCache<B>: MallocSizeOf
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.0.size_of(ops)
+	}
+}
 
 impl<Block: BlockT> BlockchainCache<Block> for DbCacheSync<Block> {
 	fn initialize(&self, key: &CacheKeyId, data: Vec<u8>) -> ClientResult<()> {

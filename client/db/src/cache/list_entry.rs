@@ -35,7 +35,11 @@ pub struct Entry<Block: BlockT, T> {
 	pub value: T,
 }
 
-impl<B: BlockT, T: MallocSizeOf> parity_util_mem::MallocSizeOf for Entry<B, T> {
+impl<B: BlockT, T> parity_util_mem::MallocSizeOf for Entry<B, T>
+where
+	ComplexBlockId<B>: MallocSizeOf,
+	T: MallocSizeOf
+{
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
 		self.valid_from.size_of(ops) + self.value.size_of(ops)
 	}

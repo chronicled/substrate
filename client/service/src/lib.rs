@@ -148,7 +148,7 @@ pub trait AbstractService: 'static + Future<Item = (), Error = Error> +
 	Executor<Box<dyn Future<Item = (), Error = ()> + Send>> + Send
 {
 	/// Type of block of this chain.
-	type Block: BlockT<Hash = H256> + MallocSizeOf;
+	type Block: BlockT<Hash = H256>;
 
 	/// Backend storage for the client.
 	type Backend: 'static + sc_client_api::backend::Backend<Self::Block, Blake2Hasher>;

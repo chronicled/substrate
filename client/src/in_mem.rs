@@ -46,10 +46,22 @@ struct PendingBlock<B: BlockT> {
 	state: NewBlockState,
 }
 
-#[derive(PartialEq, Eq, Clone, MallocSizeOf)]
+#[derive(PartialEq, Eq, Clone)]
 enum StoredBlock<B: BlockT> {
 	Header(B::Header, Option<Justification>),
 	Full(B, Option<Justification>),
+}
+
+impl<B: BlockT> MallocSizeOf for StoredBlock<B>
+where B::Header: MallocSizeOf,
+	B: MallocSizeOf
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		match self {
+			Self::Header(v1, v2) => v1.size_of(ops) + v2.size_of(ops),
+			Self::Full(v1, v2) => v1.size_of(ops) + v2.size_of(ops),
+		}
+	}
 }
 
 impl<B: BlockT> StoredBlock<B> {
@@ -91,7 +103,7 @@ impl<B: BlockT> StoredBlock<B> {
 	}
 }
 
-#[derive(Clone, MallocSizeOf)]
+#[derive(Clone)]
 struct BlockchainStorage<Block: BlockT> {
 	blocks: HashMap<Block::Hash, StoredBlock<Block>>,
 	hashes: HashMap<NumberFor<Block>, Block::Hash>,
@@ -106,10 +118,39 @@ struct BlockchainStorage<Block: BlockT> {
 	aux: HashMap<Vec<u8>, Vec<u8>>,
 }
 
+
+impl<Block: BlockT> MallocSizeOf for BlockchainStorage<Block>
+where
+	Block::Header: MallocSizeOf,
+	Block::Hash: MallocSizeOf,
+	Block: MallocSizeOf,
+	NumberFor<Block>: MallocSizeOf,
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.blocks.size_of(ops) +
+			self.hashes.size_of(ops) +
+			self.header_cht_roots.size_of(ops) +
+			self.changes_trie_cht_roots.size_of(ops) +
+			self.leaves.size_of(ops) +
+			self.aux.size_of(ops)
+	}
+}
+
 /// In-memory blockchain. Supports concurrent reads.
-#[derive(MallocSizeOf)]
 pub struct Blockchain<Block: BlockT> {
 	storage: Arc<RwLock<BlockchainStorage<Block>>>,
+}
+
+impl<Block: BlockT> MallocSizeOf for Blockchain<Block>
+where
+	Block::Header: MallocSizeOf,
+	Block::Hash: MallocSizeOf,
+	Block: MallocSizeOf,
+	NumberFor<Block>: MallocSizeOf,
+{
+	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
+		self.storage.size_of(ops)
+	}
 }
 
 impl<Block: BlockT + Clone> Clone for Blockchain<Block> {

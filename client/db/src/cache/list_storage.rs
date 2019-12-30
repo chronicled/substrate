@@ -41,7 +41,7 @@ pub struct Metadata<Block: BlockT> {
 }
 
 /// Readonly list-cache storage trait.
-pub trait Storage<Block: BlockT, T: CacheItemT> : parity_util_mem::MallocSizeOf {
+pub trait Storage<Block: BlockT, T: CacheItemT> {
 	/// Reads hash of the block at given number.
 	fn read_id(&self, at: NumberFor<Block>) -> ClientResult<Option<Block::Hash>>;
 
@@ -103,7 +103,7 @@ pub struct DbStorage {
 
 impl parity_util_mem::MallocSizeOf for DbStorage {
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		self.db.size_of(ops)
+		self.name.size_of(ops) + self.meta_key.size_of(ops) + self.db.size_of(ops)
 	}
 }
 

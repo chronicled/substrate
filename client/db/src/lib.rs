@@ -343,9 +343,16 @@ pub struct BlockchainDb<Block: BlockT> {
 	header_metadata_cache: HeaderMetadataCache<Block>,
 }
 
-impl<B: BlockT> MallocSizeOf for BlockchainDb<B> {
+impl<B: BlockT> MallocSizeOf for BlockchainDb<B>
+where
+	B::Hash: MallocSizeOf,
+	NumberFor<B>: MallocSizeOf,
+	HeaderMetadataCache<B>: MallocSizeOf,
+{
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		self.db.size_of(ops) + self.leaves.size_of(ops)
+		self.db.size_of(ops) +
+			self.leaves.size_of(ops) +
+			self.header_metadata_cache.size_of(ops)
 	}
 }
 
@@ -637,7 +644,9 @@ struct StorageDb<Block: BlockT> {
 	pub state_db: StateDb<Block::Hash, Vec<u8>>,
 }
 
-impl<B: BlockT> MallocSizeOf for StorageDb<B> {
+impl<B: BlockT> MallocSizeOf for StorageDb<B>
+where B::Hash: MallocSizeOf
+{
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
 		self.db.size_of(ops) + self.state_db.size_of(ops)
 	}
@@ -850,15 +859,6 @@ pub struct Backend<Block: BlockT> {
 	shared_cache: SharedCache<Block, Blake2Hasher>,
 	import_lock: RwLock<()>,
 	is_archive: bool,
-}
-
-impl<B: BlockT> MallocSizeOf for Backend<B> {
-	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		self.storage.size_of(ops) +
-			self.blockchain.size_of(ops) +
-			// TODO: shared cache should also bee updated to use `MallocSizeOf`
-			self.shared_cache.lock().used_storage_cache_size()
-	}
 }
 
 impl<Block: BlockT<Hash=H256>> Backend<Block> {

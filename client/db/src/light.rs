@@ -66,9 +66,13 @@ pub struct LightStorage<Block: BlockT> {
 	header_metadata_cache: HeaderMetadataCache<Block>,
 }
 
-impl<B: BlockT> parity_util_mem::MallocSizeOf for LightStorage<B> {
+impl<B: BlockT> parity_util_mem::MallocSizeOf for LightStorage<B>
+where
+	B::Hash: parity_util_mem::MallocSizeOf,
+	DbCacheSync<B>: parity_util_mem::MallocSizeOf,
+{
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
-		self.db.size_of(ops) + self.cache.size_of(ops) + self.header_metadata_cache.size_of(ops)
+		self.db.size_of(ops) + self.cache.size_of(ops)
 	}
 }
 

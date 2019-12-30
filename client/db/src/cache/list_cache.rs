@@ -77,7 +77,13 @@ pub struct ListCache<Block: BlockT, T: CacheItemT, S: Storage<Block, T>> {
 	unfinalized: Vec<Fork<Block, T>>,
 }
 
-impl<B: BlockT, T: MallocSizeOf + CacheItemT, S: MallocSizeOf + Storage<B, T>> parity_util_mem::MallocSizeOf for ListCache<B, T, S> {
+impl<B: BlockT, T: CacheItemT, S: Storage<B, T>> MallocSizeOf for ListCache<B, T, S>
+where
+	ComplexBlockId<B>: MallocSizeOf,
+	Fork<B, T>: MallocSizeOf,
+	T: MallocSizeOf,
+	S: MallocSizeOf
+{
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
 		self.storage.size_of(ops) + self.unfinalized.size_of(ops)
 	}
@@ -115,7 +121,11 @@ pub struct Fork<Block: BlockT, T> {
 	head: Entry<Block, T>,
 }
 
-impl<B: BlockT, T: MallocSizeOf> parity_util_mem::MallocSizeOf for Fork<B, T> {
+impl<B: BlockT, T> MallocSizeOf for Fork<B, T>
+where
+	ComplexBlockId<B>: MallocSizeOf,
+	T: MallocSizeOf
+{
 	fn size_of(&self, ops: &mut parity_util_mem::MallocSizeOfOps) -> usize {
 		self.best_block.size_of(ops) + self.head.size_of(ops)
 	}
