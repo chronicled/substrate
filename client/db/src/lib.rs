@@ -521,7 +521,7 @@ impl<Block: BlockT> BlockImportOperation<Block> {
 	fn apply_aux(&mut self, transaction: &mut DBTransaction) {
 		for (key, maybe_val) in self.aux_ops.drain(..) {
 			match maybe_val {
-				Some(val) => transaction.put_vec(columns::AUX, &key, val),
+				Some(val) => transaction.put(columns::AUX, &key, &val),
 				None => transaction.delete(columns::AUX, &key),
 			}
 		}

@@ -61,7 +61,7 @@ pub fn write_children<
 ) {
 	let mut key = prefix.to_vec();
 	parent_hash.using_encoded(|s| key.extend(s));
-	tx.put_vec(column, &key[..], children_hashes.encode());
+	tx.put(column, &key[..], &children_hashes.encode());
 }
 
 /// Prepare transaction to remove the children of `parent_hash`.

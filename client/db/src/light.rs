@@ -429,7 +429,7 @@ impl<Block> LightBlockchainStorage<Block> for LightStorage<Block>
 
 		for (key, maybe_val) in aux_ops {
 			match maybe_val {
-				Some(val) => transaction.put_vec(columns::AUX, &key, val),
+				Some(val) => transaction.put(columns::AUX, &key, &val),
 				None => transaction.delete(columns::AUX, &key),
 			}
 		}

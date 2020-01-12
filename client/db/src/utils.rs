@@ -152,10 +152,10 @@ pub fn insert_number_to_key_mapping<N: TryInto<u32> + Clone, H: AsRef<[u8]>>(
 	number: N,
 	hash: H,
 ) -> sp_blockchain::Result<()> {
-	transaction.put_vec(
+	transaction.put(
 		key_lookup_col,
 		number_index_key(number.clone())?.as_ref(),
-		number_and_hash_to_lookup_key(number, hash)?,
+		&number_and_hash_to_lookup_key(number, hash)?,
 	);
 	Ok(())
 }
@@ -167,10 +167,10 @@ pub fn insert_hash_to_key_mapping<N: TryInto<u32>, H: AsRef<[u8]> + Clone>(
 	number: N,
 	hash: H,
 ) -> sp_blockchain::Result<()> {
-	transaction.put_vec(
+	transaction.put(
 		key_lookup_col,
 		hash.clone().as_ref(),
-		number_and_hash_to_lookup_key(number, hash)?,
+		&number_and_hash_to_lookup_key(number, hash)?,
 	);
 	Ok(())
 }

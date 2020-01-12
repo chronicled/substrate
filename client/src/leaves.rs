@@ -200,7 +200,7 @@ impl<H, N> LeafSet<H, N> where
 		let mut buf = prefix.to_vec();
 		for LeafSetItem { hash, number } in self.pending_added.drain(..) {
 			hash.using_encoded(|s| buf.extend(s));
-			tx.put_vec(column, &buf[..], number.0.encode());
+			tx.put(column, &buf[..], &number.0.encode());
 			buf.truncate(prefix.len()); // reuse allocation.
 		}
 		for hash in self.pending_removed.drain(..) {
