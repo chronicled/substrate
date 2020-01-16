@@ -34,10 +34,11 @@ pub use sp_core::{Blake2Hasher, traits::BareCryptoStorePtr};
 pub use sp_runtime::{Storage, StorageChild};
 pub use sp_state_machine::ExecutionStrategy;
 
-pub use self::client_ext::{ClientExt, ClientBlockImportExt};
+pub use self::client_ext::ClientExt;
 
 use std::sync::Arc;
 use std::collections::HashMap;
+use hash_db::Hasher;
 use sp_core::storage::{well_known_keys, ChildInfo};
 use sp_runtime::traits::Block as BlockT;
 use sc_client::LocalCallExecutor;
@@ -70,18 +71,34 @@ pub struct TestClientBuilder<Executor, Backend, G: GenesisInit> {
 	keystore: Option<BareCryptoStorePtr>,
 }
 
-impl<Block: BlockT, Executor, G: GenesisInit> Default
-	for TestClientBuilder<Executor, Backend<Block>, G> {
+impl<Block, Executor, G: GenesisInit> Default for TestClientBuilder<
+	Executor,
+	Backend<Block>,
+	G,
+> where
+	Block: BlockT<Hash=<Blake2Hasher as Hasher>::Out>,
+{
 	fn default() -> Self {
 		Self::with_default_backend()
 	}
 }
 
-impl<Block: BlockT, Executor, G: GenesisInit> TestClientBuilder<Executor, Backend<Block>, G> {
+impl<Block, Executor, G: GenesisInit> TestClientBuilder<
+	Executor,
+	Backend<Block>,
+	G,
+> where
+	Block: BlockT<Hash=<Blake2Hasher as Hasher>::Out>,
+{
 	/// Create new `TestClientBuilder` with default backend.
 	pub fn with_default_backend() -> Self {
 		let backend = Arc::new(Backend::new_test(std::u32::MAX, std::u64::MAX));
 		Self::with_backend(backend)
+	}
+
+	/// Give access to the underlying backend of these clients
+	pub fn backend(&self) -> Arc<Backend<Block>> {
+		self.backend.clone()
 	}
 
 	/// Create new `TestClientBuilder` with default backend and pruning window size
@@ -113,11 +130,6 @@ impl<Executor, Backend, G: GenesisInit> TestClientBuilder<Executor, Backend, G> 
 	/// Alter the genesis storage parameters.
 	pub fn genesis_init_mut(&mut self) -> &mut G {
 		&mut self.genesis_init
-	}
-
-	/// Give access to the underlying backend of these clients
-	pub fn backend(&self) -> Arc<Backend> {
-		self.backend.clone()
 	}
 
 	/// Extend child storage
@@ -165,9 +177,9 @@ impl<Executor, Backend, G: GenesisInit> TestClientBuilder<Executor, Backend, G> 
 		>,
 		sc_client::LongestChain<Backend, Block>,
 	) where
-		Executor: sc_client::CallExecutor<Block>,
-		Backend: sc_client_api::backend::Backend<Block>,
-		Block: BlockT,
+		Executor: sc_client::CallExecutor<Block, Blake2Hasher>,
+		Backend: sc_client_api::backend::Backend<Block, Blake2Hasher>,
+		Block: BlockT<Hash=<Blake2Hasher as Hasher>::Out>,
 	{
 
 		let storage = {
@@ -225,8 +237,8 @@ impl<E, Backend, G: GenesisInit> TestClientBuilder<
 	) where
 		I: Into<Option<NativeExecutor<E>>>,
 		E: sc_executor::NativeExecutionDispatch,
-		Backend: sc_client_api::backend::Backend<Block>,
-		Block: BlockT,
+		Backend: sc_client_api::backend::Backend<Block, Blake2Hasher>,
+		Block: BlockT<Hash=<Blake2Hasher as Hasher>::Out>,
 	{
 		let executor = executor.into().unwrap_or_else(||
 			NativeExecutor::new(WasmExecutionMethod::Interpreted, None)

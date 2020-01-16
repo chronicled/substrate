@@ -21,9 +21,7 @@
 use sp_std::vec::Vec;
 
 #[cfg(feature = "std")]
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-#[cfg(feature = "std")]
-use sp_api::ProvideRuntimeApi;
+use sp_runtime::{generic::BlockId, traits::{ProvideRuntimeApi, Block as BlockT}};
 
 sp_api::decl_runtime_apis! {
 	/// Session keys runtime api.
@@ -46,11 +44,11 @@ pub fn generate_initial_session_keys<Block, T>(
 	client: std::sync::Arc<T>,
 	at: &BlockId<Block>,
 	seeds: Vec<String>,
-) -> Result<(), sp_api::ApiErrorFor<T, Block>>
+) -> Result<(), <<T as ProvideRuntimeApi>::Api as sp_api::ApiExt<Block>>::Error>
 where
 	Block: BlockT,
-	T: ProvideRuntimeApi<Block>,
-	T::Api: SessionKeys<Block>,
+	T: ProvideRuntimeApi,
+	<T as ProvideRuntimeApi>::Api: SessionKeys<Block>,
 {
 	let runtime_api = client.runtime_api();
 

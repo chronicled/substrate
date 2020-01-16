@@ -24,16 +24,16 @@ use authorship::claim_slot;
 
 use sp_consensus_babe::{AuthorityPair, SlotNumber};
 use sc_block_builder::BlockBuilder;
-use sp_consensus::{
-	NoNetwork as DummyOracle, Proposal, RecordProof,
-	import_queue::{BoxBlockImport, BoxJustificationImport, BoxFinalityProofImport},
+use sp_consensus::NoNetwork as DummyOracle;
+use sp_consensus::import_queue::{
+	BoxBlockImport, BoxJustificationImport, BoxFinalityProofImport,
 };
 use sc_network_test::*;
 use sc_network_test::{Block as TestBlock, PeersClient};
 use sc_network::config::{BoxFinalityProofRequestBuilder, ProtocolConfig};
 use sp_runtime::{generic::DigestItem, traits::{Block as BlockT, DigestFor}};
 use tokio::runtime::current_thread;
-use sc_client_api::{BlockchainEvents, backend::TransactionFor};
+use sc_client_api::BlockchainEvents;
 use log::debug;
 use std::{time::Duration, cell::RefCell};
 
@@ -94,25 +94,16 @@ impl Environment<TestBlock> for DummyFactory {
 
 impl DummyProposer {
 	fn propose_with(&mut self, pre_digests: DigestFor<TestBlock>)
-		-> future::Ready<
-			Result<
-				Proposal<
-					TestBlock,
-					sc_client_api::TransactionFor<substrate_test_runtime_client::Backend, TestBlock>
-				>,
-				Error
-			>
-		>
+		-> future::Ready<Result<TestBlock, Error>>
 	{
 		use codec::Encode;
 		let block_builder = self.factory.client.new_block_at(
 			&BlockId::Hash(self.parent_hash),
 			pre_digests,
-			false,
 		).unwrap();
 
-		let mut block = match block_builder.build().map_err(|e| e.into()) {
-			Ok(b) => b.block,
+		let mut block = match block_builder.bake().map_err(|e| e.into()) {
+			Ok(b) => b,
 			Err(e) => return future::ready(Err(e)),
 		};
 
@@ -151,22 +142,20 @@ impl DummyProposer {
 		// mutate the block header according to the mutator.
 		(self.factory.mutator)(&mut block.header, Stage::PreSeal);
 
-		future::ready(Ok(Proposal { block, proof: None, storage_changes: Default::default() }))
+		future::ready(Ok(block))
 	}
 }
 
 impl Proposer<TestBlock> for DummyProposer {
 	type Error = Error;
-	type Transaction = sc_client_api::TransactionFor<substrate_test_runtime_client::Backend, TestBlock>;
-	type Proposal = future::Ready<Result<Proposal<TestBlock, Self::Transaction>, Error>>;
+	type Create = future::Ready<Result<TestBlock, Error>>;
 
 	fn propose(
 		&mut self,
 		_: InherentData,
 		pre_digests: DigestFor<TestBlock>,
 		_: Duration,
-		_: RecordProof,
-	) -> Self::Proposal {
+	) -> Self::Create {
 		self.propose_with(pre_digests)
 	}
 }
@@ -180,11 +169,10 @@ struct PanickingBlockImport<B>(B);
 
 impl<B: BlockImport<TestBlock>> BlockImport<TestBlock> for PanickingBlockImport<B> {
 	type Error = B::Error;
-	type Transaction = B::Transaction;
 
 	fn import_block(
 		&mut self,
-		block: BlockImportParams<TestBlock, Self::Transaction>,
+		block: BlockImportParams<TestBlock>,
 		new_cache: HashMap<CacheKeyId, Vec<u8>>,
 	) -> Result<ImportResult, Self::Error> {
 		Ok(self.0.import_block(block, new_cache).expect("importing block failed"))
@@ -226,7 +214,7 @@ impl Verifier<TestBlock> for TestVerifier {
 		mut header: TestHeader,
 		justification: Option<Justification>,
 		body: Option<Vec<TestExtrinsic>>,
-	) -> Result<(BlockImportParams<TestBlock, ()>, Option<Vec<(CacheKeyId, Vec<u8>)>>), String> {
+	) -> Result<(BlockImportParams<TestBlock>, Option<Vec<(CacheKeyId, Vec<u8>)>>), String> {
 		// apply post-sealing mutations (i.e. stripping seal, if desired).
 		(self.mutator)(&mut header, Stage::PostSeal);
 		Ok(self.inner.verify(origin, header, justification, body).expect("verification failed!"))
@@ -236,9 +224,7 @@ impl Verifier<TestBlock> for TestVerifier {
 pub struct PeerData {
 	link: BabeLink<TestBlock>,
 	inherent_data_providers: InherentDataProviders,
-	block_import: Mutex<
-		Option<BoxBlockImport<TestBlock, TransactionFor<substrate_test_runtime_client::Backend, TestBlock>>>
-	>,
+	block_import: Mutex<Option<BoxBlockImport<TestBlock>>>,
 }
 
 impl TestNetFactory for BabeTestNet {
@@ -254,9 +240,9 @@ impl TestNetFactory for BabeTestNet {
 		}
 	}
 
-	fn make_block_import<Transaction>(&self, client: PeersClient)
+	fn make_block_import(&self, client: PeersClient)
 		-> (
-			BlockImportAdapter<Transaction>,
+			BoxBlockImport<Block>,
 			Option<BoxJustificationImport<Block>>,
 			Option<BoxFinalityProofImport<Block>>,
 			Option<BoxFinalityProofRequestBuilder<Block>>,
@@ -276,11 +262,9 @@ impl TestNetFactory for BabeTestNet {
 
 		let block_import = PanickingBlockImport(block_import);
 
-		let data_block_import = Mutex::new(
-			Some(Box::new(block_import.clone()) as BoxBlockImport<_, _>)
-		);
+		let data_block_import = Mutex::new(Some(Box::new(block_import.clone()) as BoxBlockImport<_>));
 		(
-			BlockImportAdapter::new_full(block_import),
+			Box::new(block_import),
 			None,
 			None,
 			None,
@@ -338,8 +322,8 @@ impl TestNetFactory for BabeTestNet {
 fn rejects_empty_block() {
 	env_logger::try_init().unwrap();
 	let mut net = BabeTestNet::new(3);
-	let block_builder = |builder: BlockBuilder<_, _, _>| {
-		builder.build().unwrap().block
+	let block_builder = |builder: BlockBuilder<_, _>| {
+		builder.bake().unwrap()
 	};
 	net.mut_peers(|peer| {
 		peer[0].generate_blocks(1, BlockOrigin::NetworkInitialSync, block_builder);
@@ -541,12 +525,12 @@ fn can_author_block() {
 }
 
 // Propose and import a new BABE block on top of the given parent.
-fn propose_and_import_block<Transaction>(
+fn propose_and_import_block(
 	parent: &TestHeader,
 	slot_number: Option<SlotNumber>,
 	proposer_factory: &mut DummyFactory,
-	block_import: &mut BoxBlockImport<TestBlock, Transaction>,
-) -> sp_core::H256 {
+	block_import: &mut BoxBlockImport<TestBlock>,
+) -> H256 {
 	let mut proposer = proposer_factory.init(parent).unwrap();
 
 	let slot_number = slot_number.unwrap_or_else(|| {
@@ -565,7 +549,7 @@ fn propose_and_import_block<Transaction>(
 		],
 	};
 
-	let mut block = futures::executor::block_on(proposer.propose_with(pre_digest)).unwrap().block;
+	let mut block = futures::executor::block_on(proposer.propose_with(pre_digest)).unwrap();
 
 	let seal = {
 		// sign the pre-sealed hash of the block and then
@@ -590,7 +574,6 @@ fn propose_and_import_block<Transaction>(
 			justification: None,
 			post_digests: vec![seal],
 			body: Some(block.extrinsics),
-			storage_changes: None,
 			finalized: false,
 			auxiliary: Vec::new(),
 			fork_choice: ForkChoiceStrategy::LongestChain,

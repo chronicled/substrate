@@ -39,11 +39,13 @@ use log::{info, warn, error};
 use sc_network::{FinalityProofProvider, OnDemand, NetworkService, NetworkStateInfo};
 use sc_network::{config::BoxFinalityProofRequestBuilder, specialization::NetworkSpecialization};
 use parking_lot::{Mutex, RwLock};
+use sp_core::{Blake2Hasher, H256, Hasher};
+use sc_rpc;
+use sp_api::ConstructRuntimeApi;
 use sp_runtime::generic::BlockId;
 use sp_runtime::traits::{
-	Block as BlockT, NumberFor, SaturatedConversion, HasherFor,
+	Block as BlockT, ProvideRuntimeApi, NumberFor, SaturatedConversion,
 };
-use sp_api::ProvideRuntimeApi;
 use sc_executor::{NativeExecutor, NativeExecutionDispatch};
 use std::{
 	io::{Read, Write, Seek},
@@ -120,19 +122,19 @@ pub type TLightClient<TBl, TRtApi, TExecDisp> = Client<
 /// Light client backend type.
 pub type TLightBackend<TBl> = sc_client::light::backend::Backend<
 	sc_client_db::light::LightStorage<TBl>,
-	HasherFor<TBl>,
+	Blake2Hasher,
 >;
 
 /// Light call executor type.
 pub type TLightCallExecutor<TBl, TExecDisp> = sc_client::light::call_executor::GenesisCallExecutor<
 	sc_client::light::backend::Backend<
 		sc_client_db::light::LightStorage<TBl>,
-		HasherFor<TBl>
+		Blake2Hasher
 	>,
 	sc_client::LocalCallExecutor<
 		sc_client::light::backend::Backend<
 			sc_client_db::light::LightStorage<TBl>,
-			HasherFor<TBl>
+			Blake2Hasher
 		>,
 		NativeExecutor<TExecDisp>
 	>,
@@ -148,7 +150,7 @@ type TFullParts<TBl, TRtApi, TExecDisp> = (
 pub fn new_full_client<TBl, TRtApi, TExecDisp, TCfg, TGen, TCSExt>(
 	config: &Configuration<TCfg, TGen, TCSExt>,
 ) -> Result<TFullClient<TBl, TRtApi, TExecDisp>, Error> where
-	TBl: BlockT,
+	TBl: BlockT<Hash=H256>,
 	TExecDisp: NativeExecutionDispatch,
 	TGen: sp_runtime::BuildStorage + serde::Serialize + for<'de> serde::Deserialize<'de>,
 	TCSExt: Extension,
@@ -159,7 +161,7 @@ pub fn new_full_client<TBl, TRtApi, TExecDisp, TCfg, TGen, TCSExt>(
 fn new_full_parts<TBl, TRtApi, TExecDisp, TCfg, TGen, TCSExt>(
 	config: &Configuration<TCfg, TGen, TCSExt>,
 ) -> Result<TFullParts<TBl, TRtApi, TExecDisp>,	Error> where
-	TBl: BlockT,
+	TBl: BlockT<Hash=H256>,
 	TExecDisp: NativeExecutionDispatch,
 	TGen: sp_runtime::BuildStorage + serde::Serialize + for<'de> serde::Deserialize<'de>,
 	TCSExt: Extension,
@@ -228,7 +230,7 @@ fn new_full_parts<TBl, TRtApi, TExecDisp, TCfg, TGen, TCSExt>(
 impl<TCfg, TGen, TCSExt> ServiceBuilder<(), (), TCfg, TGen, TCSExt, (), (), (), (), (), (), (), (), (), ()>
 where TGen: RuntimeGenesis, TCSExt: Extension {
 	/// Start the service builder with a configuration.
-	pub fn new_full<TBl: BlockT, TRtApi, TExecDisp: NativeExecutionDispatch>(
+	pub fn new_full<TBl: BlockT<Hash=H256>, TRtApi, TExecDisp: NativeExecutionDispatch>(
 		config: Configuration<TCfg, TGen, TCSExt>
 	) -> Result<ServiceBuilder<
 		TBl,
@@ -270,7 +272,7 @@ where TGen: RuntimeGenesis, TCSExt: Extension {
 	}
 
 	/// Start the service builder with a configuration.
-	pub fn new_light<TBl: BlockT, TRtApi, TExecDisp: NativeExecutionDispatch + 'static>(
+	pub fn new_light<TBl: BlockT<Hash=H256>, TRtApi, TExecDisp: NativeExecutionDispatch + 'static>(
 		config: Configuration<TCfg, TGen, TCSExt>
 	) -> Result<ServiceBuilder<
 		TBl,
@@ -322,12 +324,7 @@ where TGen: RuntimeGenesis, TCSExt: Extension {
 			sc_client_db::light::LightStorage::new(db_settings)?
 		};
 		let light_blockchain = sc_client::light::new_light_blockchain(db_storage);
-		let fetch_checker = Arc::new(
-			sc_client::light::new_fetch_checker::<_, TBl, _>(
-				light_blockchain.clone(),
-				executor.clone(),
-			),
-		);
+		let fetch_checker = Arc::new(sc_client::light::new_fetch_checker(light_blockchain.clone(), executor.clone()));
 		let fetcher = Arc::new(sc_network::OnDemand::new(fetch_checker));
 		let backend = sc_client::light::new_light_backend(light_blockchain);
 		let remote_blockchain = backend.remote_blockchain();
@@ -724,21 +721,20 @@ ServiceBuilder<
 	TRpc,
 	TBackend,
 > where
-	Client<TBackend, TExec, TBl, TRtApi>: ProvideRuntimeApi<TBl>,
-	<Client<TBackend, TExec, TBl, TRtApi> as ProvideRuntimeApi<TBl>>::Api:
+	Client<TBackend, TExec, TBl, TRtApi>: ProvideRuntimeApi,
+	<Client<TBackend, TExec, TBl, TRtApi> as ProvideRuntimeApi>::Api:
 		sp_api::Metadata<TBl> +
 		sc_offchain::OffchainWorkerApi<TBl> +
 		sp_transaction_pool::runtime_api::TaggedTransactionQueue<TBl> +
 		sp_session::SessionKeys<TBl> +
-		sp_api::ApiErrorExt<Error = sp_blockchain::Error> +
-		sp_api::ApiExt<TBl, StateBackend = TBackend::State>,
-	TBl: BlockT,
-	TRtApi: 'static + Send + Sync,
+		sp_api::ApiExt<TBl, Error = sp_blockchain::Error>,
+	TBl: BlockT<Hash = <Blake2Hasher as Hasher>::Out>,
+	TRtApi: ConstructRuntimeApi<TBl, Client<TBackend, TExec, TBl, TRtApi>> + 'static + Send + Sync,
 	TCfg: Default,
 	TGen: RuntimeGenesis,
 	TCSExt: Extension,
-	TBackend: 'static + sc_client_api::backend::Backend<TBl> + Send,
-	TExec: 'static + sc_client::CallExecutor<TBl> + Send + Sync + Clone,
+	TBackend: 'static + sc_client_api::backend::Backend<TBl, Blake2Hasher> + Send,
+	TExec: 'static + sc_client::CallExecutor<TBl, Blake2Hasher> + Send + Sync + Clone,
 	TSc: Clone,
 	TImpQu: 'static + ImportQueue<TBl>,
 	TNetP: NetworkSpecialization<TBl>,
@@ -864,7 +860,7 @@ ServiceBuilder<
 				Some(Arc::new(sc_offchain::OffchainWorkers::new(client.clone(), db)))
 			},
 			(true, None) => {
-				warn!("Offchain workers disabled, due to lack of offchain storage support in backend.");
+				log::warn!("Offchain workers disabled, due to lack of offchain storage support in backend.");
 				None
 			},
 			_ => None,
@@ -1138,7 +1134,7 @@ ServiceBuilder<
 			}).compat();
 
 			let _ = to_spawn_tx.unbounded_send(Box::new(future));
-		}
+    }
 
 		// Instrumentation
 		if let Some(tracing_targets) = config.tracing_targets.as_ref() {

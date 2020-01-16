@@ -80,7 +80,7 @@ impl<P: TransactionPool, C, B> FullSystem<P, C, B> {
 
 impl<P, C, Block, AccountId, Index> SystemApi<AccountId, Index> for FullSystem<P, C, Block>
 where
-	C: sp_api::ProvideRuntimeApi<Block>,
+	C: traits::ProvideRuntimeApi,
 	C: HeaderBackend<Block>,
 	C: Send + Sync + 'static,
 	C::Api: AccountNonceApi<Block, AccountId, Index>,

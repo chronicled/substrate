@@ -143,7 +143,7 @@ fn should_notify_about_storage_changes() {
 	let (subscriber, id, transport) = Subscriber::new_test("test");
 
 	{
-		let mut client = Arc::new(substrate_test_runtime_client::new());
+		let client = Arc::new(substrate_test_runtime_client::new());
 		let api = new_full(client.clone(), Subscriptions::new(Arc::new(remote)));
 
 		api.subscribe_storage(Default::default(), subscriber, None.into());
@@ -158,8 +158,7 @@ fn should_notify_about_storage_changes() {
 			amount: 42,
 			nonce: 0,
 		}).unwrap();
-		let block = builder.build().unwrap().block;
-		client.import(BlockOrigin::Own, block).unwrap();
+		client.import(BlockOrigin::Own, builder.bake().unwrap()).unwrap();
 	}
 
 	// assert notification sent to transport
@@ -176,7 +175,7 @@ fn should_send_initial_storage_changes_and_notifications() {
 	let (subscriber, id, transport) = Subscriber::new_test("test");
 
 	{
-		let mut client = Arc::new(substrate_test_runtime_client::new());
+		let client = Arc::new(substrate_test_runtime_client::new());
 		let api = new_full(client.clone(), Subscriptions::new(Arc::new(remote)));
 
 		let alice_balance_key = blake2_256(&runtime::system::balance_of_key(AccountKeyring::Alice.into()));
@@ -195,8 +194,7 @@ fn should_send_initial_storage_changes_and_notifications() {
 			amount: 42,
 			nonce: 0,
 		}).unwrap();
-		let block = builder.build().unwrap().block;
-		client.import(BlockOrigin::Own, block).unwrap();
+		client.import(BlockOrigin::Own, builder.bake().unwrap()).unwrap();
 	}
 
 	// assert initial values sent to transport
@@ -211,11 +209,11 @@ fn should_send_initial_storage_changes_and_notifications() {
 
 #[test]
 fn should_query_storage() {
-	fn run_tests(mut client: Arc<TestClient>) {
+	fn run_tests(client: Arc<TestClient>) {
 		let core = tokio::runtime::Runtime::new().unwrap();
 		let api = new_full(client.clone(), Subscriptions::new(Arc::new(core.executor())));
 
-		let mut add_block = |nonce| {
+		let add_block = |nonce| {
 			let mut builder = client.new_block(Default::default()).unwrap();
 			// fake change: None -> None -> None
 			builder.push_storage_change(vec![1], None).unwrap();
@@ -227,7 +225,7 @@ fn should_query_storage() {
 			builder.push_storage_change(vec![4], if nonce == 0 { None } else { Some(vec![4]) }).unwrap();
 			// actual change: Some(value1) -> Some(value2)
 			builder.push_storage_change(vec![5], Some(vec![nonce as u8])).unwrap();
-			let block = builder.build().unwrap().block;
+			let block = builder.bake().unwrap();
 			let hash = block.header.hash();
 			client.import(BlockOrigin::Own, block).unwrap();
 			hash

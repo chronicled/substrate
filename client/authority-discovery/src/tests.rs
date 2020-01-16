@@ -21,10 +21,11 @@ use futures::executor::block_on;
 use futures::future::poll_fn;
 use libp2p::{kad, PeerId};
 
-use sp_api::{ApiExt, ApiErrorExt, Core, RuntimeVersion, StorageProof, ProvideRuntimeApi, ApiRef};
+use sp_api::{ApiExt, Core, RuntimeVersion, StorageProof};
 use sp_core::{testing::KeyStore, ExecutionContext, NativeOrEncoded};
-use sp_runtime::traits::{Zero, Block as BlockT, NumberFor};
-use substrate_test_runtime_client::runtime::Block;
+use sp_runtime::traits::Zero;
+use sp_runtime::traits::{ApiRef, Block as BlockT, NumberFor, ProvideRuntimeApi};
+use sp_test_primitives::Block;
 
 use super::*;
 
@@ -93,7 +94,7 @@ struct TestApi {
 	authorities: Vec<AuthorityId>,
 }
 
-impl ProvideRuntimeApi<Block> for TestApi {
+impl ProvideRuntimeApi for TestApi {
 	type Api = RuntimeApi;
 
 	fn runtime_api<'a>(&'a self) -> ApiRef<'a, Self::Api> {
@@ -181,18 +182,12 @@ impl Core<Block> for RuntimeApi {
 	}
 }
 
-impl ApiErrorExt for RuntimeApi {
-	type Error = sp_blockchain::Error;
-}
-
 impl ApiExt<Block> for RuntimeApi {
-	type StateBackend = <
-		substrate_test_runtime_client::Backend as sc_client_api::backend::Backend<Block>
-	>::State;
+	type Error = sp_blockchain::Error;
 
 	fn map_api_result<F: FnOnce(&Self) -> std::result::Result<R, E>, R, E>(
 		&self,
-		_: F
+		_: F,
 	) -> std::result::Result<R, E> {
 		unimplemented!("Not required for testing!")
 	}
@@ -200,7 +195,7 @@ impl ApiExt<Block> for RuntimeApi {
 	fn runtime_version_at(
 		&self,
 		_: &BlockId<Block>,
-	) -> std::result::Result<RuntimeVersion, Self::Error> {
+	) -> std::result::Result<RuntimeVersion, sp_blockchain::Error> {
 		unimplemented!("Not required for testing!")
 	}
 
@@ -209,19 +204,6 @@ impl ApiExt<Block> for RuntimeApi {
 	}
 
 	fn extract_proof(&mut self) -> Option<StorageProof> {
-		unimplemented!("Not required for testing!")
-	}
-
-	fn into_storage_changes<
-		T: sp_api::ChangesTrieStorage<sp_api::HasherFor<Block>, sp_api::NumberFor<Block>>
-	>(
-		&self,
-		_: &Self::StateBackend,
-		_: Option<&T>,
-		_: <Block as sp_api::BlockT>::Hash,
-	) -> std::result::Result<sp_api::StorageChanges<Self::StateBackend, Block>, String>
-		where Self: Sized
-	{
 		unimplemented!("Not required for testing!")
 	}
 }

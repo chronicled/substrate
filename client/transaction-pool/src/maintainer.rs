@@ -30,13 +30,14 @@ use sc_client_api::{
 	client::BlockBody,
 	light::{Fetcher, RemoteBodyRequest},
 };
+use sp_core::{Blake2Hasher, H256};
 use sp_runtime::{
 	generic::BlockId,
-	traits::{Block as BlockT, Extrinsic, Header, NumberFor, SimpleArithmetic},
+	traits::{Block as BlockT, Extrinsic, Header, NumberFor, ProvideRuntimeApi, SimpleArithmetic},
 };
 use sp_blockchain::HeaderBackend;
-use sp_transaction_pool::{TransactionPoolMaintainer, runtime_api::TaggedTransactionQueue};
-use sp_api::ProvideRuntimeApi;
+use sp_transaction_pool::TransactionPoolMaintainer;
+use sp_transaction_pool::runtime_api::TaggedTransactionQueue;
 
 use sc_transaction_graph::{self, ChainApi};
 
@@ -60,10 +61,10 @@ impl<Block, Client, PoolApi> TransactionPoolMaintainer
 for
 	FullBasicPoolMaintainer<Client, PoolApi>
 where
-	Block: BlockT,
-	Client: ProvideRuntimeApi<Block> + HeaderBackend<Block> + BlockBody<Block> + 'static,
+	Block: BlockT<Hash = <Blake2Hasher as sp_core::Hasher>::Out>,
+	Client: ProvideRuntimeApi + HeaderBackend<Block> + BlockBody<Block> + 'static,
 	Client::Api: TaggedTransactionQueue<Block>,
-	PoolApi: ChainApi<Block = Block, Hash = Block::Hash> + 'static,
+	PoolApi: ChainApi<Block = Block, Hash = H256> + 'static,
 {
 	type Block = Block;
 	type Hash = Block::Hash;
@@ -153,10 +154,10 @@ pub struct LightBasicPoolMaintainer<Block: BlockT, Client, PoolApi: ChainApi, F>
 
 impl<Block, Client, PoolApi, F> LightBasicPoolMaintainer<Block, Client, PoolApi, F>
 	where
-		Block: BlockT,
-		Client: ProvideRuntimeApi<Block> + HeaderBackend<Block> + BlockBody<Block> + 'static,
+		Block: BlockT<Hash = <Blake2Hasher as sp_core::Hasher>::Out>,
+		Client: ProvideRuntimeApi + HeaderBackend<Block> + BlockBody<Block> + 'static,
 		Client::Api: TaggedTransactionQueue<Block>,
-		PoolApi: ChainApi<Block = Block, Hash = Block::Hash> + 'static,
+		PoolApi: ChainApi<Block = Block, Hash = H256> + 'static,
 		F: Fetcher<Block> + 'static,
 {
 	/// Create light pool maintainer with default constants.
@@ -260,10 +261,10 @@ impl<Block, Client, PoolApi, F> TransactionPoolMaintainer
 for
 	LightBasicPoolMaintainer<Block, Client, PoolApi, F>
 where
-	Block: BlockT,
-	Client: ProvideRuntimeApi<Block> + HeaderBackend<Block> + BlockBody<Block> + 'static,
+	Block: BlockT<Hash = <Blake2Hasher as sp_core::Hasher>::Out>,
+	Client: ProvideRuntimeApi + HeaderBackend<Block> + BlockBody<Block> + 'static,
 	Client::Api: TaggedTransactionQueue<Block>,
-	PoolApi: ChainApi<Block = Block, Hash = Block::Hash> + 'static,
+	PoolApi: ChainApi<Block = Block, Hash = H256> + 'static,
 	F: Fetcher<Block> + 'static,
 {
 	type Block = Block;
@@ -428,7 +429,7 @@ mod tests {
 		// import the block
 		let mut builder = setup.client.new_block(Default::default()).unwrap();
 		builder.push(transaction.clone()).unwrap();
-		let block = builder.build().unwrap().block;
+		let block = builder.bake().unwrap();
 		let id = BlockId::hash(block.header().hash());
 		setup.client.import(BlockOrigin::Own, block).unwrap();
 
@@ -612,7 +613,7 @@ mod tests {
 		// import the block
 		let mut builder = setup.client.new_block(Default::default()).unwrap();
 		builder.push(transaction.clone()).unwrap();
-		let block = builder.build().unwrap().block;
+		let block = builder.bake().unwrap();
 		let block1_hash = block.header().hash();
 		let id = BlockId::hash(block1_hash.clone());
 		setup.client.import(BlockOrigin::Own, block).unwrap();

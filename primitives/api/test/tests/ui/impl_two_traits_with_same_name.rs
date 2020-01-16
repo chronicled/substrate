@@ -17,7 +17,7 @@ sp_api::decl_runtime_apis! {
 mod second {
 	use super::*;
 
-	sp_api::decl_runtime_apis! {
+	decl_runtime_apis! {
 		pub trait Api {
 			fn test2(data: u64);
 		}

@@ -31,9 +31,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use sp_runtime::{
-	generic::BlockId, traits::{Block as BlockT, DigestFor, NumberFor, HasherFor},
-};
+use sp_runtime::{traits::{Block as BlockT, DigestFor}, generic::BlockId};
 use futures::prelude::*;
 pub use sp_inherents::InherentData;
 
@@ -50,11 +48,10 @@ const MAX_BLOCK_SIZE: usize = 4 * 1024 * 1024 + 512;
 
 pub use self::error::Error;
 pub use block_import::{
-	BlockImport, BlockOrigin, ForkChoiceStrategy, ImportedAux, BlockImportParams, BlockCheckParams,
-	ImportResult, JustificationImport, FinalityProofImport,
+	BlockImport, BlockOrigin, ForkChoiceStrategy, ImportedAux, BlockImportParams, BlockCheckParams, ImportResult,
+	JustificationImport, FinalityProofImport,
 };
 pub use select_chain::SelectChain;
-pub use sp_state_machine::Backend as StateBackend;
 
 /// Block status.
 #[derive(Debug, PartialEq, Eq)]
@@ -74,56 +71,14 @@ pub enum BlockStatus {
 /// Environment producer for a Consensus instance. Creates proposer instance and communication streams.
 pub trait Environment<B: BlockT> {
 	/// The proposer type this creates.
-	type Proposer: Proposer<B> + 'static;
+	type Proposer: Proposer<B>;
 	/// Error which can occur upon creation.
-	type Error: From<Error> + std::fmt::Debug + 'static;
+	type Error: From<Error>;
 
 	/// Initialize the proposal logic on top of a specific header. Provide
 	/// the authorities at that header.
-	fn init(&mut self, parent_header: &B::Header) -> Result<Self::Proposer, Self::Error>;
-}
-
-/// A proposal that is created by a [`Proposer`].
-pub struct Proposal<Block: BlockT, Transaction> {
-	/// The block that was build.
-	pub block: Block,
-	/// Optional proof that was recorded while building the block.
-	pub proof: Option<sp_state_machine::StorageProof>,
-	/// The storage changes while building this block.
-	pub storage_changes: sp_state_machine::StorageChanges<Transaction, HasherFor<Block>, NumberFor<Block>>,
-}
-
-/// Used as parameter to [`Proposer`] to tell the requirement on recording a proof.
-///
-/// When `RecordProof::Yes` is given, all accessed trie nodes should be saved. These recorded
-/// trie nodes can be used by a third party to proof this proposal without having access to the
-/// full storage.
-#[derive(Copy, Clone, PartialEq)]
-pub enum RecordProof {
-	/// `Yes`, record a proof.
-	Yes,
-	/// `No`, don't record any proof.
-	No,
-}
-
-impl RecordProof {
-	/// Returns if `Self` == `Yes`.
-	pub fn yes(&self) -> bool {
-		match self {
-			Self::Yes => true,
-			Self::No => false,
-		}
-	}
-}
-
-impl From<bool> for RecordProof {
-	fn from(val: bool) -> Self {
-		if val {
-			Self::Yes
-		} else {
-			Self::No
-		}
-	}
+	fn init(&mut self, parent_header: &B::Header)
+		-> Result<Self::Proposer, Self::Error>;
 }
 
 /// Logic for a proposer.
@@ -134,29 +89,16 @@ impl From<bool> for RecordProof {
 /// Proposers are generic over bits of "consensus data" which are engine-specific.
 pub trait Proposer<B: BlockT> {
 	/// Error type which can occur when proposing or evaluating.
-	type Error: From<Error> + std::fmt::Debug + 'static;
-	/// The transaction type used by the backend.
-	type Transaction: Default + Send + 'static;
-	/// Future that resolves to a committed proposal with an optional proof.
-	type Proposal: Future<Output = Result<Proposal<B, Self::Transaction>, Self::Error>> +
-		Send + Unpin + 'static;
-
+	type Error: From<Error> + ::std::fmt::Debug + 'static;
+	/// Future that resolves to a committed proposal.
+	type Create: Future<Output = Result<B, Self::Error>>;
 	/// Create a proposal.
-	///
-	/// Gets the `inherent_data` and `inherent_digests` as input for the proposal. Additionally
-	/// a maximum duration for building this proposal is given. If building the proposal takes
-	/// longer than this maximum, the proposal will be very likely discarded.
-	///
-	/// # Return
-	///
-	/// Returns a future that resolves to a [`Proposal`] or to [`Self::Error`].
 	fn propose(
 		&mut self,
 		inherent_data: InherentData,
 		inherent_digests: DigestFor<B>,
 		max_duration: Duration,
-		record_proof: RecordProof,
-	) -> Self::Proposal;
+	) -> Self::Create;
 }
 
 /// An oracle for when major synchronization work is being undertaken.

@@ -37,12 +37,12 @@ use std::{fmt, marker::PhantomData, sync::Arc};
 
 use parking_lot::Mutex;
 use threadpool::ThreadPool;
-use sp_api::{ApiExt, ProvideRuntimeApi};
+use sp_api::ApiExt;
 use futures::future::Future;
 use log::{debug, warn};
 use sc_network::NetworkStateInfo;
 use sp_core::{offchain::{self, OffchainStorage}, ExecutionContext};
-use sp_runtime::{generic::BlockId, traits::{self, Header}};
+use sp_runtime::{generic::BlockId, traits::{self, ProvideRuntimeApi, Header}};
 
 mod api;
 
@@ -84,7 +84,7 @@ impl<Client, Storage, Block> OffchainWorkers<
 	Block,
 > where
 	Block: traits::Block,
-	Client: ProvideRuntimeApi<Block> + Send + Sync + 'static,
+	Client: ProvideRuntimeApi + Send + Sync + 'static,
 	Client::Api: OffchainWorkerApi<Block>,
 	Storage: OffchainStorage + 'static,
 {

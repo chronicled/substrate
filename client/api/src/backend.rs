@@ -21,7 +21,8 @@ use std::collections::HashMap;
 use sp_core::ChangesTrieConfiguration;
 use sp_core::offchain::OffchainStorage;
 use sp_runtime::{generic::BlockId, Justification, Storage};
-use sp_runtime::traits::{Block as BlockT, NumberFor, HasherFor};
+use sp_runtime::traits::{Block as BlockT, NumberFor};
+use sp_state_machine::backend::Backend as StateBackend;
 use sp_state_machine::{ChangesTrieStorage as StateChangesTrieStorage, ChangesTrieTransaction};
 use crate::{
 	blockchain::{
@@ -32,18 +33,8 @@ use crate::{
 };
 use sp_blockchain;
 use sp_consensus::BlockOrigin;
+use hash_db::Hasher;
 use parking_lot::RwLock;
-
-pub use sp_state_machine::Backend as StateBackend;
-
-/// Extracts the state backend type for the given backend.
-pub type StateBackendFor<B, Block> = <B as Backend<Block>>::State;
-
-/// Extracts the transaction for the given state backend.
-pub type TransactionForSB<B, Block> = <B as StateBackend<HasherFor<Block>>>::Transaction;
-
-/// Extracts the transaction for the given backend.
-pub type TransactionFor<B, Block> = TransactionForSB<StateBackendFor<B, Block>, Block>;
 
 /// In memory array of storage values.
 pub type StorageCollection = Vec<(Vec<u8>, Option<Vec<u8>>)>;
@@ -71,7 +62,11 @@ pub struct ImportSummary<Block: BlockT> {
 }
 
 /// Import operation wrapper
-pub struct ClientImportOperation<Block: BlockT, B: Backend<Block>> {
+pub struct ClientImportOperation<
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+	B: Backend<Block, H>,
+> {
 	/// DB Operation.
 	pub op: B::BlockImportOperation,
 	/// Summary of imported block.
@@ -112,9 +107,12 @@ impl NewBlockState {
 /// Block insertion operation.
 ///
 /// Keeps hold if the inserted block state and data.
-pub trait BlockImportOperation<Block: BlockT> {
+pub trait BlockImportOperation<Block, H> where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+{
 	/// Associated state backend type.
-	type State: StateBackend<HasherFor<Block>>;
+	type State: StateBackend<H>;
 
 	/// Returns pending state.
 	///
@@ -134,13 +132,10 @@ pub trait BlockImportOperation<Block: BlockT> {
 	fn update_cache(&mut self, cache: HashMap<well_known_cache_keys::Id, Vec<u8>>);
 
 	/// Inject storage data into the database.
-	fn update_db_storage(
-		&mut self,
-		update: TransactionForSB<Self::State, Block>,
-	) -> sp_blockchain::Result<()>;
+	fn update_db_storage(&mut self, update: <Self::State as StateBackend<H>>::Transaction) -> sp_blockchain::Result<()>;
 
 	/// Inject storage data into the database replacing any existing data.
-	fn reset_storage(&mut self, storage: Storage) -> sp_blockchain::Result<Block::Hash>;
+	fn reset_storage(&mut self, storage: Storage) -> sp_blockchain::Result<H::Out>;
 
 	/// Set storage changes.
 	fn update_storage(
@@ -150,10 +145,7 @@ pub trait BlockImportOperation<Block: BlockT> {
 	) -> sp_blockchain::Result<()>;
 
 	/// Inject changes trie data into the database.
-	fn update_changes_trie(
-		&mut self,
-		update: ChangesTrieTransaction<HasherFor<Block>, NumberFor<Block>>,
-	) -> sp_blockchain::Result<()>;
+	fn update_changes_trie(&mut self, update: ChangesTrieTransaction<H, NumberFor<Block>>) -> sp_blockchain::Result<()>;
 
 	/// Insert auxiliary keys.
 	///
@@ -162,18 +154,13 @@ pub trait BlockImportOperation<Block: BlockT> {
 		where I: IntoIterator<Item=(Vec<u8>, Option<Vec<u8>>)>;
 
 	/// Mark a block as finalized.
-	fn mark_finalized(
-		&mut self,
-		id: BlockId<Block>,
-		justification: Option<Justification>,
-	) -> sp_blockchain::Result<()>;
-	/// Mark a block as new head. If both block import and set head are specified, set head
-	/// overrides block import's best block rule.
+	fn mark_finalized(&mut self, id: BlockId<Block>, justification: Option<Justification>) -> sp_blockchain::Result<()>;
+	/// Mark a block as new head. If both block import and set head are specified, set head overrides block import's best block rule.
 	fn mark_head(&mut self, id: BlockId<Block>) -> sp_blockchain::Result<()>;
 }
 
 /// Finalize Facilities
-pub trait Finalizer<Block: BlockT, B: Backend<Block>> {
+pub trait Finalizer<Block: BlockT, H: Hasher<Out=Block::Hash>, B: Backend<Block, H>> {
 	/// Mark all blocks up to given as finalized in operation.
 	///
 	/// If `justification` is provided it is stored with the given finalized
@@ -185,7 +172,7 @@ pub trait Finalizer<Block: BlockT, B: Backend<Block>> {
 	/// best block should use `SelectChain` instead of the client.
 	fn apply_finality(
 		&self,
-		operation: &mut ClientImportOperation<Block, B>,
+		operation: &mut ClientImportOperation<Block, H, B>,
 		id: BlockId<Block>,
 		justification: Option<Justification>,
 		notify: bool,
@@ -239,17 +226,20 @@ pub trait AuxStore {
 /// should not be pruned. The backend should internally reference-count
 /// its state objects.
 ///
-/// The same applies for live `BlockImportOperation`s: while an import operation building on a
-/// parent `P` is alive, the state for `P` should not be pruned.
-pub trait Backend<Block: BlockT>: AuxStore + Send + Sync {
+/// The same applies for live `BlockImportOperation`s: while an import operation building on a parent `P`
+/// is alive, the state for `P` should not be pruned.
+pub trait Backend<Block, H>: AuxStore + Send + Sync where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+{
 	/// Associated block insertion operation type.
-	type BlockImportOperation: BlockImportOperation<Block, State = Self::State>;
+	type BlockImportOperation: BlockImportOperation<Block, H, State=Self::State>;
 	/// Associated blockchain backend type.
 	type Blockchain: BlockchainBackend<Block>;
 	/// Associated state backend type.
-	type State: StateBackend<HasherFor<Block>> + Send;
+	type State: StateBackend<H>;
 	/// Changes trie storage.
-	type ChangesTrieStorage: PrunableStateChangesTrieStorage<Block>;
+	type ChangesTrieStorage: PrunableStateChangesTrieStorage<Block, H>;
 	/// Offchain workers local storage.
 	type OffchainStorage: OffchainStorage;
 
@@ -259,11 +249,7 @@ pub trait Backend<Block: BlockT>: AuxStore + Send + Sync {
 	fn begin_operation(&self) -> sp_blockchain::Result<Self::BlockImportOperation>;
 
 	/// Note an operation to contain state transition.
-	fn begin_state_operation(
-		&self,
-		operation: &mut Self::BlockImportOperation,
-		block: BlockId<Block>,
-	) -> sp_blockchain::Result<()>;
+	fn begin_state_operation(&self, operation: &mut Self::BlockImportOperation, block: BlockId<Block>) -> sp_blockchain::Result<()>;
 
 	/// Commit block insertion.
 	fn commit_operation(&self, transaction: Self::BlockImportOperation) -> sp_blockchain::Result<()>;
@@ -271,11 +257,7 @@ pub trait Backend<Block: BlockT>: AuxStore + Send + Sync {
 	/// Finalize block with given Id.
 	///
 	/// This should only be called if the parent of the given block has been finalized.
-	fn finalize_block(
-		&self,
-		block: BlockId<Block>,
-		justification: Option<Justification>,
-	) -> sp_blockchain::Result<()>;
+	fn finalize_block(&self, block: BlockId<Block>, justification: Option<Justification>) -> sp_blockchain::Result<()>;
 
 	/// Returns reference to blockchain backend.
 	fn blockchain(&self) -> &Self::Blockchain;
@@ -339,8 +321,8 @@ pub trait Backend<Block: BlockT>: AuxStore + Send + Sync {
 }
 
 /// Changes trie storage that supports pruning.
-pub trait PrunableStateChangesTrieStorage<Block: BlockT>:
-	StateChangesTrieStorage<HasherFor<Block>, NumberFor<Block>>
+pub trait PrunableStateChangesTrieStorage<Block: BlockT, H: Hasher>:
+	StateChangesTrieStorage<H, NumberFor<Block>>
 {
 	/// Get number block of oldest, non-pruned changes trie.
 	fn oldest_changes_trie_block(
@@ -351,10 +333,18 @@ pub trait PrunableStateChangesTrieStorage<Block: BlockT>:
 }
 
 /// Mark for all Backend implementations, that are making use of state data, stored locally.
-pub trait LocalBackend<Block: BlockT>: Backend<Block> {}
+pub trait LocalBackend<Block, H>: Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+{}
 
 /// Mark for all Backend implementations, that are fetching required state data from remote nodes.
-pub trait RemoteBackend<Block: BlockT>: Backend<Block> {
+pub trait RemoteBackend<Block, H>: Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+{
 	/// Returns true if the state for given block is available locally.
 	fn is_local_state_available(&self, block: &BlockId<Block>) -> bool;
 

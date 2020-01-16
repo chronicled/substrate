@@ -36,6 +36,7 @@ use sc_client::{
 	light::{fetcher::Fetcher, blockchain::RemoteBlockchain},
 };
 use jsonrpc_pubsub::{typed::Subscriber, SubscriptionId};
+use sp_core::{H256, Blake2Hasher};
 use sp_rpc::{number::NumberOrHex, list::ListOrValue};
 use sp_runtime::{
 	generic::{BlockId, SignedBlock},
@@ -49,9 +50,9 @@ pub use sc_rpc_api::chain::*;
 /// Blockchain backend API
 trait ChainBackend<B, E, Block: BlockT, RA>: Send + Sync + 'static
 	where
-		Block: BlockT + 'static,
-		B: sc_client_api::backend::Backend<Block> + Send + Sync + 'static,
-		E: sc_client::CallExecutor<Block> + Send + Sync + 'static,
+		Block: BlockT<Hash=H256> + 'static,
+		B: sc_client_api::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
+		E: sc_client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
 {
 	/// Get client reference.
 	fn client(&self) -> &Arc<Client<B, E, Block, RA>>;
@@ -154,9 +155,9 @@ pub fn new_full<B, E, Block: BlockT, RA>(
 	subscriptions: Subscriptions,
 ) -> Chain<B, E, Block, RA>
 	where
-		Block: BlockT + 'static,
-		B: sc_client_api::backend::Backend<Block> + Send + Sync + 'static,
-		E: sc_client::CallExecutor<Block> + Send + Sync + 'static + Clone,
+		Block: BlockT<Hash=H256> + 'static,
+		B: sc_client_api::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
+		E: sc_client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static + Clone,
 		RA: Send + Sync + 'static,
 {
 	Chain {
@@ -172,9 +173,9 @@ pub fn new_light<B, E, Block: BlockT, RA, F: Fetcher<Block>>(
 	fetcher: Arc<F>,
 ) -> Chain<B, E, Block, RA>
 	where
-		Block: BlockT + 'static,
-		B: sc_client_api::backend::Backend<Block> + Send + Sync + 'static,
-		E: sc_client::CallExecutor<Block> + Send + Sync + 'static + Clone,
+		Block: BlockT<Hash=H256> + 'static,
+		B: sc_client_api::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
+		E: sc_client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static + Clone,
 		RA: Send + Sync + 'static,
 		F: Send + Sync + 'static,
 {
@@ -194,9 +195,9 @@ pub struct Chain<B, E, Block: BlockT, RA> {
 }
 
 impl<B, E, Block, RA> ChainApi<NumberFor<Block>, Block::Hash, Block::Header, SignedBlock<Block>> for Chain<B, E, Block, RA> where
-	Block: BlockT + 'static,
-	B: sc_client_api::backend::Backend<Block> + Send + Sync + 'static,
-	E: sc_client::CallExecutor<Block> + Send + Sync + 'static,
+	Block: BlockT<Hash=H256> + 'static,
+	B: sc_client_api::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
+	E: sc_client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
 	RA: Send + Sync + 'static
 {
 	type Metadata = crate::metadata::Metadata;
@@ -254,9 +255,9 @@ fn subscribe_headers<B, E, Block, RA, F, G, S, ERR>(
 	best_block_hash: G,
 	stream: F,
 ) where
-	Block: BlockT + 'static,
-	B: sc_client_api::backend::Backend<Block> + Send + Sync + 'static,
-	E: sc_client::CallExecutor<Block> + Send + Sync + 'static,
+	Block: BlockT<Hash=H256> + 'static,
+	B: sc_client_api::backend::Backend<Block, Blake2Hasher> + Send + Sync + 'static,
+	E: sc_client::CallExecutor<Block, Blake2Hasher> + Send + Sync + 'static,
 	F: FnOnce() -> S,
 	G: FnOnce() -> Block::Hash,
 	ERR: ::std::fmt::Debug,

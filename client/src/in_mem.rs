@@ -24,13 +24,11 @@ use sp_core::offchain::storage::{
 	InMemOffchainStorage as OffchainStorage
 };
 use sp_runtime::generic::{BlockId, DigestItem};
-use sp_runtime::traits::{Block as BlockT, Header as HeaderT, Zero, NumberFor, HasherFor};
+use sp_runtime::traits::{Block as BlockT, Header as HeaderT, Zero, NumberFor};
 use sp_runtime::{Justification, Storage};
-use sp_state_machine::{
-	InMemoryChangesTrieStorage, ChangesTrieAnchorBlockId, ChangesTrieTransaction,
-	InMemoryBackend, Backend as StateBackend,
-};
-use hash_db::Prefix;
+use sp_state_machine::backend::{Backend as StateBackend, InMemory};
+use sp_state_machine::{self, InMemoryChangesTrieStorage, ChangesTrieAnchorBlockId, ChangesTrieTransaction};
+use hash_db::{Hasher, Prefix};
 use sp_trie::MemoryDB;
 use sp_blockchain::{CachedHeaderMetadata, HeaderMetadata};
 
@@ -461,21 +459,25 @@ impl<Block: BlockT> sc_client_api::light::Storage<Block> for Blockchain<Block>
 }
 
 /// In-memory operation.
-pub struct BlockImportOperation<Block: BlockT> {
+pub struct BlockImportOperation<Block: BlockT, H: Hasher> {
 	pending_block: Option<PendingBlock<Block>>,
 	pending_cache: HashMap<CacheKeyId, Vec<u8>>,
-	old_state: InMemoryBackend<HasherFor<Block>>,
-	new_state: Option<InMemoryBackend<HasherFor<Block>>>,
-	changes_trie_update: Option<MemoryDB<HasherFor<Block>>>,
+	old_state: InMemory<H>,
+	new_state: Option<InMemory<H>>,
+	changes_trie_update: Option<MemoryDB<H>>,
 	aux: Vec<(Vec<u8>, Option<Vec<u8>>)>,
 	finalized_blocks: Vec<(BlockId<Block>, Option<Justification>)>,
 	set_head: Option<BlockId<Block>>,
 }
 
-impl<Block: BlockT> backend::BlockImportOperation<Block> for BlockImportOperation<Block> where
-	Block::Hash: Ord,
+impl<Block, H> backend::BlockImportOperation<Block, H> for BlockImportOperation<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+
+	H::Out: Ord,
 {
-	type State = InMemoryBackend<HasherFor<Block>>;
+	type State = InMemory<H>;
 
 	fn state(&self) -> sp_blockchain::Result<Option<&Self::State>> {
 		Ok(Some(&self.old_state))
@@ -500,23 +502,17 @@ impl<Block: BlockT> backend::BlockImportOperation<Block> for BlockImportOperatio
 		self.pending_cache = cache;
 	}
 
-	fn update_db_storage(
-		&mut self,
-		update: <InMemoryBackend<HasherFor<Block>> as StateBackend<HasherFor<Block>>>::Transaction,
-	) -> sp_blockchain::Result<()> {
+	fn update_db_storage(&mut self, update: <InMemory<H> as StateBackend<H>>::Transaction) -> sp_blockchain::Result<()> {
 		self.new_state = Some(self.old_state.update(update));
 		Ok(())
 	}
 
-	fn update_changes_trie(
-		&mut self,
-		update: ChangesTrieTransaction<HasherFor<Block>, NumberFor<Block>>,
-	) -> sp_blockchain::Result<()> {
+	fn update_changes_trie(&mut self, update: ChangesTrieTransaction<H, NumberFor<Block>>) -> sp_blockchain::Result<()> {
 		self.changes_trie_update = Some(update.0);
 		Ok(())
 	}
 
-	fn reset_storage(&mut self, storage: Storage) -> sp_blockchain::Result<Block::Hash> {
+	fn reset_storage(&mut self, storage: Storage) -> sp_blockchain::Result<H::Out> {
 		check_genesis_storage(&storage)?;
 
 		let child_delta = storage.children.into_iter()
@@ -528,7 +524,7 @@ impl<Block: BlockT> backend::BlockImportOperation<Block> for BlockImportOperatio
 			child_delta
 		);
 
-		self.new_state = Some(InMemoryBackend::from(transaction));
+		self.new_state = Some(InMemory::from(transaction));
 		Ok(root)
 	}
 
@@ -547,11 +543,7 @@ impl<Block: BlockT> backend::BlockImportOperation<Block> for BlockImportOperatio
 		Ok(())
 	}
 
-	fn mark_finalized(
-		&mut self,
-		block: BlockId<Block>,
-		justification: Option<Justification>,
-	) -> sp_blockchain::Result<()> {
+	fn mark_finalized(&mut self, block: BlockId<Block>, justification: Option<Justification>) -> sp_blockchain::Result<()> {
 		self.finalized_blocks.push((block, justification));
 		Ok(())
 	}
@@ -567,16 +559,26 @@ impl<Block: BlockT> backend::BlockImportOperation<Block> for BlockImportOperatio
 ///
 /// > **Warning**: Doesn't support all the features necessary for a proper database. Only use this
 /// > struct for testing purposes. Do **NOT** use in production.
-pub struct Backend<Block: BlockT> where Block::Hash: Ord {
-	states: RwLock<HashMap<Block::Hash, InMemoryBackend<HasherFor<Block>>>>,
-	changes_trie_storage: ChangesTrieStorage<Block>,
+pub struct Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+	H::Out: Ord,
+{
+	states: RwLock<HashMap<Block::Hash, InMemory<H>>>,
+	changes_trie_storage: ChangesTrieStorage<Block, H>,
 	blockchain: Blockchain<Block>,
 	import_lock: RwLock<()>,
 }
 
-impl<Block: BlockT> Backend<Block> where Block::Hash: Ord {
+impl<Block, H> Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+	H::Out: Ord,
+{
 	/// Create a new instance of in-mem backend.
-	pub fn new() -> Self {
+	pub fn new() -> Backend<Block, H> {
 		Backend {
 			states: RwLock::new(HashMap::new()),
 			changes_trie_storage: ChangesTrieStorage(InMemoryChangesTrieStorage::new()),
@@ -586,7 +588,12 @@ impl<Block: BlockT> Backend<Block> where Block::Hash: Ord {
 	}
 }
 
-impl<Block: BlockT> backend::AuxStore for Backend<Block> where Block::Hash: Ord {
+impl<Block, H> backend::AuxStore for Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+	H::Out: Ord,
+{
 	fn insert_aux<
 		'a,
 		'b: 'a,
@@ -602,11 +609,16 @@ impl<Block: BlockT> backend::AuxStore for Backend<Block> where Block::Hash: Ord 
 	}
 }
 
-impl<Block: BlockT> backend::Backend<Block> for Backend<Block> where Block::Hash: Ord {
-	type BlockImportOperation = BlockImportOperation<Block>;
+impl<Block, H> backend::Backend<Block, H> for Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+	H::Out: Ord,
+{
+	type BlockImportOperation = BlockImportOperation<Block, H>;
 	type Blockchain = Blockchain<Block>;
-	type State = InMemoryBackend<HasherFor<Block>>;
-	type ChangesTrieStorage = ChangesTrieStorage<Block>;
+	type State = InMemory<H>;
+	type ChangesTrieStorage = ChangesTrieStorage<Block, H>;
 	type OffchainStorage = OffchainStorage;
 
 	fn begin_operation(&self) -> sp_blockchain::Result<Self::BlockImportOperation> {
@@ -623,11 +635,7 @@ impl<Block: BlockT> backend::Backend<Block> for Backend<Block> where Block::Hash
 		})
 	}
 
-	fn begin_state_operation(
-		&self,
-		operation: &mut Self::BlockImportOperation,
-		block: BlockId<Block>,
-	) -> sp_blockchain::Result<()> {
+	fn begin_state_operation(&self, operation: &mut Self::BlockImportOperation, block: BlockId<Block>) -> sp_blockchain::Result<()> {
 		operation.old_state = self.state_at(block)?;
 		Ok(())
 	}
@@ -672,11 +680,7 @@ impl<Block: BlockT> backend::Backend<Block> for Backend<Block> where Block::Hash
 		Ok(())
 	}
 
-	fn finalize_block(
-		&self,
-		block: BlockId<Block>,
-		justification: Option<Justification>,
-	) -> sp_blockchain::Result<()> {
+	fn finalize_block(&self, block: BlockId<Block>, justification: Option<Justification>) -> sp_blockchain::Result<()> {
 		self.blockchain.finalize_header(block, justification)
 	}
 
@@ -723,9 +727,19 @@ impl<Block: BlockT> backend::Backend<Block> for Backend<Block> where Block::Hash
 	}
 }
 
-impl<Block: BlockT> backend::LocalBackend<Block> for Backend<Block> where Block::Hash: Ord {}
+impl<Block, H> backend::LocalBackend<Block, H> for Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+	H::Out: Ord,
+{}
 
-impl<Block: BlockT> backend::RemoteBackend<Block> for Backend<Block> where Block::Hash: Ord {
+impl<Block, H> backend::RemoteBackend<Block, H> for Backend<Block, H>
+where
+	Block: BlockT,
+	H: Hasher<Out=Block::Hash>,
+	H::Out: Ord,
+{
 	fn is_local_state_available(&self, block: &BlockId<Block>) -> bool {
 		self.blockchain.expect_block_number_from_id(block)
 			.map(|num| num.is_zero())
@@ -738,11 +752,8 @@ impl<Block: BlockT> backend::RemoteBackend<Block> for Backend<Block> where Block
 }
 
 /// Prunable in-memory changes trie storage.
-pub struct ChangesTrieStorage<Block: BlockT>(
-	InMemoryChangesTrieStorage<HasherFor<Block>, NumberFor<Block>>
-);
-
-impl<Block: BlockT> backend::PrunableStateChangesTrieStorage<Block> for ChangesTrieStorage<Block> {
+pub struct ChangesTrieStorage<Block: BlockT, H: Hasher>(InMemoryChangesTrieStorage<H, NumberFor<Block>>);
+impl<Block: BlockT, H: Hasher> backend::PrunableStateChangesTrieStorage<Block, H> for ChangesTrieStorage<Block, H> {
 	fn oldest_changes_trie_block(
 		&self,
 		_config: &ChangesTrieConfiguration,
@@ -752,47 +763,45 @@ impl<Block: BlockT> backend::PrunableStateChangesTrieStorage<Block> for ChangesT
 	}
 }
 
-impl<Block: BlockT> sp_state_machine::ChangesTrieRootsStorage<HasherFor<Block>, NumberFor<Block>> for
-	ChangesTrieStorage<Block>
+impl<Block, H> sp_state_machine::ChangesTrieRootsStorage<H, NumberFor<Block>> for ChangesTrieStorage<Block, H>
+	where
+		Block: BlockT,
+		H: Hasher,
 {
 	fn build_anchor(
 		&self,
-		_hash: Block::Hash,
-	) -> Result<sp_state_machine::ChangesTrieAnchorBlockId<Block::Hash, NumberFor<Block>>, String> {
+		_hash: H::Out,
+	) -> Result<sp_state_machine::ChangesTrieAnchorBlockId<H::Out, NumberFor<Block>>, String> {
 		Err("Dummy implementation".into())
 	}
 
 	fn root(
 		&self,
-		_anchor: &ChangesTrieAnchorBlockId<Block::Hash, NumberFor<Block>>,
+		_anchor: &ChangesTrieAnchorBlockId<H::Out, NumberFor<Block>>,
 		_block: NumberFor<Block>,
-	) -> Result<Option<Block::Hash>, String> {
+	) -> Result<Option<H::Out>, String> {
 		Err("Dummy implementation".into())
 	}
 }
 
-impl<Block: BlockT> sp_state_machine::ChangesTrieStorage<HasherFor<Block>, NumberFor<Block>> for
-	ChangesTrieStorage<Block>
+impl<Block, H> sp_state_machine::ChangesTrieStorage<H, NumberFor<Block>> for ChangesTrieStorage<Block, H>
+	where
+		Block: BlockT,
+		H: Hasher,
 {
-	fn as_roots_storage(&self)
-		-> &dyn sp_state_machine::ChangesTrieRootsStorage<HasherFor<Block>, NumberFor<Block>>
-	{
+	fn as_roots_storage(&self) -> &dyn sp_state_machine::ChangesTrieRootsStorage<H, NumberFor<Block>> {
 		self
 	}
 
 	fn with_cached_changed_keys(
 		&self,
-		_root: &Block::Hash,
+		_root: &H::Out,
 		_functor: &mut dyn FnMut(&HashMap<Option<Vec<u8>>, HashSet<Vec<u8>>>),
 	) -> bool {
 		false
 	}
 
-	fn get(
-		&self,
-		key: &Block::Hash,
-		prefix: Prefix,
-	) -> Result<Option<sp_state_machine::DBValue>, String> {
+	fn get(&self, key: &H::Out, prefix: Prefix) -> Result<Option<sp_state_machine::DBValue>, String> {
 		self.0.get(key, prefix)
 	}
 }
@@ -814,8 +823,10 @@ pub fn check_genesis_storage(storage: &Storage) -> sp_blockchain::Result<()> {
 mod tests {
 	use sp_core::offchain::{OffchainStorage, storage::InMemOffchainStorage};
 	use std::sync::Arc;
+	use substrate_test_runtime_client;
+	use sp_core::Blake2Hasher;
 
-	type TestBackend = substrate_test_runtime_client::sc_client::in_mem::Backend<substrate_test_runtime_client::runtime::Block>;
+	type TestBackend = substrate_test_runtime_client::sc_client::in_mem::Backend<substrate_test_runtime_client::runtime::Block, Blake2Hasher>;
 
 	#[test]
 	fn test_leaves_with_complex_block_tree() {

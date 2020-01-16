@@ -31,23 +31,17 @@ use slots::Slots;
 pub use aux_schema::{check_equivocation, MAX_SLOT_CAPACITY, PRUNING_BOUND};
 
 use codec::{Decode, Encode};
-use sp_consensus::{BlockImport, Proposer, SyncOracle, SelectChain, CanAuthorWith, SlotData, RecordProof};
+use sp_consensus::{BlockImport, Proposer, SyncOracle, SelectChain, CanAuthorWith, SlotData};
 use futures::{prelude::*, future::{self, Either}};
 use futures_timer::Delay;
 use sp_inherents::{InherentData, InherentDataProviders};
 use log::{debug, error, info, warn};
 use sp_runtime::generic::BlockId;
-use sp_runtime::traits::{Block as BlockT, Header, HasherFor, NumberFor};
-use sp_api::{ProvideRuntimeApi, ApiRef};
+use sp_runtime::traits::{ApiRef, Block as BlockT, Header, ProvideRuntimeApi};
 use std::{fmt::Debug, ops::Deref, pin::Pin, sync::Arc, time::{Instant, Duration}};
 use sc_telemetry::{telemetry, CONSENSUS_DEBUG, CONSENSUS_WARN, CONSENSUS_INFO};
 use parking_lot::Mutex;
-
-/// The changes that need to applied to the storage to create the state for a block.
-///
-/// See [`state_machine::StorageChanges`] for more information.
-pub type StorageChanges<Transaction, Block> =
-	sp_state_machine::StorageChanges<Transaction, HasherFor<Block>, NumberFor<Block>>;
+use sc_client_api;
 
 /// A worker that should be invoked at every new slot.
 pub trait SlotWorker<B: BlockT> {
@@ -64,8 +58,7 @@ pub trait SlotWorker<B: BlockT> {
 /// out if block production takes too long.
 pub trait SimpleSlotWorker<B: BlockT> {
 	/// A handle to a `BlockImport`.
-	type BlockImport: BlockImport<B, Transaction = <Self::Proposer as Proposer<B>>::Transaction>
-		+ Send + 'static;
+	type BlockImport: BlockImport<B> + Send + 'static;
 
 	/// A handle to a `SyncOracle`.
 	type SyncOracle: SyncOracle;
@@ -101,26 +94,15 @@ pub trait SimpleSlotWorker<B: BlockT> {
 	) -> Option<Self::Claim>;
 
 	/// Return the pre digest data to include in a block authored with the given claim.
-	fn pre_digest_data(
-		&self,
-		slot_number: u64,
-		claim: &Self::Claim,
-	) -> Vec<sp_runtime::DigestItem<B::Hash>>;
+	fn pre_digest_data(&self, slot_number: u64, claim: &Self::Claim) -> Vec<sp_runtime::DigestItem<B::Hash>>;
 
 	/// Returns a function which produces a `BlockImportParams`.
-	fn block_import_params(&self) -> Box<
-		dyn Fn(
-			B::Header,
-			&B::Hash,
-			Vec<B::Extrinsic>,
-			StorageChanges<<Self::BlockImport as BlockImport<B>>::Transaction, B>,
-			Self::Claim,
-		) -> sp_consensus::BlockImportParams<
-			B,
-			<Self::BlockImport as BlockImport<B>>::Transaction
-		>
-		+ Send
-	>;
+	fn block_import_params(&self) -> Box<dyn Fn(
+		B::Header,
+		&B::Hash,
+		Vec<B::Extrinsic>,
+		Self::Claim,
+	) -> sp_consensus::BlockImportParams<B> + Send>;
 
 	/// Whether to force authoring if offline.
 	fn force_authoring(&self) -> bool;
@@ -154,7 +136,7 @@ pub trait SimpleSlotWorker<B: BlockT> {
 	fn on_slot(&mut self, chain_head: B::Header, slot_info: SlotInfo)
 		-> Pin<Box<dyn Future<Output = Result<(), sp_consensus::Error>> + Send>> where
 		Self: Send + Sync,
-		<Self::Proposer as Proposer<B>>::Proposal: Unpin + Send + 'static,
+		<Self::Proposer as Proposer<B>>::Create: Unpin + Send + 'static,
 	{
 		let (timestamp, slot_number, slot_duration) =
 			(slot_info.timestamp, slot_info.number, slot_info.duration);
@@ -240,7 +222,6 @@ pub trait SimpleSlotWorker<B: BlockT> {
 				logs,
 			},
 			slot_remaining_duration,
-			RecordProof::No,
 		).map_err(|e| sp_consensus::Error::ClientImport(format!("{:?}", e)));
 		let delay: Box<dyn Future<Output=()> + Unpin + Send> = match proposing_remaining_duration {
 			Some(r) => Box::new(Delay::new(r)),
@@ -266,8 +247,8 @@ pub trait SimpleSlotWorker<B: BlockT> {
 		let block_import = self.block_import();
 		let logging_target = self.logging_target();
 
-		Box::pin(proposal_work.map_ok(move |(proposal, claim)| {
-			let (header, body) = proposal.block.deconstruct();
+		Box::pin(proposal_work.map_ok(move |(block, claim)| {
+			let (header, body) = block.deconstruct();
 			let header_num = *header.number();
 			let header_hash = header.hash();
 			let parent_hash = *header.parent_hash();
@@ -276,15 +257,13 @@ pub trait SimpleSlotWorker<B: BlockT> {
 				header,
 				&header_hash,
 				body,
-				proposal.storage_changes,
 				claim,
 			);
 
-			info!(
-				"Pre-sealed block for proposal at {}. Hash now {:?}, previously {:?}.",
-				header_num,
-				block_import_params.post_header().hash(),
-				header_hash,
+			info!("Pre-sealed block for proposal at {}. Hash now {:?}, previously {:?}.",
+					header_num,
+					block_import_params.post_header().hash(),
+					header_hash,
 			);
 
 			telemetry!(CONSENSUS_INFO; "slots.pre_sealed_block";
@@ -439,7 +418,7 @@ impl<T: Clone> SlotDuration<T> {
 	/// compile-time constant.
 	pub fn get_or_compute<B: BlockT, C, CB>(client: &C, cb: CB) -> sp_blockchain::Result<Self> where
 		C: sc_client_api::backend::AuxStore,
-		C: ProvideRuntimeApi<B>,
+		C: ProvideRuntimeApi,
 		CB: FnOnce(ApiRef<C::Api>, &BlockId<B>) -> sp_blockchain::Result<T>,
 		T: SlotData + Encode + Decode + Debug,
 	{

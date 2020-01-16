@@ -16,10 +16,8 @@
 
 //! Block import helpers.
 
-use sp_runtime::{
-	Justification,
-	traits::{Block as BlockT, DigestItemFor, Header as HeaderT, NumberFor, HasherFor},
-};
+use sp_runtime::traits::{Block as BlockT, DigestItemFor, Header as HeaderT, NumberFor};
+use sp_runtime::Justification;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -112,7 +110,7 @@ pub struct BlockCheckParams<Block: BlockT> {
 }
 
 /// Data required to import a Block.
-pub struct BlockImportParams<Block: BlockT, Transaction> {
+pub struct BlockImportParams<Block: BlockT> {
 	/// Origin of the Block
 	pub origin: BlockOrigin,
 	/// The header, without consensus post-digests applied. This should be in the same
@@ -132,13 +130,8 @@ pub struct BlockImportParams<Block: BlockT, Transaction> {
 	/// Digest items that have been added after the runtime for external
 	/// work, like a consensus signature.
 	pub post_digests: Vec<DigestItemFor<Block>>,
-	/// The body of the block.
+	/// Block's body
 	pub body: Option<Vec<Block::Extrinsic>>,
-	/// The changes to the storage to create the state for the block. If this is `Some(_)`,
-	/// the block import will not need to re-execute the block for importing it.
-	pub storage_changes: Option<
-		sp_state_machine::StorageChanges<Transaction, HasherFor<Block>, NumberFor<Block>>
-	>,
 	/// Is this block finalized already?
 	/// `true` implies instant finality.
 	pub finalized: bool,
@@ -155,7 +148,7 @@ pub struct BlockImportParams<Block: BlockT, Transaction> {
 	pub import_existing: bool,
 }
 
-impl<Block: BlockT, Transaction> BlockImportParams<Block, Transaction> {
+impl<Block: BlockT> BlockImportParams<Block> {
 	/// Deconstruct the justified header into parts.
 	pub fn into_inner(self)
 		-> (
@@ -163,8 +156,7 @@ impl<Block: BlockT, Transaction> BlockImportParams<Block, Transaction> {
 			<Block as BlockT>::Header,
 			Option<Justification>,
 			Vec<DigestItemFor<Block>>,
-			Option<Vec<Block::Extrinsic>>,
-			Option<sp_state_machine::StorageChanges<Transaction, HasherFor<Block>, NumberFor<Block>>>,
+			Option<Vec<<Block as BlockT>::Extrinsic>>,
 			bool,
 			Vec<(Vec<u8>, Option<Vec<u8>>)>,
 		) {
@@ -174,7 +166,6 @@ impl<Block: BlockT, Transaction> BlockImportParams<Block, Transaction> {
 			self.justification,
 			self.post_digests,
 			self.body,
-			self.storage_changes,
 			self.finalized,
 			self.auxiliary,
 		)
@@ -195,34 +186,11 @@ impl<Block: BlockT, Transaction> BlockImportParams<Block, Transaction> {
 			})
 		}
 	}
-
-	/// Auxiliary function for "converting" the transaction type.
-	///
-	/// Actually this just sets `storage_changes` to `None` and makes rustc think that `Self` now
-	/// uses a different transaction type.
-	pub fn convert_transaction<Transaction2>(self) -> BlockImportParams<Block, Transaction2> {
-		BlockImportParams {
-			origin: self.origin,
-			header: self.header,
-			justification: self.justification,
-			post_digests: self.post_digests,
-			body: self.body,
-			storage_changes: None,
-			finalized: self.finalized,
-			auxiliary: self.auxiliary,
-			allow_missing_state: self.allow_missing_state,
-			fork_choice: self.fork_choice,
-			import_existing: self.import_existing,
-		}
-	}
 }
 
 /// Block import trait.
 pub trait BlockImport<B: BlockT> {
-	/// The error type.
-	type Error: std::error::Error + Send + 'static;
-	/// The transaction type used by the backend.
-	type Transaction;
+	type Error: ::std::error::Error + Send + 'static;
 
 	/// Check block preconditions.
 	fn check_block(
@@ -235,14 +203,13 @@ pub trait BlockImport<B: BlockT> {
 	/// Cached data can be accessed through the blockchain cache.
 	fn import_block(
 		&mut self,
-		block: BlockImportParams<B, Self::Transaction>,
+		block: BlockImportParams<B>,
 		cache: HashMap<CacheKeyId, Vec<u8>>,
 	) -> Result<ImportResult, Self::Error>;
 }
 
-impl<B: BlockT, Transaction> BlockImport<B> for crate::import_queue::BoxBlockImport<B, Transaction> {
+impl<B: BlockT> BlockImport<B> for crate::import_queue::BoxBlockImport<B> {
 	type Error = crate::error::Error;
-	type Transaction = Transaction;
 
 	/// Check block preconditions.
 	fn check_block(
@@ -257,18 +224,17 @@ impl<B: BlockT, Transaction> BlockImport<B> for crate::import_queue::BoxBlockImp
 	/// Cached data can be accessed through the blockchain cache.
 	fn import_block(
 		&mut self,
-		block: BlockImportParams<B, Transaction>,
+		block: BlockImportParams<B>,
 		cache: HashMap<CacheKeyId, Vec<u8>>,
 	) -> Result<ImportResult, Self::Error> {
 		(**self).import_block(block, cache)
 	}
 }
 
-impl<B: BlockT, T, E: std::error::Error + Send + 'static, Transaction> BlockImport<B> for Arc<T>
-	where for<'r> &'r T: BlockImport<B, Error = E, Transaction = Transaction>
+impl<B: BlockT, T, E: std::error::Error + Send + 'static> BlockImport<B> for Arc<T>
+where for<'r> &'r T: BlockImport<B, Error = E>
 {
 	type Error = E;
-	type Transaction = Transaction;
 
 	fn check_block(
 		&mut self,
@@ -279,7 +245,7 @@ impl<B: BlockT, T, E: std::error::Error + Send + 'static, Transaction> BlockImpo
 
 	fn import_block(
 		&mut self,
-		block: BlockImportParams<B, Transaction>,
+		block: BlockImportParams<B>,
 		cache: HashMap<CacheKeyId, Vec<u8>>,
 	) -> Result<ImportResult, Self::Error> {
 		(&**self).import_block(block, cache)
@@ -288,7 +254,7 @@ impl<B: BlockT, T, E: std::error::Error + Send + 'static, Transaction> BlockImpo
 
 /// Justification import trait
 pub trait JustificationImport<B: BlockT> {
-	type Error: std::error::Error + Send + 'static;
+	type Error: ::std::error::Error + Send + 'static;
 
 	/// Called by the import queue when it is started. Returns a list of justifications to request
 	/// from the network.

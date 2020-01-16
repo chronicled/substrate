@@ -48,6 +48,7 @@ use sc_network::{
 };
 use log::{log, warn, debug, error, Level};
 use codec::{Encode, Decode};
+use sp_core::{Blake2Hasher, H256};
 use sp_runtime::generic::BlockId;
 use sp_runtime::traits::{NumberFor, Block as BlockT};
 
@@ -146,11 +147,11 @@ impl futures03::task::Spawn for SpawnTaskHandle {
 pub trait AbstractService: 'static + Future<Item = (), Error = Error> +
 	Executor<Box<dyn Future<Item = (), Error = ()> + Send>> + Send {
 	/// Type of block of this chain.
-	type Block: BlockT;
+	type Block: BlockT<Hash = H256>;
 	/// Backend storage for the client.
-	type Backend: 'static + sc_client_api::backend::Backend<Self::Block>;
+	type Backend: 'static + sc_client_api::backend::Backend<Self::Block, Blake2Hasher>;
 	/// How to execute calls towards the runtime.
-	type CallExecutor: 'static + sc_client::CallExecutor<Self::Block> + Send + Sync + Clone;
+	type CallExecutor: 'static + sc_client::CallExecutor<Self::Block, Blake2Hasher> + Send + Sync + Clone;
 	/// API that the runtime provides.
 	type RuntimeApi: Send + Sync;
 	/// Chain selection algorithm.
@@ -199,8 +200,7 @@ pub trait AbstractService: 'static + Future<Item = (), Error = Error> +
 	fn select_chain(&self) -> Option<Self::SelectChain>;
 
 	/// Get shared network instance.
-	fn network(&self)
-		-> Arc<NetworkService<Self::Block, Self::NetworkSpecialization, <Self::Block as BlockT>::Hash>>;
+	fn network(&self) -> Arc<NetworkService<Self::Block, Self::NetworkSpecialization, H256>>;
 
 	/// Returns a receiver that periodically receives a status of the network.
 	fn network_status(&self, interval: Duration) -> mpsc::UnboundedReceiver<(NetworkStatus<Self::Block>, NetworkState)>;
@@ -214,11 +214,11 @@ pub trait AbstractService: 'static + Future<Item = (), Error = Error> +
 
 impl<TBl, TBackend, TExec, TRtApi, TSc, TNetSpec, TExPool, TOc> AbstractService for
 	Service<TBl, Client<TBackend, TExec, TBl, TRtApi>, TSc, NetworkStatus<TBl>,
-		NetworkService<TBl, TNetSpec, TBl::Hash>, TExPool, TOc>
+		NetworkService<TBl, TNetSpec, H256>, TExPool, TOc>
 where
-	TBl: BlockT,
-	TBackend: 'static + sc_client_api::backend::Backend<TBl>,
-	TExec: 'static + sc_client::CallExecutor<TBl> + Send + Sync + Clone,
+	TBl: BlockT<Hash = H256>,
+	TBackend: 'static + sc_client_api::backend::Backend<TBl, Blake2Hasher>,
+	TExec: 'static + sc_client::CallExecutor<TBl, Blake2Hasher> + Send + Sync + Clone,
 	TRtApi: 'static + Send + Sync,
 	TSc: sp_consensus::SelectChain<TBl> + 'static + Clone + Send,
 	TExPool: 'static + TransactionPool<Block = TBl>
@@ -288,9 +288,7 @@ where
 		self.select_chain.clone()
 	}
 
-	fn network(&self)
-		-> Arc<NetworkService<Self::Block, Self::NetworkSpecialization, <Self::Block as BlockT>::Hash>>
-	{
+	fn network(&self) -> Arc<NetworkService<Self::Block, Self::NetworkSpecialization, H256>> {
 		self.network.clone()
 	}
 

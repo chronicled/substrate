@@ -289,8 +289,7 @@ pub trait Storage {
 	///
 	/// Returns an `Option` that holds the SCALE encoded hash.
 	fn changes_root(&mut self, parent_hash: &[u8]) -> Option<Vec<u8>> {
-		self.storage_changes_root(parent_hash)
-			.expect("Invalid `parent_hash` given to `changes_root`.")
+		self.storage_changes_root(parent_hash).ok().and_then(|h| h)
 	}
 
 	/// Get the next key in storage after the given one in lexicographic order.

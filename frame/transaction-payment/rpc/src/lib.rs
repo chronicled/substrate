@@ -21,8 +21,10 @@ use codec::{Codec, Decode};
 use sp_blockchain::HeaderBackend;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use sp_runtime::{generic::BlockId, traits::{Block as BlockT, UniqueSaturatedInto}};
-use sp_api::ProvideRuntimeApi;
+use sp_runtime::{
+	generic::BlockId,
+	traits::{Block as BlockT, ProvideRuntimeApi, UniqueSaturatedInto},
+};
 use sp_core::Bytes;
 use pallet_transaction_payment_rpc_runtime_api::CappedDispatchInfo;
 pub use pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi as TransactionPaymentRuntimeApi;
@@ -72,7 +74,9 @@ impl<C, Block, Balance, Extrinsic> TransactionPaymentApi<<Block as BlockT>::Hash
 	for TransactionPayment<C, (Block, Extrinsic)>
 where
 	Block: BlockT,
-	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
+	C: Send + Sync + 'static,
+	C: ProvideRuntimeApi,
+	C: HeaderBackend<Block>,
 	C::Api: TransactionPaymentRuntimeApi<Block, Balance, Extrinsic>,
 	Balance: Codec + UniqueSaturatedInto<u64>,
 	Extrinsic: Codec + Send + Sync + 'static,
