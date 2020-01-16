@@ -71,11 +71,7 @@ pub fn build_transport(
 		let desktop_trans = tcp::TcpConfig::new();
 		let desktop_trans = websocket::WsConfig::new(desktop_trans.clone())
 			.or_transport(desktop_trans);
-		OptionalTransport::some(if let Ok(dns) = dns::DnsConfig::new(desktop_trans.clone()) {
-			dns.boxed()
-		} else {
-			desktop_trans.map_err(dns::DnsErr::Underlying).boxed()
-		})
+		OptionalTransport::some(dns::DnsConfig::new(desktop_trans))
 	} else {
 		OptionalTransport::none()
 	});
@@ -95,7 +91,7 @@ pub fn build_transport(
 	let transport = transport.and_then(move |stream, endpoint| {
 		let upgrade = core::upgrade::SelectUpgrade::new(noise_config, secio_config);
 		core::upgrade::apply(stream, upgrade, endpoint, upgrade::Version::V1)
-			.map(|out| match out? {
+			.and_then(|out| match out {
 				// We negotiated noise
 				EitherOutput::First((remote_id, out)) => {
 					let remote_key = match remote_id {
@@ -114,7 +110,7 @@ pub fn build_transport(
 	#[cfg(target_os = "unknown")]
 	let transport = transport.and_then(move |stream, endpoint| {
 		core::upgrade::apply(stream, secio_config, endpoint, upgrade::Version::V1)
-			.map_ok(|(id, stream)| ((stream, id)))
+			.and_then(|(id, stream)| Ok((stream, id)))
 	});
 
 	// Multiplexing
@@ -125,7 +121,7 @@ pub fn build_transport(
 				.map_outbound(move |muxer| (peer_id2, muxer));
 
 			core::upgrade::apply(stream, upgrade, endpoint, upgrade::Version::V1)
-				.map_ok(|(id, muxer)| (id, core::muxing::StreamMuxerBox::new(muxer)))
+				.map(|(id, muxer)| (id, core::muxing::StreamMuxerBox::new(muxer)))
 		})
 
 		.timeout(Duration::from_secs(20))
