@@ -27,7 +27,7 @@ pub mod error;
 mod builder;
 mod status_sinks;
 
-use std::{io, pin::Pin};
+use std::io;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 use std::collections::HashMap;
@@ -66,7 +66,7 @@ pub use sc_transaction_pool::txpool::Options as TransactionPoolOptions;
 pub use sc_client::FinalityNotifications;
 pub use sc_rpc::Metadata as RpcMetadata;
 #[doc(hidden)]
-pub use std::{ops::Deref, result::Result, sync::Arc};
+pub use std::{ops::Deref, pin::Pin, result::Result, sync::Arc};
 #[doc(hidden)]
 pub use sc_network::{FinalityProofProvider, OnDemand, config::BoxFinalityProofRequestBuilder};
 
@@ -469,7 +469,9 @@ fn build_network_future<
 		});
 
 		// Main network polling.
-		if let Poll::Ready(Ok(())) = Pin::new(&mut network).poll(cx).map_err(|err| {
+		use futures01::{Async, Future};
+
+		if let Ok(Async::Ready(())) = network.poll().map_err(|err| {
 			warn!(target: "service", "Error in network: {:?}", err);
 		}) {
 			return Poll::Ready(());

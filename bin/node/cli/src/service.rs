@@ -114,7 +114,7 @@ macro_rules! new_full {
 	($config:expr, $with_startup_data: expr) => {{
 		use futures::{
 			prelude::*,
-			compat::Future01CompatExt
+			compat::{Future01CompatExt, Stream01CompatExt},
 		};
 		use sc_network::Event;
 
@@ -180,8 +180,9 @@ macro_rules! new_full {
 			service.spawn_essential_task(babe);
 
 			let network = service.network();
-			let dht_event_stream = network.event_stream().filter_map(|e| async move { match e {
-				Event::Dht(e) => Some(e),
+			let network_event_stream = network.event_stream().compat();
+			let dht_event_stream = network_event_stream.filter_map(|e| async move { match e {
+				Ok(Event::Dht(e)) => Some(e),
 				_ => None,
 			}}).boxed();
 			let authority_discovery = sc_authority_discovery::AuthorityDiscovery::new(

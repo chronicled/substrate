@@ -20,6 +20,7 @@ use crate::{
 };
 use crate::{ExHashT, specialization::NetworkSpecialization};
 use crate::protocol::{CustomMessageOutcome, Protocol};
+use futures::prelude::*;
 use libp2p::NetworkBehaviour;
 use libp2p::core::{Multiaddr, PeerId, PublicKey};
 use libp2p::kad::record;
@@ -28,7 +29,7 @@ use libp2p::core::{nodes::Substream, muxing::StreamMuxerBox};
 use log::{debug, warn};
 use sp_consensus::{BlockOrigin, import_queue::{IncomingBlock, Origin}};
 use sp_runtime::{traits::{Block as BlockT, NumberFor}, Justification};
-use std::{iter, task::Context, task::Poll};
+use std::iter;
 use void;
 
 /// General behaviour of the network. Combines all protocols together.
@@ -58,7 +59,7 @@ pub enum BehaviourOut<B: BlockT> {
 
 impl<B: BlockT, S: NetworkSpecialization<B>, H: ExHashT> Behaviour<B, S, H> {
 	/// Builds a new `Behaviour`.
-	pub async fn new(
+	pub fn new(
 		substrate: Protocol<B, S, H>,
 		user_agent: String,
 		local_public_key: PublicKey,
@@ -74,7 +75,7 @@ impl<B: BlockT, S: NetworkSpecialization<B>, H: ExHashT> Behaviour<B, S, H> {
 				known_addresses,
 				enable_mdns,
 				allow_private_ipv4
-			).await,
+			),
 			events: Vec::new(),
 		}
 	}
@@ -211,11 +212,11 @@ impl<B: BlockT, S: NetworkSpecialization<B>, H: ExHashT> NetworkBehaviourEventPr
 }
 
 impl<B: BlockT, S: NetworkSpecialization<B>, H: ExHashT> Behaviour<B, S, H> {
-	fn poll<TEv>(&mut self, _: &mut Context) -> Poll<NetworkBehaviourAction<TEv, BehaviourOut<B>>> {
+	fn poll<TEv>(&mut self) -> Async<NetworkBehaviourAction<TEv, BehaviourOut<B>>> {
 		if !self.events.is_empty() {
-			return Poll::Ready(NetworkBehaviourAction::GenerateEvent(self.events.remove(0)))
+			return Async::Ready(NetworkBehaviourAction::GenerateEvent(self.events.remove(0)))
 		}
 
-		Poll::Pending
+		Async::NotReady
 	}
 }

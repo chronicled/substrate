@@ -60,12 +60,11 @@
 
 use futures::{prelude::*, channel::mpsc};
 use libp2p::{Multiaddr, wasm_ext};
-use log::{error, warn};
+use log::warn;
 use parking_lot::Mutex;
 use serde::{Serialize, Deserialize};
 use std::{pin::Pin, sync::Arc, task::{Context, Poll}, time::{Duration, Instant}};
 
-pub use libp2p::wasm_ext::ExtTransport;
 pub use slog_scope::with_logger;
 pub use slog;
 
@@ -130,8 +129,8 @@ pub struct Telemetry {
 /// where we extract the telemetry registration so that it continues running during the shutdown
 /// process.
 struct TelemetryInner {
-	/// Worker for the telemetry. `None` if it failed to initialize.
-	worker: Option<worker::TelemetryWorker>,
+	/// Worker for the telemetry.
+	worker: worker::TelemetryWorker,
 	/// Receives log entries for them to be dispatched to the worker.
 	receiver: mpsc::Receiver<async_record::AsyncRecord>,
 }
@@ -163,17 +162,9 @@ pub fn init_telemetry(config: TelemetryConfig) -> Telemetry {
 		slog_scope::set_global_logger(root)
 	};
 
-	let worker = match worker::TelemetryWorker::new(endpoints, config.wasm_external_transport) {
-		Ok(w) => Some(w),
-		Err(err) => {
-			error!(target: "telemetry", "Failed to initialize telemetry worker: {:?}", err);
-			None
-		}
-	};
-
 	Telemetry {
 		inner: Arc::new(Mutex::new(TelemetryInner {
-			worker,
+			worker: worker::TelemetryWorker::new(endpoints, config.wasm_external_transport),
 			receiver,
 		})),
 		_guard: Arc::new(guard),
@@ -218,19 +209,15 @@ impl Stream for Telemetry {
 		// The polling pattern is: poll the worker so that it processes its queue, then add one
 		// message from the receiver (if possible), then poll the worker again, and so on.
 		loop {
-			if let Some(worker) = inner.worker.as_mut() {
-				while let Poll::Ready(event) = worker.poll(cx) {
-					// Right now we only have one possible event. This line is here in order to not
-					// forget to handle any possible new event type.
-					let worker::TelemetryWorkerEvent::Connected = event;
-					has_connected = true;
-				}
+			while let Poll::Ready(event) = inner.worker.poll(cx) {
+				// Right now we only have one possible event. This line is here in order to not
+				// forget to handle any possible new event type.
+				let worker::TelemetryWorkerEvent::Connected = event;
+				has_connected = true;
 			}
 
 			if let Poll::Ready(Some(log_entry)) = Stream::poll_next(Pin::new(&mut inner.receiver), cx) {
-				if let Some(worker) = inner.worker.as_mut() {
-					log_entry.as_record_values(|rec, val| { let _ = worker.log(rec, val); });
-				}
+				log_entry.as_record_values(|rec, val| { let _ = inner.worker.log(rec, val); });
 			} else {
 				break;
 			}

@@ -20,6 +20,7 @@ use crate::protocol::legacy_proto::upgrade::RegisteredProtocol;
 use bytes::BytesMut;
 use fnv::FnvHashMap;
 use futures::prelude::*;
+use futures03::{compat::Compat, TryFutureExt as _, StreamExt as _, TryStreamExt as _};
 use libp2p::core::{ConnectedPoint, Multiaddr, PeerId};
 use libp2p::swarm::{NetworkBehaviour, NetworkBehaviourAction, PollParameters};
 use log::{debug, error, trace, warn};
@@ -27,7 +28,7 @@ use rand::distributions::{Distribution as _, Uniform};
 use smallvec::SmallVec;
 use std::{borrow::Cow, collections::hash_map::Entry, cmp, error, marker::PhantomData, mem, pin::Pin};
 use std::time::{Duration, Instant};
-use std::task::{Context, Poll};
+use tokio_io::{AsyncRead, AsyncWrite};
 
 /// Network behaviour that handles opening substreams for custom protocols with other nodes.
 ///
@@ -102,7 +103,7 @@ enum PeerState {
 	/// The peerset requested that we connect to this peer. We are not connected to this node.
 	PendingRequest {
 		/// When to actually start dialing.
-		timer: futures_timer::Delay,
+		timer: Compat<futures_timer::Delay>,
 		/// When the `timer` will trigger.
 		timer_deadline: Instant,
 	},
@@ -134,7 +135,7 @@ enum PeerState {
 		/// state mismatch.
 		open: bool,
 		/// When to enable this remote.
-		timer: futures_timer::Delay,
+		timer: Compat<futures_timer::Delay>,
 		/// When the `timer` will trigger.
 		timer_deadline: Instant,
 	},
@@ -387,7 +388,7 @@ impl<TSubstream> LegacyProto<TSubstream> {
 				debug!(target: "sub-libp2p", "PSM => Connect({:?}): Will start to connect at \
 					until {:?}", occ_entry.key(), until);
 				*occ_entry.into_mut() = PeerState::PendingRequest {
-					timer: futures_timer::Delay::new_at(until.clone()),
+					timer: futures_timer::Delay::new_at(until.clone()).compat(),
 					timer_deadline: until.clone(),
 				};
 			},
@@ -406,7 +407,7 @@ impl<TSubstream> LegacyProto<TSubstream> {
 				*occ_entry.into_mut() = PeerState::DisabledPendingEnable {
 					connected_point: connected_point.clone(),
 					open,
-					timer: futures_timer::Delay::new_at(banned.clone()),
+					timer: futures_timer::Delay::new_at(banned.clone()).compat(),
 					timer_deadline: banned.clone(),
 				};
 			},
@@ -615,7 +616,7 @@ impl<TSubstream> DiscoveryNetBehaviour for LegacyProto<TSubstream> {
 
 impl<TSubstream> NetworkBehaviour for LegacyProto<TSubstream>
 where
-	TSubstream: AsyncRead + AsyncWrite + Unpin,
+	TSubstream: AsyncRead + AsyncWrite,
 {
 	type ProtocolsHandler = CustomProtoHandlerProto<TSubstream>;
 	type OutEvent = LegacyProtoOut;
@@ -950,9 +951,8 @@ where
 
 	fn poll(
 		&mut self,
-		cx: &mut Context,
 		_params: &mut impl PollParameters,
-	) -> Poll<
+	) -> Async<
 		NetworkBehaviourAction<
 			CustomProtoHandlerIn,
 			Self::OutEvent,
@@ -961,31 +961,38 @@ where
 		// Poll for instructions from the peerset.
 		// Note that the peerset is a *best effort* crate, and we have to use defensive programming.
 		loop {
-			match futures::Stream::poll_next(Pin::new(&mut self.peerset), cx) {
-				Poll::Ready(Some(sc_peerset::Message::Accept(index))) => {
+			let mut peerset01 = futures03::stream::poll_fn(|cx|
+				futures03::Stream::poll_next(Pin::new(&mut self.peerset), cx)
+			).map(|v| Ok::<_, ()>(v)).compat();
+			match peerset01.poll() {
+				Ok(Async::Ready(Some(sc_peerset::Message::Accept(index)))) => {
 					self.peerset_report_accept(index);
 				}
-				Poll::Ready(Some(sc_peerset::Message::Reject(index))) => {
+				Ok(Async::Ready(Some(sc_peerset::Message::Reject(index)))) => {
 					self.peerset_report_reject(index);
 				}
-				Poll::Ready(Some(sc_peerset::Message::Connect(id))) => {
+				Ok(Async::Ready(Some(sc_peerset::Message::Connect(id)))) => {
 					self.peerset_report_connect(id);
 				}
-				Poll::Ready(Some(sc_peerset::Message::Drop(id))) => {
+				Ok(Async::Ready(Some(sc_peerset::Message::Drop(id)))) => {
 					self.peerset_report_disconnect(id);
 				}
-				Poll::Ready(None) => {
+				Ok(Async::Ready(None)) => {
 					error!(target: "sub-libp2p", "Peerset receiver stream has returned None");
 					break;
 				}
-				Poll::Pending => break,
+				Ok(Async::NotReady) => break,
+				Err(err) => {
+					error!(target: "sub-libp2p", "Peerset receiver stream has errored: {:?}", err);
+					break
+				}
 			}
 		}
 
 		for (peer_id, peer_state) in self.peers.iter_mut() {
 			match mem::replace(peer_state, PeerState::Poisoned) {
 				PeerState::PendingRequest { mut timer, timer_deadline } => {
-					if let Poll::Pending = Pin::new(&mut timer).poll(cx) {
+					if let Ok(Async::NotReady) = timer.poll() {
 						*peer_state = PeerState::PendingRequest { timer, timer_deadline };
 						continue;
 					}
@@ -996,7 +1003,7 @@ where
 				}
 
 				PeerState::DisabledPendingEnable { mut timer, connected_point, open, timer_deadline } => {
-					if let Poll::Pending = Pin::new(&mut timer).poll(cx) {
+					if let Ok(Async::NotReady) = timer.poll() {
 						*peer_state = PeerState::DisabledPendingEnable {
 							timer,
 							connected_point,
@@ -1019,9 +1026,9 @@ where
 		}
 
 		if !self.events.is_empty() {
-			return Poll::Ready(self.events.remove(0))
+			return Async::Ready(self.events.remove(0))
 		}
 
-		Poll::Pending
+		Async::NotReady
 	}
 }
