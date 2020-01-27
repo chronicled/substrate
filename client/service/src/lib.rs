@@ -660,10 +660,6 @@ where
 	fn on_broadcasted(&self, propagations: HashMap<H, Vec<String>>) {
 		self.pool.on_broadcasted(propagations)
 	}
-
-	fn transaction(&self, hash: &H) -> Option<B::Extrinsic> {
-		self.pool.ready_transaction(hash).map(|tx| tx.data().clone())
-	}
 }
 
 #[cfg(test)]

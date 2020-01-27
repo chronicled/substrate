@@ -179,7 +179,7 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 		Box::new(self.pool.ready())
 	}
 
-	fn import_notification_stream(&self) -> ImportNotificationStream<TxHash<Self>> {
+	fn import_notification_stream(&self) -> ImportNotificationStream<Arc<Self::InPoolTransaction>> {
 		self.pool.import_notification_stream()
 	}
 
@@ -189,10 +189,6 @@ impl<PoolApi, Block> TransactionPool for BasicPool<PoolApi, Block>
 
 	fn on_broadcasted(&self, propagations: HashMap<TxHash<Self>, Vec<String>>) {
 		self.pool.on_broadcasted(propagations)
-	}
-
-	fn ready_transaction(&self, hash: &TxHash<Self>) -> Option<Arc<Self::InPoolTransaction>> {
-		self.pool.ready_transaction(hash)
 	}
 }
 

@@ -906,9 +906,13 @@ ServiceBuilder<
 			let network = Arc::downgrade(&network);
 			let transaction_pool_ = transaction_pool.clone();
 			let events = transaction_pool.import_notification_stream()
-				.for_each(move |hash| {
+				.for_each(move |transaction| {
+					use sp_transaction_pool::InPoolTransaction;
+
 					if let Some(network) = network.upgrade() {
-						network.propagate_extrinsic(hash);
+						let hash = transaction.hash().clone();
+						let data = transaction.data().clone();
+						network.propagate_extrinsic(hash, data);
 					}
 					let status = transaction_pool_.status();
 					telemetry!(SUBSTRATE_INFO; "txpool.import";

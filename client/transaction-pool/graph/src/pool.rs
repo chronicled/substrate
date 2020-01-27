@@ -331,7 +331,7 @@ impl<B: ChainApi> Pool<B> {
 	///
 	/// Consumers of this stream should use the `ready` method to actually get the
 	/// pending transactions in the right order.
-	pub fn import_notification_stream(&self) -> EventStream<ExHash<B>> {
+	pub fn import_notification_stream(&self) -> EventStream<TransactionFor<B>> {
 		self.validated_pool.import_notification_stream()
 	}
 
@@ -438,10 +438,6 @@ impl<B: ChainApi> Pool<B> {
 		(hash, validity)
 	}
 
-	/// Get ready transaction by hash, if it present in the pool.
-	pub fn ready_transaction(&self, hash: &ExHash<B>) -> Option<TransactionFor<B>> {
-		self.validated_pool.ready_by_hash(hash)
-	}
 }
 
 impl<B: ChainApi> Clone for Pool<B> {

@@ -1138,17 +1138,17 @@ impl<B: BlockT, S: NetworkSpecialization<B>, H: ExHashT> Protocol<B, S, H> {
 	/// Propagate one extrinsic.
 	pub fn propagate_extrinsic(
 		&mut self,
-		hash: &H,
+		hash: H,
+		extrinsic: B::Extrinsic,
 	) {
 		debug!(target: "sync", "Propagating extrinsic [{:?}]", hash);
 		// Accept transactions only when fully synced
 		if self.sync.status().state != SyncState::Idle {
 			return;
 		}
-		if let Some(extrinsic) = self.transaction_pool.transaction(hash) {
-			let propagated_to = self.do_propagate_extrinsics(&[(hash.clone(), extrinsic)]);
-			self.transaction_pool.on_broadcasted(propagated_to);
-		}
+
+		let propagated_to = self.do_propagate_extrinsics(&[(hash, extrinsic)]);
+		self.transaction_pool.on_broadcasted(propagated_to);
 	}
 
 	fn do_propagate_extrinsics(

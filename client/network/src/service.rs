@@ -77,8 +77,6 @@ pub trait TransactionPool<H: ExHashT, B: BlockT>: Send + Sync {
 	);
 	/// Notify the pool about transactions broadcast.
 	fn on_broadcasted(&self, propagations: HashMap<H, Vec<String>>);
-	/// Get transaction by hash.
-	fn transaction(&self, hash: &H) -> Option<B::Extrinsic>;
 }
 
 /// A cloneable handle for reporting cost/benefits of peers.
@@ -491,8 +489,8 @@ impl<B: BlockT + 'static, S: NetworkSpecialization<B>, H: ExHashT> NetworkServic
 	///
 	/// This transaction will be fetched from the `TransactionPool` that was passed at
 	/// initialization as part of the configuration and propagated to peers.
-	pub fn propagate_extrinsic(&self, hash: H) {
-		let _ = self.to_worker.unbounded_send(ServiceToWorkerMsg::PropagateExtrinsic(hash));
+	pub fn propagate_extrinsic(&self, hash: H, extrinsic: B::Extrinsic) {
+		let _ = self.to_worker.unbounded_send(ServiceToWorkerMsg::PropagateExtrinsic(hash, extrinsic));
 	}
 
 	/// Make sure an important block is propagated to peers.
@@ -676,7 +674,7 @@ impl<B, S, H> NetworkStateInfo for NetworkService<B, S, H>
 ///
 /// Each entry corresponds to a method of `NetworkService`.
 enum ServiceToWorkerMsg<B: BlockT, H: ExHashT, S: NetworkSpecialization<B>> {
-	PropagateExtrinsic(H),
+	PropagateExtrinsic(H, B::Extrinsic),
 	PropagateExtrinsics,
 	RequestJustification(B::Hash, NumberFor<B>),
 	AnnounceBlock(B::Hash, Vec<u8>),
@@ -758,8 +756,8 @@ impl<B: BlockT + 'static, S: NetworkSpecialization<B>, H: ExHashT> Future for Ne
 					this.network_service.user_protocol_mut().announce_block(hash, data),
 				ServiceToWorkerMsg::RequestJustification(hash, number) =>
 					this.network_service.user_protocol_mut().request_justification(&hash, number),
-				ServiceToWorkerMsg::PropagateExtrinsic(hash) =>
-					this.network_service.user_protocol_mut().propagate_extrinsic(&hash),
+				ServiceToWorkerMsg::PropagateExtrinsic(hash, extrinsic) =>
+					this.network_service.user_protocol_mut().propagate_extrinsic(hash, extrinsic),
 				ServiceToWorkerMsg::PropagateExtrinsics =>
 					this.network_service.user_protocol_mut().propagate_extrinsics(),
 				ServiceToWorkerMsg::GetValue(key) =>
