@@ -23,3 +23,4 @@ sc-keystore = { version = "2.0.0", path = "../../../client/keystore" }
 sc-consensus-epochs = { version = "0.8", path = "../../../client/consensus/epochs" }
 sp-consensus = { version = "0.8", path = "../../../primitives/consensus/common" }
 sp-blockchain = { version = "2.0.0", path = "../../../primitives/blockchain" }
+sc-finality-grandpa-rpc = { version = "0.8", path = "../../../client/finality-grandpa/rpc" }
