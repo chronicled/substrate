@@ -24,7 +24,8 @@ use crate::{
 		self, Member, MaybeDisplay, SignedExtension, Checkable, Extrinsic, ExtrinsicMetadata,
 		IdentifyAccount,
 	},
-	generic::{CheckSignature, CheckedExtrinsic}, 
+	MultiSignedMessage,
+	generic::{CheckSignature, CheckedExtrinsic},
 	transaction_validity::{TransactionValidityError, InvalidTransaction},
 };
 
@@ -106,6 +107,12 @@ impl<Address, Call, Signature, Extra: SignedExtension> Extrinsic
 	}
 }
 
+enum CheckSignatureContext {
+	Skip,
+	Verify,
+	Collect(Vec<MultiSignedMessage>),
+}
+
 impl<Address, AccountId, Call, Signature, Extra, Lookup>
 	Checkable<Lookup>
 for
@@ -118,27 +125,35 @@ where
 	Extra: SignedExtension<AccountId=AccountId>,
 	AccountId: Member + MaybeDisplay,
 	Lookup: traits::Lookup<Source=Address, Target=AccountId>,
+	(AccountId, Signature, Vec<u8>): Into<MultiSignedMessage>,
 {
 	type Checked = CheckedExtrinsic<AccountId, Call, Extra>;
 
-	fn check(self, check_signature: CheckSignature, lookup: &Lookup) -> Result<Self::Checked, TransactionValidityError> {
+	fn check(self, check_signature: &mut CheckSignatureContext, lookup: &Lookup) -> Result<Self::Checked, TransactionValidityError> {
 		Ok(match self.signature {
 			Some((signed, signature, extra)) => {
 				let signed = lookup.lookup(signed)?;
 
-				let (function, extra) = if let CheckSignature::No = check_signature {
-					(self.function, extra)
-				} else {
-					let raw_payload = SignedPayload::new(self.function, extra)?;
+				let (function, extra) = match check_signature {
+					CheckSignatureContext::Skip => (self.function, extra),
+					CheckSignatureContext::Verify => {
+						let raw_payload = SignedPayload::new(self.function, extra)?;
 
-					if !raw_payload.using_encoded(|payload| {
-						signature.verify(payload, &signed)
-					}) {
-						return Err(InvalidTransaction::BadProof.into())
+						if !raw_payload.using_encoded(|payload| {
+							signature.verify(payload, &signed)
+						}) {
+							return Err(InvalidTransaction::BadProof.into())
+						}
+						let (function, extra, _) = raw_payload.deconstruct();
+
+						(function, extra)
+					},
+					CheckSignatureContext::Collect(ref mut collected) => {
+						let message = SignedPayload::new(self.function, extra)?.encode();
+						collected.push(MultiSignedMessage::from((
+							signed, signature, message,
+						)))
 					}
-					let (function, extra, _) = raw_payload.deconstruct();
-
-					(function, extra)
 				};
 
 				CheckedExtrinsic {

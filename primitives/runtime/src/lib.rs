@@ -313,7 +313,7 @@ impl Verify for MultiSignature {
 	}
 }
 
-/// Signature verify that can work with any known signature types..
+/// Signature verify that can work with sr25519 or ed25519 signature types.
 #[derive(Eq, PartialEq, Clone, Default, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AnySignature(H512);
@@ -341,6 +341,50 @@ impl From<sr25519::Signature> for AnySignature {
 impl From<ed25519::Signature> for AnySignature {
 	fn from(s: ed25519::Signature) -> Self {
 		AnySignature(s.into())
+	}
+}
+
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
+pub enum MultiSigned {
+	Sr25519(sr25519::Public, sr25519::Signature),
+	Ed25519(ed25519::Public, ed25519::Signature),
+	Ecdsa(ecdsa::Public, ecdsa::Signature),
+}
+
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
+pub struct MultiSignedMessage {
+	pub signed: MultiSigned,
+	pub message: Vec<u8>,
+}
+
+impl From<(ed25519::Public, ed25519::Signature, Vec<u8>)> for MultiSignedMessage {
+	fn from(val: (ed25519::Public, ed25519::Signature, Vec<u8>)) -> Self {
+		let (signed, signature, message) = val;
+		MultiSignedMessage {
+			signed: MultiSigned::Ed25519(signed, signature),
+			message,
+		}
+	}
+}
+
+impl From<(sr25519::Public, sr25519::Signature, Vec<u8>)> for MultiSignedMessage {
+	fn from(val: (sr25519::Public, sr25519::Signature, Vec<u8>)) -> Self {
+		let (signed, signature, message) = val;
+		MultiSignedMessage {
+			signed: MultiSigned::Sr25519(signed, signature),
+			message,
+		}
+	}
+}
+
+
+impl From<(ecdsa::Public, ecdsa::Signature, Vec<u8>)> for MultiSignedMessage {
+	fn from(val: (ecdsa::Public, ecdsa::Signature, Vec<u8>)) -> Self {
+		let (signed, signature, message) = val;
+		MultiSignedMessage {
+			signed: MultiSigned::Ecdsa(signed, signature),
+			message,
+		}
 	}
 }
 
