@@ -2003,6 +2003,93 @@ impl<T: Trait> Module<T> {
 		<Module<T> as Store>::CurrentEraStartSessionIndex::kill();
 		<Module<T> as Store>::CurrentEraPointsEarned::kill();
 	}
+
+	pub fn test_do_upgrade() {
+		let old_stakers = <Self as Store>::CurrentElected::get();
+		let old_current_era = <Self as Store>::CurrentEra::get().unwrap();
+		let old_stakers_exposures = old_stakers.iter()
+			.map(<Self as Store>::Stakers::get)
+			.collect::<Vec<_>>();
+		let old_era_points_earned = <Self as Store>::CurrentEraPointsEarned::get();
+
+		Self::ensure_storage_upgraded();
+		assert!(<Self as Store>::IsUpgraded::get());
+
+		// Check ActiveEra and CurrentEra
+		let active_era = Self::active_era().unwrap();
+		let current_era = Self::current_era().unwrap();
+		assert!(current_era == active_era);
+		assert!(current_era == old_current_era);
+
+		// Check ErasStartSessionIndex
+		let active_era_start = Self::eras_start_session_index(active_era).unwrap();
+		let current_era_start = Self::eras_start_session_index(current_era).unwrap();
+		// let current_session_index = Session::current_index();
+		assert!(current_era_start == active_era_start);
+		// assert!(active_era_start <= current_session_index);
+		assert_eq!(<Self as Store>::ErasStartSessionIndex::iter().count(), 1);
+
+		// Check ErasStakers
+		assert_eq!(<Self as Store>::ErasStakers::iter().count(), old_stakers.len());
+		for (old_staker, old_staker_exposure) in old_stakers.iter().zip(old_stakers_exposures.iter()) {
+			assert_eq!(
+				<Self as Store>::ErasStakers::get(current_era, old_staker),
+				*old_staker_exposure
+			);
+		}
+
+		// Check ErasStakersClipped
+		assert_eq!(<Self as Store>::ErasStakersClipped::iter().count(), old_stakers.len());
+		assert!(<Self as Store>::ErasStakersClipped::iter().all(|exposure_clipped| {
+			let max = T::MaxNominatorRewardedPerValidator::get() as usize;
+			exposure_clipped.others.len() <= max
+		}));
+		for (old_staker, old_staker_exposure) in old_stakers.iter().zip(old_stakers_exposures.iter()) {
+			assert_eq!(
+				<Self as Store>::ErasStakersClipped::get(current_era, old_staker),
+				*old_staker_exposure
+			);
+		}
+
+		// Check ErasValidatorPrefs
+		assert_eq!(<Self as Store>::ErasValidatorPrefs::iter().count(), old_stakers.len());
+		for old_staker in old_stakers.iter() {
+			assert_eq!(
+				<Self as Store>::ErasValidatorPrefs::get(current_era, old_staker),
+				Self::validators(old_staker)
+			);
+		}
+
+		// Check ErasTotalStake
+		assert_eq!(<Self as Store>::ErasTotalStake::iter().count(), 1);
+		let mut sum = 0.into();
+		for old_staker_exposure in old_stakers_exposures.iter() {
+			sum += old_staker_exposure.total;
+		}
+		assert_eq!(
+			<Self as Store>::ErasTotalStake::get(current_era),
+			sum
+		);
+
+		// Check ErasRewardPoints
+		assert_eq!(<Self as Store>::ErasRewardPoints::iter().count(), 1);
+		let mut individual = BTreeMap::new();
+		for (old_staker_index, old_staker) in old_stakers.iter().enumerate() {
+			if let Some(p) = old_era_points_earned.individual.get(old_staker_index) {
+				individual.insert(old_staker.clone(), p.clone());
+			}
+		}
+		assert_eq!(
+			<Self as Store>::ErasRewardPoints::get(current_era),
+			EraRewardPoints {
+				total: old_era_points_earned.total,
+				individual,
+		}
+		);
+
+		// Check ErasValidatorReward
+		assert_eq!(<Self as Store>::ErasValidatorReward::iter().count(), 0);
+	}
 }
 
 /// In this implementation `new_session(session)` must be called before `end_session(session-1)`
