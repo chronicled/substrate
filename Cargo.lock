@@ -7116,6 +7116,7 @@ dependencies = [
  "lazy_static",
  "libsecp256k1",
  "log 0.4.8",
+ "merlin",
  "num-traits",
  "parity-scale-codec",
  "parity-util-mem",
