@@ -57,6 +57,8 @@ use codec::{Encode, Decode};
 #[cfg(feature = "std")]
 use sp_externalities::{ExternalitiesExt, Externalities};
 
+mod r#async;
+
 /// Error verifying ECDSA signature
 #[derive(Encode, Decode)]
 pub enum EcdsaVerifyError {

@@ -22,6 +22,9 @@ sp-runtime-interface = { version = "2.0.0-alpha.2", default-features = false, pa
 sp-trie = { version = "2.0.0-alpha.2", optional = true, path = "../../primitives/trie" }
 sp-externalities = { version = "0.8.0-alpha.2", optional = true, path = "../externalities" }
 log = { version = "0.4.8", optional = true }
+futures = { version = "0.3.4", default-features = false }
+lazy_static = "1.0"
+spin = "0.5"
 
 [features]
 default = ["std"]
