@@ -22,6 +22,7 @@
 use sp_runtime_interface::*;
 use sp_runtime_interface_test_wasm::{WASM_BINARY, test_api::HostFunctions};
 use sp_wasm_interface::HostFunctions as HostFunctionsT;
+use sp_core::traits::CallInWasm;
 
 type TestExternalities = sp_state_machine::TestExternalities<sp_core::Blake2Hasher, u64>;
 
@@ -29,20 +30,17 @@ fn call_wasm_method<HF: HostFunctionsT>(method: &str) -> TestExternalities {
 	let mut ext = TestExternalities::default();
 	let mut ext_ext = ext.ext();
 
-	sc_executor::call_in_wasm::<
-		(
-			HF,
-			sp_io::SubstrateHostFunctions,
-			sc_executor::deprecated_host_interface::SubstrateExternals
-		)
-	>(
+	let executor = sc_executor::WasmExecutor::new(
+		sc_executor::WasmExecutionMethod::Interpreted,
+		Some(8),
+		HF::host_functions(),
+		false,
+	);
+	executor.call_in_wasm(
+		&WASM_BINARY[..],
 		method,
 		&[],
-		sc_executor::WasmExecutionMethod::Interpreted,
 		&mut ext_ext,
-		&WASM_BINARY[..],
-		8,
-		false,
 	).expect(&format!("Executes `{}`", method));
 
 	ext
