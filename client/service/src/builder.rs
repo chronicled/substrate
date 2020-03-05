@@ -17,7 +17,7 @@
 use crate::{Service, NetworkStatus, NetworkState, error::Error, DEFAULT_PROTOCOL_ID, MallocSizeOfWasm};
 use crate::{TaskManagerBuilder, start_rpc_servers, build_network_future, TransactionPoolAdapter};
 use crate::status_sinks;
-use crate::config::{Configuration, DatabaseConfig, KeystoreConfig};
+use crate::config::{Configuration, DatabaseConfig, KeystoreConfig, PrometheusConfig};
 use sc_client_api::{
 	self,
 	BlockchainEvents,
@@ -182,6 +182,7 @@ type TFullParts<TBl, TRtApi, TExecDisp> = (
 	TFullClient<TBl, TRtApi, TExecDisp>,
 	Arc<TFullBackend<TBl>>,
 	Arc<RwLock<sc_keystore::Store>>,
+	TaskManagerBuilder,
 );
 
 /// Creates a new full client for the given config.
@@ -266,7 +267,7 @@ fn new_full_parts<TBl, TRtApi, TExecDisp, TGen, TCSExt>(
 		)?
 	};
 
-	Ok((client, backend, keystore))
+	Ok((client, backend, keystore, tasks_builder))
 }
 
 impl<TGen, TCSExt> ServiceBuilder<(), (), TGen, TCSExt, (), (), (), (), (), (), (), (), (), ()>
@@ -290,7 +291,7 @@ where TGen: RuntimeGenesis, TCSExt: Extension {
 		(),
 		TFullBackend<TBl>,
 	>, Error> {
-		let (client, backend, keystore) = new_full_parts(&config)?;
+		let (client, backend, keystore, tasks_builder) = new_full_parts(&config)?;
 
 		let client = Arc::new(client);
 
@@ -519,7 +520,6 @@ impl<TBl, TRtApi, TGen, TCSExt, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TNetP, TEx
 			remote_backend: self.remote_backend,
 			background_tasks: self.background_tasks,
 			marker: self.marker,
-			prometheus_registry: self.prometheus_registry,
 		})
 	}
 
@@ -1043,24 +1043,13 @@ ServiceBuilder<
 		}
 
 		// Prometheus metrics
-		let metrics = if let Some(prometheus_config) = config.prometheus_config.clone() {
-			let metrics = ServiceMetrics::register(&prometheus_config.registry)?;
-
+		let metrics = if let Some(PrometheusConfig { port, registry }) = config.prometheus_config.clone() {
+			let metrics = ServiceMetrics::register(&registry)?;
 			metrics.node_roles.set(u64::from(config.roles.bits()));
-
-			let future = select(
-				prometheus_endpoint::init_prometheus(
-					prometheus_config.port,
-					prometheus_config.registry
-				).boxed(),
-				exit.clone()
-			).map(drop);
-
-			let _ = to_spawn_tx.unbounded_send((
-				Box::pin(future),
-				From::from("prometheus-endpoint")
-			));
-
+			spawn_handle.spawn(
+				"prometheus-endpoint",
+				prometheus_endpoint::init_prometheus(port, registry).map(drop)
+			);
 			Some(metrics)
 		} else {
 			None
