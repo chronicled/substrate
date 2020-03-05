@@ -18,9 +18,9 @@ use sp_api::ProvideRuntimeApi;
 use substrate_test_runtime_client::{
 	prelude::*,
 	DefaultTestClientBuilderExt, TestClientBuilder,
-	runtime::{TestAPI, DecodeFails, Transfer, Header},
+	runtime::{TestAPI, DecodeFails, Transfer, Block},
 };
-use sp_runtime::{generic::BlockId, traits::{Header as HeaderT, Hash as HashT}};
+use sp_runtime::{generic::BlockId, traits::{Header as HeaderT, HashFor}};
 use sp_state_machine::{
 	ExecutionStrategy, create_proof_check_backend,
 	execution_proof_check_on_trie_backend,
@@ -28,6 +28,7 @@ use sp_state_machine::{
 
 use sp_consensus::SelectChain;
 use codec::Encode;
+use sc_block_builder::BlockBuilderProvider;
 
 fn calling_function_with_strat(strat: ExecutionStrategy) {
 	let client = TestClientBuilder::new().set_execution_strategy(strat).build();
@@ -163,6 +164,12 @@ fn record_proof_works() {
 	let block_id = BlockId::Number(client.chain_info().best_number);
 	let storage_root = longest_chain.best_chain().unwrap().state_root().clone();
 
+	let runtime_code = sp_core::traits::RuntimeCode {
+		code: client.code_at(&block_id).unwrap(),
+		hash: vec![1],
+		heap_pages: None,
+	};
+
 	let transaction = Transfer {
 		amount: 1000,
 		nonce: 0,
@@ -177,7 +184,7 @@ fn record_proof_works() {
 	builder.push(transaction.clone()).unwrap();
 	let (block, _, proof) = builder.build().expect("Bake block").into_inner();
 
-	let backend = create_proof_check_backend::<<<Header as HeaderT>::Hashing as HashT>::Hasher>(
+	let backend = create_proof_check_backend::<HashFor<Block>>(
 		storage_root,
 		proof.expect("Proof was generated"),
 	).expect("Creates proof backend.");
@@ -191,5 +198,6 @@ fn record_proof_works() {
 		&executor,
 		"Core_execute_block",
 		&block.encode(),
+		&runtime_code,
 	).expect("Executes block while using the proof backend");
 }
