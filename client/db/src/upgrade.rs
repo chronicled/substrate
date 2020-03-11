@@ -23,6 +23,7 @@ use std::sync::Arc;
 
 use codec::Encode;
 use kvdb_rocksdb::{Database, DatabaseConfig};
+use kvdb::KeyValueDB;
 use parking_lot::RwLock;
 use sp_blockchain::{well_known_cache_keys, Cache};
 use sp_core::ChangesTrieConfiguration;
@@ -58,7 +59,7 @@ pub fn upgrade_db<Block: BlockT>(db_path: &Path, db_type: DatabaseType) -> sp_bl
 /// 2) changes tries configuration are now cached.
 fn migrate_0_to_1<Block: BlockT>(db_path: &Path, db_type: DatabaseType) -> sp_blockchain::Result<()> {
 	{
-		let db = open_database(db_path, db_type, V0_NUM_COLUMNS)?;
+		let mut db = open_database(db_path, db_type, V0_NUM_COLUMNS)?;
 		db.add_column().map_err(db_err)?;
 		db.flush().map_err(db_err)?;
 	}

@@ -241,7 +241,7 @@ pub fn open_database<Block: BlockT>(
 					}
 				}
 
-				db_config.memory_budget = memory_budget;
+				//db_config.memory_budget = memory_budget;
 			}
 			let path = path.to_str()
 				.ok_or_else(|| sp_blockchain::Error::Backend("Invalid database path".into()))?;
