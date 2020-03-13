@@ -23,7 +23,7 @@ pub mod client_ext;
 pub use sc_client::{blockchain, self};
 pub use sc_client_api::{
 	execution_extensions::{ExecutionStrategies, ExecutionExtensions},
-	ForkBlocks, BadBlocks,
+	ForkBlocks, BadBlocks, ClonableSpawn,
 };
 pub use sc_client_db::{Backend, self};
 pub use sp_consensus;
@@ -43,6 +43,8 @@ use std::collections::HashMap;
 use sp_core::storage::{well_known_keys, ChildInfo};
 use sp_runtime::traits::{Block as BlockT, BlakeTwo256};
 use sc_client::LocalCallExecutor;
+
+use futures::{executor, task};
 
 /// Test client light database backend.
 pub type LightBackend<Block> = sc_client::light::backend::Backend<
@@ -220,6 +222,38 @@ impl<Block: BlockT, Executor, Backend, G: GenesisInit> TestClientBuilder<Block, 
 	}
 }
 
+#[derive(Debug, Clone)]
+struct LocalSpawn {
+	pool: executor::ThreadPool,
+}
+
+impl LocalSpawn {
+	fn new() -> Self {
+		Self {
+			pool: executor::ThreadPool::builder().pool_size(1).create()
+				.expect("Failed to create task executor")
+		}
+	}
+}
+
+impl task::Spawn for LocalSpawn {
+	fn spawn_obj(&self, future: task::FutureObj<'static, ()>)
+	-> Result<(), task::SpawnError> {
+		self.pool.spawn_obj(future)
+	}
+}
+
+impl sc_client_api::ClonableSpawn for LocalSpawn {
+	fn clone(&self) -> Box<dyn ClonableSpawn> {
+		Box::new(Clone::clone(self))
+	}
+}
+
+/// Creates tasks executor for test client.
+pub fn local_task_executor() -> Box<dyn ClonableSpawn> {
+	Box::new(LocalSpawn::new())
+}
+
 impl<Block: BlockT, E, Backend, G: GenesisInit> TestClientBuilder<
 	Block,
 	sc_client::LocalCallExecutor<Backend, NativeExecutor<E>>,
@@ -246,7 +280,7 @@ impl<Block: BlockT, E, Backend, G: GenesisInit> TestClientBuilder<
 		let executor = executor.into().unwrap_or_else(||
 			NativeExecutor::new(WasmExecutionMethod::Interpreted, None, 8)
 		);
-		let executor = LocalCallExecutor::new(self.backend.clone(), executor);
+		let executor = LocalCallExecutor::new(self.backend.clone(), executor, local_task_executor());
 
 		self.build_with_executor(executor)
 	}

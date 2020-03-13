@@ -36,6 +36,12 @@ pub use proof_provider::*;
 
 pub use sp_state_machine::{StorageProof, ExecutionStrategy};
 
+/// Something that can spawn tasks and also can be cloned.
+pub trait ClonableSpawn: futures::task::Spawn + Send + Sync {
+	/// Clone as heap-allocated handle.
+	fn clone(&self) -> Box<dyn ClonableSpawn>;
+}
+
 /// Utility methods for the client.
 pub mod utils {
 	use sp_blockchain::{HeaderBackend, HeaderMetadata, Error};

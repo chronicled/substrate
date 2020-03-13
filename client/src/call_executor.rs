@@ -27,13 +27,14 @@ use sc_executor::{RuntimeVersion, RuntimeInfo, NativeVersion};
 use sp_externalities::Extensions;
 use sp_core::{NativeOrEncoded, NeverNativeValue, traits::CodeExecutor};
 use sp_api::{ProofRecorder, InitializeBlock, StorageTransactionCache};
-use sc_client_api::{backend, call_executor::CallExecutor};
+use sc_client_api::{backend, call_executor::CallExecutor, ClonableSpawn};
 
 /// Call executor that executes methods locally, querying all required
 /// data from local backend.
 pub struct LocalCallExecutor<B, E> {
 	backend: Arc<B>,
 	executor: E,
+	spawn_handle: Box<dyn ClonableSpawn>,
 }
 
 impl<B, E> LocalCallExecutor<B, E> {
@@ -41,10 +42,12 @@ impl<B, E> LocalCallExecutor<B, E> {
 	pub fn new(
 		backend: Arc<B>,
 		executor: E,
+		spawn_handle: Box<dyn ClonableSpawn>,
 	) -> Self {
 		LocalCallExecutor {
 			backend,
 			executor,
+			spawn_handle,
 		}
 	}
 }
@@ -54,6 +57,7 @@ impl<B, E> Clone for LocalCallExecutor<B, E> where E: Clone {
 		LocalCallExecutor {
 			backend: self.backend.clone(),
 			executor: self.executor.clone(),
+			spawn_handle: self.spawn_handle.clone(),
 		}
 	}
 }

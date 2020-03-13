@@ -76,7 +76,7 @@ pub use sc_client_api::{
 	},
 	execution_extensions::{ExecutionExtensions, ExecutionStrategies},
 	notifications::{StorageNotifications, StorageEventStream},
-	CallExecutor, ExecutorProvider, ProofProvider,
+	CallExecutor, ExecutorProvider, ProofProvider, ClonableSpawn,
 };
 use sp_blockchain::Error;
 use prometheus_endpoint::Registry;
@@ -135,6 +135,7 @@ pub fn new_in_mem<E, Block, S, RA>(
 	genesis_storage: &S,
 	keystore: Option<sp_core::traits::BareCryptoStorePtr>,
 	prometheus_registry: Option<Registry>,
+	spawn_handle: Box<dyn ClonableSpawn>,
 ) -> sp_blockchain::Result<Client<
 	in_mem::Backend<Block>,
 	LocalCallExecutor<in_mem::Backend<Block>, E>,
@@ -145,7 +146,7 @@ pub fn new_in_mem<E, Block, S, RA>(
 	S: BuildStorage,
 	Block: BlockT,
 {
-	new_with_backend(Arc::new(in_mem::Backend::new()), executor, genesis_storage, keystore, prometheus_registry)
+	new_with_backend(Arc::new(in_mem::Backend::new()), executor, genesis_storage, keystore, spawn_handle, prometheus_registry)
 }
 
 /// Create a client with the explicitly provided backend.
@@ -155,6 +156,7 @@ pub fn new_with_backend<B, E, Block, S, RA>(
 	executor: E,
 	build_genesis_storage: &S,
 	keystore: Option<sp_core::traits::BareCryptoStorePtr>,
+	spawn_handle: Box<dyn ClonableSpawn>,
 	prometheus_registry: Option<Registry>,
 ) -> sp_blockchain::Result<Client<B, LocalCallExecutor<B, E>, Block, RA>>
 	where
@@ -163,7 +165,7 @@ pub fn new_with_backend<B, E, Block, S, RA>(
 		Block: BlockT,
 		B: backend::LocalBackend<Block> + 'static,
 {
-	let call_executor = LocalCallExecutor::new(backend.clone(), executor);
+	let call_executor = LocalCallExecutor::new(backend.clone(), executor, spawn_handle);
 	let extensions = ExecutionExtensions::new(Default::default(), keystore);
 	Client::new(
 		backend,
@@ -3473,7 +3475,7 @@ pub(crate) mod tests {
 
 	#[test]
 	fn cleans_up_closed_notification_sinks_on_block_import() {
-		use substrate_test_runtime_client::GenesisInit;
+		use substrate_test_runtime_client::{GenesisInit, local_task_executor};
 
 		// NOTE: we need to build the client here instead of using the client
 		// provided by test_runtime_client otherwise we can't access the private
@@ -3489,6 +3491,7 @@ pub(crate) mod tests {
 				&substrate_test_runtime_client::GenesisParameters::default().genesis_storage(),
 				None,
 				None,
+				local_task_executor(),
 			)
 			.unwrap();
 
