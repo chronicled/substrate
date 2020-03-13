@@ -26,6 +26,7 @@ use futures::{
 	compat::*,
 	task::{Spawn, FutureObj, SpawnError},
 };
+use sc_client_api::ClonableSpawn;
 
 /// Type alias for service task executor (usually runtime).
 pub type ServiceTaskExecutor = Arc<dyn Fn(Pin<Box<dyn Future<Output = ()> + Send>>) + Send + Sync>;

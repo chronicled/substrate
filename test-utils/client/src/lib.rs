@@ -174,6 +174,7 @@ impl<Block: BlockT, Executor, Backend, G: GenesisInit> TestClientBuilder<Block, 
 	pub fn build_with_executor<RuntimeApi>(
 		self,
 		executor: Executor,
+		spawn_handle: Box<dyn ClonableSpawn>,
 	) -> (
 		sc_client::Client<
 			Backend,
@@ -213,6 +214,7 @@ impl<Block: BlockT, Executor, Backend, G: GenesisInit> TestClientBuilder<Block, 
 				self.execution_strategies,
 				self.keystore.clone(),
 			),
+			spawn_handle,
 			None,
 		).expect("Creates new client");
 
@@ -280,8 +282,9 @@ impl<Block: BlockT, E, Backend, G: GenesisInit> TestClientBuilder<
 		let executor = executor.into().unwrap_or_else(||
 			NativeExecutor::new(WasmExecutionMethod::Interpreted, None, 8)
 		);
-		let executor = LocalCallExecutor::new(self.backend.clone(), executor, local_task_executor());
+		let spawn_handle = local_task_executor();
+		let executor = LocalCallExecutor::new(self.backend.clone(), executor, spawn_handle.clone());
 
-		self.build_with_executor(executor)
+		self.build_with_executor(executor, spawn_handle)
 	}
 }

@@ -51,7 +51,7 @@ mod tests {
 	use substrate_test_runtime_client::{
 		runtime::genesismap::{GenesisConfig, insert_genesis_block},
 		runtime::{Hash, Transfer, Block, BlockNumber, Header, Digest},
-		AccountKeyring, Sr25519Keyring,
+		AccountKeyring, Sr25519Keyring, local_task_executor,
 	};
 	use sp_runtime::traits::BlakeTwo256;
 	use hex_literal::*;
@@ -101,6 +101,7 @@ mod tests {
 			&header.encode(),
 			Default::default(),
 			&runtime_code,
+			local_task_executor(),
 		).execute(
 			ExecutionStrategy::NativeElseWasm,
 		).unwrap();
@@ -115,6 +116,7 @@ mod tests {
 				&tx.encode(),
 				Default::default(),
 				&runtime_code,
+				local_task_executor(),
 			).execute(
 				ExecutionStrategy::NativeElseWasm,
 			).unwrap();
@@ -129,6 +131,7 @@ mod tests {
 			&[],
 			Default::default(),
 			&runtime_code,
+			local_task_executor(),
 		).execute(
 			ExecutionStrategy::NativeElseWasm,
 		).unwrap();
@@ -179,6 +182,7 @@ mod tests {
 			&b1data,
 			Default::default(),
 			&runtime_code,
+			local_task_executor(),
 		).execute(
 			ExecutionStrategy::NativeElseWasm,
 		).unwrap();
@@ -210,6 +214,7 @@ mod tests {
 			&b1data,
 			Default::default(),
 			&runtime_code,
+			local_task_executor(),
 		).execute(
 			ExecutionStrategy::AlwaysWasm,
 		).unwrap();
@@ -241,6 +246,7 @@ mod tests {
 			&b1data,
 			Default::default(),
 			&runtime_code,
+			local_task_executor(),
 		).execute(
 			ExecutionStrategy::NativeElseWasm,
 		);

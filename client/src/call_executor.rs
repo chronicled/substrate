@@ -95,6 +95,7 @@ where
 			call_data,
 			extensions.unwrap_or_default(),
 			&state_runtime_code.runtime_code()?,
+			self.spawn_handle.clone(),
 		).execute_using_consensus_failure_handler::<_, NeverNativeValue, fn() -> _>(
 			strategy.get_manager(),
 			None,
@@ -168,6 +169,7 @@ where
 					call_data,
 					extensions.unwrap_or_default(),
 					&runtime_code,
+					self.spawn_handle.clone(),
 				)
 				// TODO: https://github.com/paritytech/substrate/issues/4455
 				// .with_storage_transaction_cache(storage_transaction_cache.as_mut().map(|c| &mut **c))
@@ -184,6 +186,7 @@ where
 					call_data,
 					extensions.unwrap_or_default(),
 					&state_runtime_code.runtime_code()?,
+					self.spawn_handle.clone(),
 				)
 				.with_storage_transaction_cache(storage_transaction_cache.as_mut().map(|c| &mut **c))
 				.execute_using_consensus_failure_handler(execution_manager, native_call)
@@ -205,6 +208,7 @@ where
 			&state,
 			changes_trie_state,
 			None,
+			None,
 		);
 		let state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(&state);
 		self.executor.runtime_version(&mut ext, &state_runtime_code.runtime_code()?)
@@ -222,6 +226,7 @@ where
 			trie_state,
 			overlay,
 			&self.executor,
+			self.spawn_handle.clone(),
 			method,
 			call_data,
 			&sp_state_machine::backend::BackendRuntimeCode::new(trie_state).runtime_code()?,

@@ -77,7 +77,7 @@ pub fn new_light<B, S, RA, E>(
 		S: BlockchainStorage<B> + 'static,
 		E: CodeExecutor + RuntimeInfo + Clone + 'static,
 {
-	let local_executor = LocalCallExecutor::new(backend.clone(), code_executor, spawn_handle);
+	let local_executor = LocalCallExecutor::new(backend.clone(), code_executor, spawn_handle.clone());
 	let executor = GenesisCallExecutor::new(backend.clone(), local_executor);
 	Client::new(
 		backend,
@@ -86,6 +86,7 @@ pub fn new_light<B, S, RA, E>(
 		Default::default(),
 		Default::default(),
 		Default::default(),
+		spawn_handle,
 		prometheus_registry,
 	)
 }
@@ -94,9 +95,10 @@ pub fn new_light<B, S, RA, E>(
 pub fn new_fetch_checker<E, B: BlockT, S: BlockchainStorage<B>>(
 	blockchain: Arc<Blockchain<S>>,
 	executor: E,
+	spawn_handle: Box<dyn ClonableSpawn>,
 ) -> LightDataChecker<E, HashFor<B>, B, S>
 	where
 		E: CodeExecutor,
 {
-	LightDataChecker::new(blockchain, executor)
+	LightDataChecker::new(blockchain, executor, spawn_handle)
 }

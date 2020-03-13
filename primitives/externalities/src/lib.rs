@@ -182,6 +182,11 @@ pub trait Externalities: ExtensionStore {
 	/// Returns the SCALE encoded hash.
 	fn storage_changes_root(&mut self, parent: &[u8]) -> Result<Option<Vec<u8>>, ()>;
 
+	/// Return handle that can spawn parallel tasks.
+	///
+	/// Can be none if host does not support parallel tasks.
+	fn spawn_handle(&self) -> Option<&dyn ClonableSpawn>;
+
 	/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	/// Benchmarking related functionality and shouldn't be used anywhere else!
 	/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -221,4 +226,10 @@ impl ExternalitiesExt for &mut dyn Externalities {
 	fn deregister_extension<T: Extension>(&mut self) {
 		self.deregister_extension_by_type_id(TypeId::of::<T>());
 	}
+}
+
+/// Something that can spawn tasks and also can be cloned.
+pub trait ClonableSpawn: futures::task::Spawn + Send + Sync {
+	/// Clone as heap-allocated handle.
+	fn clone(&self) -> Box<dyn ClonableSpawn>;
 }

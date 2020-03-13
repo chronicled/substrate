@@ -7203,6 +7203,7 @@ name = "sp-externalities"
 version = "0.8.0-alpha.3"
 dependencies = [
  "environmental",
+ "futures 0.3.4",
  "sp-std",
  "sp-storage",
 ]
@@ -7424,6 +7425,7 @@ dependencies = [
 name = "sp-state-machine"
 version = "0.8.0-alpha.3"
 dependencies = [
+ "futures 0.3.4",
  "hash-db",
  "hex-literal",
  "log 0.4.8",

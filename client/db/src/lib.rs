@@ -310,7 +310,7 @@ pub fn new_client<E, Block, RA>(
 		E: CodeExecutor + RuntimeInfo,
 {
 	let backend = Arc::new(Backend::new(settings, CANONICALIZATION_DELAY)?);
-	let executor = sc_client::LocalCallExecutor::new(backend.clone(), executor, spawn_handle);
+	let executor = sc_client::LocalCallExecutor::new(backend.clone(), executor, spawn_handle.clone());
 	Ok((
 		sc_client::Client::new(
 			backend.clone(),
@@ -319,6 +319,7 @@ pub fn new_client<E, Block, RA>(
 			fork_blocks,
 			bad_blocks,
 			execution_extensions,
+			spawn_handle,
 			prometheus_registry,
 		)?,
 		backend,

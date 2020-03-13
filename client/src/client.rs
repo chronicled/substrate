@@ -99,6 +99,7 @@ pub struct Client<B, E, Block, RA> where Block: BlockT {
 	importing_block: RwLock<Option<Block::Hash>>,
 	block_rules: BlockRules<Block>,
 	execution_extensions: ExecutionExtensions<Block>,
+	spawn_handle: Box<dyn ClonableSpawn>,
 	_phantom: PhantomData<RA>,
 }
 
@@ -165,7 +166,7 @@ pub fn new_with_backend<B, E, Block, S, RA>(
 		Block: BlockT,
 		B: backend::LocalBackend<Block> + 'static,
 {
-	let call_executor = LocalCallExecutor::new(backend.clone(), executor, spawn_handle);
+	let call_executor = LocalCallExecutor::new(backend.clone(), executor, spawn_handle.clone());
 	let extensions = ExecutionExtensions::new(Default::default(), keystore);
 	Client::new(
 		backend,
@@ -174,6 +175,7 @@ pub fn new_with_backend<B, E, Block, S, RA>(
 		Default::default(),
 		Default::default(),
 		extensions,
+		spawn_handle,
 		prometheus_registry,
 	)
 }
@@ -252,6 +254,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		fork_blocks: ForkBlocks<Block>,
 		bad_blocks: BadBlocks<Block>,
 		execution_extensions: ExecutionExtensions<Block>,
+		spawn_handle: Box<dyn ClonableSpawn>,
 		_prometheus_registry: Option<Registry>,
 	) -> sp_blockchain::Result<Self> {
 		if backend.blockchain().header(BlockId::Number(Zero::zero()))?.is_none() {
@@ -282,6 +285,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 			importing_block: Default::default(),
 			block_rules: BlockRules::new(fork_blocks, bad_blocks),
 			execution_extensions,
+			spawn_handle,
 			_phantom: Default::default(),
 		})
 	}
@@ -1148,7 +1152,14 @@ impl<B, E, Block, RA> ProofProvider<Block> for Client<B, E, Block, RA> where
 
 		let state = self.state_at(id)?;
 		let header = self.prepare_environment_block(id)?;
-		prove_execution(state, header, &self.executor, method, call_data).map(|(r, p)| {
+		prove_execution(
+			state,
+			header,
+			&self.executor,
+			self.spawn_handle.clone(),
+			method,
+			call_data,
+		).map(|(r, p)| {
 			(r, StorageProof::merge(vec![p, code_proof]))
 		})
 	}

@@ -74,6 +74,7 @@ pub use trie_backend::TrieBackend;
 pub use error::{Error, ExecutionError};
 pub use in_memory_backend::InMemory as InMemoryBackend;
 pub use stats::{UsageInfo, UsageUnit};
+pub use sp_externalities::ClonableSpawn;
 
 type CallResult<R, E> = Result<NativeOrEncoded<R>, E>;
 
@@ -191,6 +192,7 @@ pub struct StateMachine<'a, B, H, N, Exec>
 	_marker: PhantomData<(H, N)>,
 	storage_transaction_cache: Option<&'a mut StorageTransactionCache<B::Transaction, H, N>>,
 	runtime_code: &'a RuntimeCode<'a>,
+	spawn_handle: Box<dyn ClonableSpawn>,
 }
 
 impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
@@ -210,6 +212,7 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 		call_data: &'a [u8],
 		mut extensions: Extensions,
 		runtime_code: &'a RuntimeCode,
+		spawn_handle: Box<dyn ClonableSpawn>,
 	) -> Self {
 		extensions.register(CallInWasmExt::new(exec.clone()));
 
@@ -224,6 +227,7 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 			_marker: PhantomData,
 			storage_transaction_cache: None,
 			runtime_code,
+			spawn_handle,
 		}
 	}
 
@@ -281,6 +285,7 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 			self.backend,
 			self.changes_trie_state.clone(),
 			Some(&mut self.extensions),
+			Some(self.spawn_handle.clone()),
 		);
 
 		let id = ext.id;
@@ -437,6 +442,7 @@ pub fn prove_execution<B, H, N, Exec>(
 	mut backend: B,
 	overlay: &mut OverlayedChanges,
 	exec: &Exec,
+	spawn_handle: Box<dyn ClonableSpawn>,
 	method: &str,
 	call_data: &[u8],
 	runtime_code: &RuntimeCode,
@@ -454,6 +460,7 @@ where
 		trie_backend,
 		overlay,
 		exec,
+		spawn_handle,
 		method,
 		call_data,
 		runtime_code,
@@ -473,6 +480,7 @@ pub fn prove_execution_on_trie_backend<S, H, N, Exec>(
 	trie_backend: &TrieBackend<S, H>,
 	overlay: &mut OverlayedChanges,
 	exec: &Exec,
+	spawn_handle: Box<dyn ClonableSpawn>,
 	method: &str,
 	call_data: &[u8],
 	runtime_code: &RuntimeCode,
@@ -494,6 +502,7 @@ where
 		call_data,
 		Extensions::default(),
 		runtime_code,
+		spawn_handle,
 	);
 
 	let result = sm.execute_using_consensus_failure_handler::<_, NeverNativeValue, fn() -> _>(
@@ -510,6 +519,7 @@ pub fn execution_proof_check<H, N, Exec>(
 	proof: StorageProof,
 	overlay: &mut OverlayedChanges,
 	exec: &Exec,
+	spawn_handle: Box<dyn ClonableSpawn>,
 	method: &str,
 	call_data: &[u8],
 	runtime_code: &RuntimeCode,
@@ -525,6 +535,7 @@ where
 		&trie_backend,
 		overlay,
 		exec,
+		spawn_handle,
 		method,
 		call_data,
 		runtime_code,
@@ -536,6 +547,7 @@ pub fn execution_proof_check_on_trie_backend<H, N, Exec>(
 	trie_backend: &TrieBackend<MemoryDB<H>, H>,
 	overlay: &mut OverlayedChanges,
 	exec: &Exec,
+	spawn_handle: Box<dyn ClonableSpawn>,
 	method: &str,
 	call_data: &[u8],
 	runtime_code: &RuntimeCode,
@@ -555,6 +567,7 @@ where
 		call_data,
 		Extensions::default(),
 		runtime_code,
+		spawn_handle,
 	);
 
 	sm.execute_using_consensus_failure_handler::<_, NeverNativeValue, fn() -> _>(
@@ -738,6 +751,26 @@ mod tests {
 		fallback_succeeds: bool,
 	}
 
+	struct DummyTaskExecutor;
+
+	impl futures::task::Spawn for DummyTaskExecutor {
+		fn spawn_obj(&self, _future: futures::task::FutureObj<'static, ()>)
+			-> Result<(), futures::task::SpawnError>
+		{
+			unimplemented!()
+		}
+	}
+
+	impl ClonableSpawn for DummyTaskExecutor {
+		fn clone(&self) -> Box<dyn ClonableSpawn> {
+			Box::new(DummyTaskExecutor)
+		}
+	}
+
+	fn dummy_task_executor() -> Box<dyn ClonableSpawn> {
+		DummyTaskExecutor.clone()
+	}
+
 	const CHILD_INFO_1: ChildInfo<'static> = ChildInfo::new_default(b"unique_id_1");
 
 	impl CodeExecutor for DummyCodeExecutor {
@@ -820,6 +853,7 @@ mod tests {
 			&[],
 			Default::default(),
 			&wasm_code,
+			dummy_task_executor(),
 		);
 
 		assert_eq!(
@@ -849,6 +883,7 @@ mod tests {
 			&[],
 			Default::default(),
 			&wasm_code,
+			dummy_task_executor(),
 		);
 
 		assert_eq!(state_machine.execute(ExecutionStrategy::NativeElseWasm).unwrap(), vec![66]);
@@ -875,6 +910,7 @@ mod tests {
 			&[],
 			Default::default(),
 			&wasm_code,
+			dummy_task_executor(),
 		);
 
 		assert!(
@@ -905,6 +941,7 @@ mod tests {
 			remote_backend,
 			&mut Default::default(),
 			&executor,
+			dummy_task_executor(),
 			"test",
 			&[],
 			&RuntimeCode::empty(),
@@ -916,6 +953,7 @@ mod tests {
 			remote_proof,
 			&mut Default::default(),
 			&executor,
+			dummy_task_executor(),
 			"test",
 			&[],
 			&RuntimeCode::empty(),
@@ -956,6 +994,7 @@ mod tests {
 				backend,
 				changes_trie::disabled_state::<_, u64>(),
 				None,
+				None,
 			);
 			ext.clear_prefix(b"ab");
 		}
@@ -986,6 +1025,7 @@ mod tests {
 			&mut cache,
 			backend,
 			changes_trie::disabled_state::<_, u64>(),
+			None,
 			None,
 		);
 
@@ -1088,6 +1128,7 @@ mod tests {
 				&mut cache,
 				&backend,
 				changes_trie::disabled_state::<_, u64>(),
+				None,
 				None,
 			);
 			ext.set_child_storage(subtrie1, CHILD_INFO_1, b"abc".to_vec(), b"def".to_vec());

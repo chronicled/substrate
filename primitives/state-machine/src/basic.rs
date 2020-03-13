@@ -291,6 +291,10 @@ impl Externalities for BasicExternalities {
 		Ok(None)
 	}
 
+	fn spawn_handle(&self) -> Option<&dyn sp_externalities::ClonableSpawn> {
+		unimplemented!()
+	}
+
 	fn wipe(&mut self) {}
 
 	fn commit(&mut self) {}
