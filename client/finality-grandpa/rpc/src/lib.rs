@@ -28,10 +28,20 @@ pub trait GrandpaApi {
 	fn grandpa_roundState(&self) -> FutureResult<String>;
 }
 
-pub struct GrandpaRpcHandler;
+pub struct GrandpaRpcHandler {
+	// WIP: sort out trait dependencies
+	shared_voter_state: SharedVoterState<H, N, E>,
+};
 
-impl GrandpaApi for GrandpaRpcHandler {
+impl GrandpaApi<H, N, E> for GrandpaRpcHandler {
+	pub fn new(shared_voter_state: SharedVoterState<H, N, E>) -> Self {
+		Self {
+			shared_voter_state,
+		}
+	}
+
 	fn grandpa_roundState(&self) -> FutureResult<String> {
+		// WIP: expose actual data from SharedVoterState
 		let future = async move {
 			Ok(String::from("Hello world"))
 		}.boxed();

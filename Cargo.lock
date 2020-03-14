@@ -1374,7 +1374,6 @@ dependencies = [
 [[package]]
 name = "finality-grandpa"
 version = "0.11.0"
-source = "git+https://github.com/octol/finality-grandpa?branch=jon/issue-55-expose-voter-state#709a7fd6e6e352a39402b8cbb9772eec7f4d223b"
 dependencies = [
  "futures 0.3.4",
  "futures-timer 2.0.2",
@@ -3506,6 +3505,7 @@ dependencies = [
  "sc-consensus-babe",
  "sc-consensus-babe-rpc",
  "sc-consensus-epochs",
+ "sc-finality-grandpa",
  "sc-finality-grandpa-rpc",
  "sc-keystore",
  "sp-api",

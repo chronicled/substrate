@@ -19,7 +19,7 @@ use parity_scale_codec::{Encode, Decode};
 
 /// Consensus-related data changes tracker.
 #[derive(Clone, Debug, Encode, Decode)]
-pub(crate) struct ConsensusChanges<H, N> {
+pub struct ConsensusChanges<H, N> {
 	pending_changes: Vec<(N, H)>,
 }
 
@@ -75,4 +75,4 @@ impl<H: Copy + PartialEq, N: Copy + Ord> ConsensusChanges<H, N> {
 }
 
 /// Thread-safe consensus changes tracker reference.
-pub(crate) type SharedConsensusChanges<H, N> = Arc<parking_lot::Mutex<ConsensusChanges<H, N>>>;
+pub type SharedConsensusChanges<H, N> = Arc<parking_lot::Mutex<ConsensusChanges<H, N>>>;

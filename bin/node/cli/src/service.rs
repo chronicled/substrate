@@ -54,6 +54,8 @@ macro_rules! new_full_start {
 		type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 		let mut import_setup = None;
 		let inherent_data_providers = sp_inherents::InherentDataProviders::new();
+		// WIP: sort out construction
+		let shared_voter_state = Arc::new(RwLock::new(VoterState));
 
 		let builder = sc_service::ServiceBuilder::new_full::<
 			node_primitives::Block, node_runtime::RuntimeApi, node_executor::Executor
@@ -107,12 +109,13 @@ macro_rules! new_full_start {
 						keystore: builder.keystore(),
 						babe_config: sc_consensus_babe::BabeLink::config(babe_link).clone(),
 						shared_epoch_changes: sc_consensus_babe::BabeLink::epoch_changes(babe_link).clone()
-					}
+					},
+					shared_voter_state: Arc::clone(&shared_voter_state),
 				};
 				Ok(node_rpc::create_full(deps))
 			})?;
 
-		(builder, import_setup, inherent_data_providers)
+		(builder, import_setup, inherent_data_providers, shared_voter_state)
 	}}
 }
 
@@ -144,7 +147,8 @@ macro_rules! new_full {
 		// never actively participate in any consensus process.
 		let participates_in_consensus = is_authority && !$config.sentry_mode;
 
-		let (builder, mut import_setup, inherent_data_providers) = new_full_start!($config);
+		let (builder, mut import_setup, inherent_data_providers, shared_voter_state)
+			= new_full_start!($config);
 
 		let service = builder.with_network_protocol(|_| Ok(crate::service::NodeProtocol::new()))?
 			.with_finality_proof_provider(|client, backend|
@@ -240,6 +244,7 @@ macro_rules! new_full {
 					on_exit: service.on_exit(),
 					telemetry_on_connect: Some(service.telemetry_on_connect_stream()),
 					voting_rule: grandpa::VotingRulesBuilder::default().build(),
+					shared_voter_state,
 				};
 				// the GRANDPA voter task is considered infallible, i.e.
 				// if it fails we take down the service with it.

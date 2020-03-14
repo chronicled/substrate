@@ -42,7 +42,9 @@ use sp_consensus_babe::BabeApi;
 use sc_consensus_epochs::SharedEpochChanges;
 use sc_consensus_babe::{Config, Epoch};
 use sc_consensus_babe_rpc::BabeRPCHandler;
+use sc_finality_grandpa::{SharedVoterState, voter, Environment};
 use sc_finality_grandpa_rpc::GrandpaRpcHandler;
+use sp_runtime::traits::{Block as BlockT, NumberFor};
 
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {
@@ -67,7 +69,7 @@ pub struct BabeDeps {
 }
 
 /// Full client dependencies.
-pub struct FullDeps<C, P, SC> {
+pub struct FullDeps<C, P, SC, B, E, N, RA, VR> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
@@ -76,6 +78,12 @@ pub struct FullDeps<C, P, SC> {
 	pub select_chain: SC,
 	/// BABE specific dependencies.
 	pub babe: BabeDeps,
+	// WIP: sort out trait dependencies
+	pub shared_voter_state: SharedVoterState<
+		<Block as BlockT>::Hash,
+		NumberFor<Block>,
+		Environment<B, E, Block, N, RA, SC, VR>,
+	>,
 }
 
 /// Instantiate all Full RPC extensions.
@@ -103,7 +111,8 @@ pub fn create_full<C, P, M, SC>(
 		client,
 		pool,
 		select_chain,
-		babe
+		babe,
+		shared_voter_state,
 	} = deps;
 	let BabeDeps {
 		keystore,
@@ -130,7 +139,7 @@ pub fn create_full<C, P, M, SC>(
 	);
 	io.extend_with(
 		sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
-			GrandpaRpcHandler {}
+			GrandpaRpcHandler::new(shared_voter_state)
 		)
 	);
 

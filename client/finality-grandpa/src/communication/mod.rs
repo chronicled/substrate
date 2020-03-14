@@ -140,7 +140,7 @@ pub(crate) fn global_topic<B: BlockT>(set_id: SetIdNumber) -> B::Hash {
 }
 
 /// Bridge between the underlying network service, gossiping consensus messages and Grandpa
-pub(crate) struct NetworkBridge<B: BlockT, N: Network<B>> {
+pub struct NetworkBridge<B: BlockT, N: Network<B>> {
 	service: N,
 	gossip_engine: GossipEngine<B>,
 	validator: Arc<GossipValidator<B>>,

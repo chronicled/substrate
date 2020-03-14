@@ -68,11 +68,13 @@ use sp_consensus::SelectChain;
 use sp_core::Pair;
 use sc_telemetry::{telemetry, CONSENSUS_INFO, CONSENSUS_DEBUG};
 use serde_json;
+use parking_lot::RwLock;
 
 use sp_finality_tracker;
 
 use finality_grandpa::Error as GrandpaError;
-use finality_grandpa::{voter, BlockNumberOps, voter_set::VoterSet};
+use finality_grandpa::{BlockNumberOps, voter_set::VoterSet, voter::VoterState};
+pub use finality_grandpa::voter;
 
 use std::{fmt, io};
 use std::sync::Arc;
@@ -102,7 +104,8 @@ pub use voting_rule::{
 };
 
 use aux_schema::PersistentData;
-use environment::{Environment, VoterSetState};
+pub use environment::Environment;
+use environment::VoterSetState;
 use import::GrandpaBlockImport;
 use until_imported::UntilGlobalMessageBlocksImported;
 use communication::{NetworkBridge, Network as NetworkT};
@@ -180,6 +183,8 @@ type CommunicationOutH<Block, H> = finality_grandpa::voter::CommunicationOut<
 	AuthoritySignature,
 	AuthorityId,
 >;
+
+pub type SharedVoterState<H, N, E> = Arc<RwLock<VoterState<H, N, E>>>;
 
 /// Configuration for the GRANDPA service.
 #[derive(Clone)]
@@ -280,7 +285,7 @@ impl<Block, Network> BlockSyncRequester<Block> for NetworkBridge<Block, Network>
 
 /// A new authority set along with the canonical block it changed at.
 #[derive(Debug)]
-pub(crate) struct NewAuthoritySet<H, N> {
+pub struct NewAuthoritySet<H, N> {
 	pub(crate) canon_number: N,
 	pub(crate) canon_hash: H,
 	pub(crate) set_id: SetId,
@@ -289,7 +294,7 @@ pub(crate) struct NewAuthoritySet<H, N> {
 
 /// Commands issued to the voter.
 #[derive(Debug)]
-pub(crate) enum VoterCommand<H, N> {
+pub enum VoterCommand<H, N> {
 	/// Pause the voter for given reason.
 	Pause(String),
 	/// New authorities.
@@ -307,7 +312,7 @@ impl<H, N> fmt::Display for VoterCommand<H, N> {
 
 /// Signals either an early exit of a voter or an error.
 #[derive(Debug)]
-pub(crate) enum CommandOrError<H, N> {
+pub enum CommandOrError<H, N> {
 	/// An error occurred.
 	Error(Error),
 	/// A command to the voter.
@@ -516,7 +521,15 @@ fn register_finality_tracker_inherent_data_provider<B, E, Block: BlockT, RA>(
 }
 
 /// Parameters used to run Grandpa.
-pub struct GrandpaParams<B, E, Block: BlockT, N, RA, SC, VR, X> {
+pub struct GrandpaParams<B, E, Block: BlockT, N, RA, SC, VR, X>
+where
+	N: communication::Network<Block>,
+	B: Backend<Block>,
+	E: CallExecutor<Block> + Send + Sync,
+	RA: Send + Sync,
+	SC: SelectChain<Block> + Send + Sync,
+	VR: VotingRule<Block, Client<B, E, Block, RA>>,
+{
 	/// Configuration for the GRANDPA service.
 	pub config: Config,
 	/// A link to the block import worker.
@@ -531,6 +544,13 @@ pub struct GrandpaParams<B, E, Block: BlockT, N, RA, SC, VR, X> {
 	pub telemetry_on_connect: Option<futures::channel::mpsc::UnboundedReceiver<()>>,
 	/// A voting rule used to potentially restrict target votes.
 	pub voting_rule: VR,
+	/// The voter state is exposed at an RPC endpoint.
+	// WIP: sort out trait dependencies
+	pub shared_voter_state: SharedVoterState<
+		Block::Hash,
+		NumberFor<Block>,
+		Environment<B, E, Block, N, RA, SC, VR>,
+	>,
 }
 
 /// Run a GRANDPA voter as a task. Provide configuration and a link to a
@@ -919,3 +939,4 @@ fn authority_id<'a, I>(
 		None => None,
 	}
 }
+

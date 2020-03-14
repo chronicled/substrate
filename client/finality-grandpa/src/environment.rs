@@ -377,17 +377,17 @@ impl<Block: BlockT> SharedVoterSetState<Block> {
 }
 
 /// The environment we run GRANDPA in.
-pub(crate) struct Environment<B, E, Block: BlockT, N: NetworkT<Block>, RA, SC, VR> {
-	pub(crate) client: Arc<Client<B, E, Block, RA>>,
-	pub(crate) select_chain: SC,
-	pub(crate) voters: Arc<VoterSet<AuthorityId>>,
-	pub(crate) config: Config,
-	pub(crate) authority_set: SharedAuthoritySet<Block::Hash, NumberFor<Block>>,
-	pub(crate) consensus_changes: SharedConsensusChanges<Block::Hash, NumberFor<Block>>,
-	pub(crate) network: crate::communication::NetworkBridge<Block, N>,
-	pub(crate) set_id: SetId,
-	pub(crate) voter_set_state: SharedVoterSetState<Block>,
-	pub(crate) voting_rule: VR,
+pub struct Environment<B, E, Block: BlockT, N: NetworkT<Block>, RA, SC, VR> {
+	pub client: Arc<Client<B, E, Block, RA>>,
+	pub select_chain: SC,
+	pub voters: Arc<VoterSet<AuthorityId>>,
+	pub config: Config,
+	pub authority_set: SharedAuthoritySet<Block::Hash, NumberFor<Block>>,
+	pub consensus_changes: SharedConsensusChanges<Block::Hash, NumberFor<Block>>,
+	pub network: crate::communication::NetworkBridge<Block, N>,
+	pub set_id: SetId,
+	pub voter_set_state: SharedVoterSetState<Block>,
+	pub voting_rule: VR,
 }
 
 impl<B, E, Block: BlockT, N: NetworkT<Block>, RA, SC, VR> Environment<B, E, Block, N, RA, SC, VR> {

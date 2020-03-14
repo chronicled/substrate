@@ -30,7 +30,7 @@ use std::ops::Add;
 use std::sync::Arc;
 
 /// A shared authority set.
-pub(crate) struct SharedAuthoritySet<H, N> {
+pub struct SharedAuthoritySet<H, N> {
 	inner: Arc<RwLock<AuthoritySet<H, N>>>,
 }
 
