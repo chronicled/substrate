@@ -57,7 +57,7 @@ fn bench_block_import(c: &mut Criterion) {
 	// for future uses, uncomment if something wrong.
 	// sc_cli::init_logger("sc_client=debug");
 
-	let mut bench_db = BenchDb::new(100);
+	let mut bench_db = BenchDb::new(50000);
 	let block = bench_db.generate_block(BlockType::RandomTransfers(100));
 
 	log::trace!(
