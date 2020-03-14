@@ -280,6 +280,14 @@ pub enum DatabaseSettingsSrc {
 		cache_size: Option<usize>,
 	},
 
+	/// Use sled backed.
+	Sled {
+		/// Path to the database.
+		path: PathBuf,
+		/// Cache size in bytes. If `None` default is used.
+		cache_size: Option<usize>,
+	},
+
 	/// Use a custom already-open database.
 	Custom(Arc<dyn KeyValueDB>),
 }

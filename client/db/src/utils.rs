@@ -253,6 +253,12 @@ pub fn open_database<Block: BlockT>(
 			return Err(sp_blockchain::Error::Backend(msg));
 		},
 		DatabaseSettingsSrc::Custom(db) => db.clone(),
+		DatabaseSettingsSrc::Sled { path, cache_size: _ } => {
+			let db_config = sc_sled_db::DatabaseConfig::with_columns(NUM_COLUMNS);
+			let path = path.to_str()
+				.ok_or_else(|| sp_blockchain::Error::Backend("Invalid database path".into()))?;
+			Arc::new(sc_sled_db::Database::open(&db_config, &path).map_err(db_err)?)
+		}
 	};
 
 	check_database_type(&*db, db_type)?;

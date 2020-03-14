@@ -242,7 +242,7 @@ fn new_full_parts<TBl, TRtApi, TExecDisp>(
 			pruning: config.pruning.clone(),
 			source: match config.expect_database() {
 				DatabaseConfig::Path { path, cache_size } =>
-					sc_client_db::DatabaseSettingsSrc::Path {
+					sc_client_db::DatabaseSettingsSrc::Sled {
 						path: path.clone(),
 						cache_size: cache_size.clone().map(|u| u as usize),
 					},

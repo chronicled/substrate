@@ -1,0 +1,17 @@
+[package]
+name = "sc-sled-db"
+version = "0.8.0-alpha.3"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+license = "GPL-3.0"
+homepage = "https://substrate.dev"
+repository = "https://github.com/paritytech/substrate/"
+description = "sled databased backed for substrate"
+
+[dependencies]
+log = "0.4.8"
+kvdb = "0.4.0"
+hash-db = "0.15.2"
+sled = { version = "0.31", features = ["compression"] }
+parity-util-mem = { version = "0.5.1", default-features = false, features = ["std"] }
+
