@@ -524,11 +524,13 @@ fn register_finality_tracker_inherent_data_provider<B, E, Block: BlockT, RA>(
 pub struct GrandpaParams<B, E, Block: BlockT, N, RA, SC, VR, X>
 where
 	N: communication::Network<Block>,
-	B: Backend<Block>,
-	E: CallExecutor<Block> + Send + Sync,
-	RA: Send + Sync,
-	SC: SelectChain<Block> + Send + Sync,
+	B: Backend<Block> + 'static,
+	E: CallExecutor<Block> + Send + Sync + 'static,
+	RA: Send + Sync + 'static,
+	SC: SelectChain<Block> + Send + Sync + 'static,
 	VR: VotingRule<Block, Client<B, E, Block, RA>>,
+	NumberFor<Block>: BlockNumberOps,
+	Client<B, E, Block, RA>: AuxStore,
 {
 	/// Configuration for the GRANDPA service.
 	pub config: Config,
