@@ -69,7 +69,7 @@ pub struct BabeDeps {
 }
 
 /// Full client dependencies.
-pub struct FullDeps<C, P, SC, B, E, N, RA, VR> {
+pub struct FullDeps<C, P, SC, Env> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
@@ -82,7 +82,7 @@ pub struct FullDeps<C, P, SC, B, E, N, RA, VR> {
 	pub shared_voter_state: SharedVoterState<
 		<Block as BlockT>::Hash,
 		NumberFor<Block>,
-		Environment<B, E, Block, N, RA, SC, VR>,
+		Env,
 	>,
 }
 
