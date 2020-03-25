@@ -104,7 +104,7 @@ pub fn create_full<C, P, M, SC, Env>(
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
 	SC: SelectChain<Block> +'static,
-	Env: voter::Environment<<Block as BlockT>::Hash, NumberFor<Block>> + Send + Sync,
+	Env: voter::Environment<<Block as BlockT>::Hash, NumberFor<Block>> + Send + Sync + 'static,
 {
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 	use pallet_contracts_rpc::{Contracts, ContractsApi};
@@ -143,7 +143,7 @@ pub fn create_full<C, P, M, SC, Env>(
 	);
 	io.extend_with(
 		sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
-			GrandpaRpcHandler::new(shared_voter_state)
+			GrandpaRpcHandler::<Block, _>::new(shared_voter_state)
 		)
 	);
 
