@@ -69,7 +69,10 @@ pub struct BabeDeps {
 }
 
 /// Full client dependencies.
-pub struct FullDeps<C, P, SC, Env> {
+pub struct FullDeps<C, P, SC, Env>
+where
+	Env: voter::Environment<<Block as BlockT>::Hash, NumberFor<Block>>,
+{
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
@@ -87,8 +90,8 @@ pub struct FullDeps<C, P, SC, Env> {
 }
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P, M, SC>(
-	deps: FullDeps<C, P, SC>,
+pub fn create_full<C, P, M, SC, Env>(
+	deps: FullDeps<C, P, SC, Env>,
 ) -> jsonrpc_core::IoHandler<M> where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error=BlockChainError> + 'static,
@@ -101,6 +104,7 @@ pub fn create_full<C, P, M, SC>(
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
 	SC: SelectChain<Block> +'static,
+	Env: voter::Environment<<Block as BlockT>::Hash, NumberFor<Block>> + Send + Sync,
 {
 	use substrate_frame_rpc_system::{FullSystem, SystemApi};
 	use pallet_contracts_rpc::{Contracts, ContractsApi};
