@@ -19,6 +19,7 @@
 //! Service implementation. Specialized wrapper over substrate service.
 
 use std::sync::Arc;
+use parking_lot::RwLock;
 
 use sc_consensus_babe;
 use sc_client::{self, LongestChain};
@@ -55,7 +56,7 @@ macro_rules! new_full_start {
 		let mut import_setup = None;
 		let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 		// WIP: sort out construction
-		let shared_voter_state = Arc::new(RwLock::new(VoterState));
+		let shared_voter_state = Arc::new(RwLock::new(None));
 
 		let builder = sc_service::ServiceBuilder::new_full::<
 			node_primitives::Block, node_runtime::RuntimeApi, node_executor::Executor

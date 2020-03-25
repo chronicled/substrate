@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 use std::time::Duration;
+use parking_lot::RwLock;
 use sc_client::LongestChain;
 use node_template_runtime::{self, GenesisConfig, opaque::Block, RuntimeApi};
 use sc_service::{error::{Error as ServiceError}, AbstractService, Configuration, ServiceBuilder};
@@ -170,6 +171,7 @@ pub fn new_full(config: Configuration<GenesisConfig>)
 				on_exit: service.on_exit(),
 				telemetry_on_connect: Some(service.telemetry_on_connect_stream()),
 				voting_rule: grandpa::VotingRulesBuilder::default().build(),
+				shared_voter_state: Arc::new(RwLock::new(None)),
 			};
 
 			// the GRANDPA voter task is considered infallible, i.e.

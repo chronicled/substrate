@@ -73,8 +73,8 @@ use parking_lot::RwLock;
 use sp_finality_tracker;
 
 use finality_grandpa::Error as GrandpaError;
-use finality_grandpa::{voter_set::VoterSet, voter::VoterState};
-pub use finality_grandpa::{BlockNumberOps, voter};
+use finality_grandpa::{voter_set::VoterSet};
+pub use finality_grandpa::{BlockNumberOps, voter, voter::VoterState};
 
 use std::{fmt, io};
 use std::sync::Arc;
@@ -184,7 +184,7 @@ type CommunicationOutH<Block, H> = finality_grandpa::voter::CommunicationOut<
 	AuthorityId,
 >;
 
-pub type SharedVoterState<H, N, E> = Arc<RwLock<VoterState<H, N, E>>>;
+pub type SharedVoterState<H, N, E> = Arc<RwLock<Option<VoterState<H, N, E>>>>;
 
 /// Configuration for the GRANDPA service.
 #[derive(Clone)]
