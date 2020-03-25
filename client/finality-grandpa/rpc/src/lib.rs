@@ -19,6 +19,8 @@
 use futures::{FutureExt as _, TryFutureExt as _};
 use jsonrpc_derive::rpc;
 use jsonrpc_core::{Error as RpcError, futures::future as rpc_future};
+use sc_finality_grandpa::{SharedVoterState, voter, BlockNumberOps};
+use sp_runtime::traits::{NumberFor, Block as BlockT};
 
 type FutureResult<T> = Box<dyn rpc_future::Future<Item = T, Error = RpcError> + Send>;
 
@@ -28,18 +30,34 @@ pub trait GrandpaApi {
 	fn grandpa_roundState(&self) -> FutureResult<String>;
 }
 
-pub struct GrandpaRpcHandler {
+pub struct GrandpaRpcHandler<Block: BlockT, Env>
+where
+	Env: voter::Environment<Block::Hash, NumberFor<Block>>,
+	NumberFor<Block>: BlockNumberOps,
+{
 	// WIP: sort out trait dependencies
-	shared_voter_state: SharedVoterState<H, N, E>,
-};
+	shared_voter_state: SharedVoterState<Block::Hash, NumberFor<Block>, Env>,
+}
 
-impl GrandpaApi<H, N, E> for GrandpaRpcHandler {
-	pub fn new(shared_voter_state: SharedVoterState<H, N, E>) -> Self {
+impl<Block, Env> GrandpaRpcHandler<Block, Env>
+where
+	Block: BlockT,
+	Env: voter::Environment<Block::Hash, NumberFor<Block>>,
+	NumberFor<Block>: BlockNumberOps,
+{
+	pub fn new(shared_voter_state: SharedVoterState<Block::Hash, NumberFor<Block>, Env>) -> Self {
 		Self {
 			shared_voter_state,
 		}
 	}
+}
 
+impl<Block, Env> GrandpaApi for GrandpaRpcHandler<Block, Env>
+where
+	Block: BlockT,
+	Env: voter::Environment<Block::Hash, NumberFor<Block>> + Send + Sync + 'static,
+	NumberFor<Block>: BlockNumberOps,
+{
 	fn grandpa_roundState(&self) -> FutureResult<String> {
 		// WIP: expose actual data from SharedVoterState
 		let future = async move {

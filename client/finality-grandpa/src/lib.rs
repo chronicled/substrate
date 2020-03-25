@@ -73,8 +73,8 @@ use parking_lot::RwLock;
 use sp_finality_tracker;
 
 use finality_grandpa::Error as GrandpaError;
-use finality_grandpa::{BlockNumberOps, voter_set::VoterSet, voter::VoterState};
-pub use finality_grandpa::voter;
+use finality_grandpa::{voter_set::VoterSet, voter::VoterState};
+pub use finality_grandpa::{BlockNumberOps, voter};
 
 use std::{fmt, io};
 use std::sync::Arc;
@@ -580,6 +580,7 @@ pub fn run_grandpa_voter<B, E, Block: BlockT, N, RA, SC, VR, X>(
 		on_exit,
 		telemetry_on_connect,
 		voting_rule,
+		shared_voter_state,
 	} = grandpa_params;
 
 	let LinkHalf {

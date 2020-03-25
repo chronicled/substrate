@@ -6171,6 +6171,7 @@ dependencies = [
  "jsonrpc-core-client",
  "jsonrpc-derive",
  "sc-finality-grandpa",
+ "sp-runtime",
  "substrate-test-runtime-client",
 ]
 
