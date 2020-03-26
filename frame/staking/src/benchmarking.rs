@@ -20,7 +20,7 @@ use super::*;
 
 use rand_chacha::{rand_core::{RngCore, SeedableRng}, ChaChaRng};
 
-use sp_runtime::traits::One;
+use sp_runtime::traits::{Dispatchable, One};
 use sp_io::hashing::blake2_256;
 
 use frame_system::RawOrigin;
@@ -386,6 +386,88 @@ benchmarks! {
 			&mut NegativeImbalanceOf::<T>::zero()
 		);
 	}
+
+	payout_all {
+		let v in 1 .. 10;
+		let n in 1 .. 100;
+		MinimumValidatorCount::put(0);
+		create_validators_with_nominators_for_era::<T>(v, n)?;
+		// Start a new Era
+		let new_validators = Staking::<T>::new_era(SessionIndex::one()).unwrap();
+		assert!(new_validators.len() == v as usize);
+
+		let current_era = CurrentEra::get().unwrap();
+		let mut points_total = 0;
+		let mut points_individual = Vec::new();
+		let mut payout_calls = Vec::new();
+
+		for validator in new_validators.iter() {
+			points_total += 10;
+			points_individual.push((validator.clone(), 10));
+			payout_calls.push(Call::<T>::payout_validator(current_era))
+		}
+
+		// Give Era Points
+		let reward = EraRewardPoints::<T::AccountId> {
+			total: points_total,
+			individual: points_individual.into_iter().collect(),
+		};
+
+		ErasRewardPoints::<T>::insert(current_era, reward);
+
+		// Create reward pool
+		let total_payout = T::Currency::minimum_balance() * 1000.into();
+		<ErasValidatorReward<T>>::insert(current_era, total_payout);
+
+		let era = current_era;
+
+		let validators_with_reward = ErasRewardPoints::<T>::get(era).individual.keys()
+			.cloned()
+			.collect::<Vec<_>>();
+
+		let mut payout_calls = Vec::new();
+
+		// reward nominators
+		let mut nominator_controllers = Vec::new();
+		for validator in Staking::eras_reward_points(era).individual.keys() {
+			let validator: &T::AccountId = validator;
+			let validator_exposure = Staking::eras_stakers_clipped(era, validator);
+			for (nom_index, nom) in validator_exposure.others.iter().enumerate() {
+				if let Some(nom_ctrl) = Staking::bonded(nom.who) {
+					match nominator_controllers.binary_search_by(|(nom, _): &(T::AccountId, Vec<(T::AccountId, u32)>)| { nom.cmp(&nom_ctrl) }) {
+						Ok(pos) => {
+							let (nom_ctrl, mut list) = nominator_controllers.remove(pos);
+							list.push((validator.clone(), nom_index as u32));
+							nominator_controllers.insert(pos, (nom_ctrl, list));
+						},
+						Err(pos) => {
+							nominator_controllers.insert(pos, (nom_ctrl, vec![(validator.clone(), nom_index as u32)]))
+						},
+					}
+				}
+			}
+		}
+
+		for (nominator_controller, validators_with_nom_index) in nominator_controllers {
+			payout_calls.push(Call::<T>::payout_nominator(
+				era,
+				validators_with_nom_index,
+			));
+		}
+
+		// reward validators
+		for validator_controller in validators_with_reward.iter().filter_map(Staking::bonded) {
+			let validator_controller: &T::AccountId = validator_controller;
+			payout_calls.push(Call::<T>::payout_validator(era));
+		}
+
+		let caller: T::AccountId = account("caller", 0, SEED);
+		assert!(payout_calls.len() == (v + n.min(64)) as usize);
+	}: {
+		for call in payout_calls {
+			call.dispatch(RawOrigin::Signed(caller.clone()).into())?;
+		}
+	}
 }
 
 #[cfg(test)]
@@ -398,6 +480,7 @@ mod tests {
 		create_validators_with_nominators_for_era,
 		create_validator_with_nominators,
 		create_nominator_with_validators,
+		SelectedBenchmark,
 	};
 
 	#[test]
@@ -461,4 +544,21 @@ mod tests {
 		});
 	}
 
+	#[test]
+	fn test_payout_all() {
+		ExtBuilder::default().stakers(false).build().execute_with(|| {
+			let v = 10;
+			let n = 100;
+
+			let selected_benchmark = SelectedBenchmark::payout_all;
+			let c = vec![(frame_benchmarking::BenchmarkParameter::v, v), (frame_benchmarking::BenchmarkParameter::n, n)];
+			let closure_to_benchmark =
+				<SelectedBenchmark as frame_benchmarking::BenchmarkingSetup<Test>>::instance(
+					&selected_benchmark,
+					&c
+				).unwrap();
+
+			assert_ok!(closure_to_benchmark());
+		});
+	}
 }
