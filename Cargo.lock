@@ -1374,6 +1374,7 @@ dependencies = [
 [[package]]
 name = "finality-grandpa"
 version = "0.11.0"
+source = "git+https://github.com/octol/finality-grandpa?branch=jon/issue-55-expose-voter-state#2fe5d6505ea4d9104da604dacc929262cc61f678"
 dependencies = [
  "futures 0.3.4",
  "futures-timer 2.0.2",

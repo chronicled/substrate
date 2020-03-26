@@ -30,17 +30,17 @@ sc-network-gossip = { version = "0.8", path = "../network-gossip" }
 sp-finality-tracker = { version = "2.0.0", path = "../../primitives/finality-tracker" }
 sp-finality-grandpa = { version = "2.0.0", path = "../../primitives/finality-grandpa" }
 #finality-grandpa = { version = "0.11.1", features = ["derive-codec"] }
-finality-grandpa = { path = "../../../finality-grandpa", features = ["derive-codec"] }
+#finality-grandpa = { path = "../../../finality-grandpa", features = ["derive-codec"] }
 pin-project = "0.4.6"
 
-#[dependencies.finality-grandpa]
-#git = "https://github.com/octol/finality-grandpa"
-#branch = "jon/issue-55-expose-voter-state"
-#features = ["derive-codec"]
+[dependencies.finality-grandpa]
+git = "https://github.com/octol/finality-grandpa"
+branch = "jon/issue-55-expose-voter-state"
+features = ["derive-codec"]
 
 [dev-dependencies]
 #finality-grandpa = { version = "0.11.1", features = ["derive-codec", "test-helpers"] }
-finality-grandpa = { path = "../../../finality-grandpa", features = ["derive-codec", "test-helpers"] }
+#finality-grandpa = { path = "../../../finality-grandpa", features = ["derive-codec", "test-helpers"] }
 sc-network = { version = "0.8", path = "../network" }
 sc-network-test = { version = "0.8.0", path = "../network/test" }
 sp-keyring = { version = "2.0.0", path = "../../primitives/keyring" }
@@ -53,7 +53,7 @@ tempfile = "3.1.0"
 sp-api = { version = "2.0.0", path = "../../primitives/api" }
 futures01 = { package = "futures", version = "0.1.29" }
 
-#[dev-dependencies.finality-grandpa]
-#git = "https://github.com/octol/finality-grandpa"
-#branch = "jon/issue-55-expose-voter-state"
-#features = ["derive-codec", "test-helpers"]
+[dev-dependencies.finality-grandpa]
+git = "https://github.com/octol/finality-grandpa"
+branch = "jon/issue-55-expose-voter-state"
+features = ["derive-codec", "test-helpers"]
