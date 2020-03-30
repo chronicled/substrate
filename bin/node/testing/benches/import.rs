@@ -96,13 +96,6 @@ fn bench_block_import(c: &mut Criterion) {
 						block.extrinsics.len(),
 						elapsed,
 					);
-
-					log::info!(
-						target: "bench-logistics",
-						"usage info: {}",
-						context.backend.usage_info()
-							.expect("RocksDB backend always provides usage info!"),
-					);
 				},
 				criterion::BatchSize::PerIteration,
 			);
