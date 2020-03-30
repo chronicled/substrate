@@ -17,7 +17,7 @@
 use crate::{Service, NetworkStatus, NetworkState, error::Error, DEFAULT_PROTOCOL_ID, MallocSizeOfWasm};
 use crate::{TaskManagerBuilder, start_rpc_servers, build_network_future, TransactionPoolAdapter};
 use crate::status_sinks;
-use crate::config::{Configuration, DatabaseConfig, KeystoreConfig, PrometheusConfig};
+use crate::config::{Configuration, DatabaseConfig, KeystoreConfig, PrometheusConfig, OffchainWorkerConfig};
 use sc_client_api::{
 	self,
 	BlockchainEvents,
@@ -888,11 +888,11 @@ ServiceBuilder<
 		let network_status_sinks = Arc::new(Mutex::new(status_sinks::StatusSinks::new()));
 
 		let offchain_storage = backend.offchain_storage();
-		let offchain_workers = match (config.offchain_worker, offchain_storage.clone()) {
-			(true, Some(db)) => {
+		let offchain_workers = match (config.offchain_worker.clone(), offchain_storage.clone()) {
+			(OffchainWorkerConfig{enabled : true, .. }, Some(db)) => {
 				Some(Arc::new(sc_offchain::OffchainWorkers::new(client.clone(), db)))
 			},
-			(true, None) => {
+			(OffchainWorkerConfig{enabled : true, .. }, None) => {
 				warn!("Offchain workers disabled, due to lack of offchain storage support in backend.");
 				None
 			},

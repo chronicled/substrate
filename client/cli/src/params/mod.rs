@@ -20,6 +20,7 @@ mod shared_params;
 mod node_key_params;
 mod network_configuration_params;
 mod pruning_params;
+mod offchain_worker_params;
 
 use std::str::FromStr;
 use std::fmt::Debug;
@@ -30,6 +31,7 @@ pub use crate::params::shared_params::*;
 pub use crate::params::node_key_params::*;
 pub use crate::params::network_configuration_params::*;
 pub use crate::params::pruning_params::*;
+pub use crate::params::offchain_worker_params::*;
 
 /// Wrapper type of `String` that holds an unsigned integer of arbitrary size, formatted as a decimal.
 #[derive(Debug, Clone)]

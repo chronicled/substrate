@@ -18,7 +18,7 @@ use std::path::PathBuf;
 use std::net::SocketAddr;
 use std::fs;
 use log::info;
-use structopt::{StructOpt, clap::arg_enum};
+use structopt::StructOpt;
 use names::{Generator, Name};
 use regex::Regex;
 use chrono::prelude::*;
@@ -34,6 +34,7 @@ use crate::params::ImportParams;
 use crate::params::SharedParams;
 use crate::params::NetworkConfigurationParams;
 use crate::params::TransactionPoolParams;
+use crate::params::OffchainWorkerParams;
 use crate::runtime::run_service_until_exit;
 
 /// The maximum number of characters for a node name.
@@ -42,16 +43,7 @@ const NODE_NAME_MAX_LENGTH: usize = 32;
 /// default sub directory for the key store
 const DEFAULT_KEYSTORE_CONFIG_PATH : &'static str = "keystore";
 
-arg_enum! {
-	/// Whether off-chain workers are enabled.
-	#[allow(missing_docs)]
-	#[derive(Debug, Clone)]
-	pub enum OffchainWorkerEnabled {
-		Always,
-		Never,
-		WhenValidating,
-	}
-}
+
 
 /// The `run` command used to run a node.
 #[derive(Debug, StructOpt, Clone)]
@@ -176,17 +168,9 @@ pub struct RunCmd {
 	#[structopt(long = "telemetry-url", value_name = "URL VERBOSITY", parse(try_from_str = parse_telemetry_endpoints))]
 	pub telemetry_endpoints: Vec<(String, u8)>,
 
-	/// Should execute offchain workers on every block.
-	///
-	/// By default it's only enabled for nodes that are authoring new blocks.
-	#[structopt(
-		long = "offchain-worker",
-		value_name = "ENABLED",
-		possible_values = &OffchainWorkerEnabled::variants(),
-		case_insensitive = true,
-		default_value = "WhenValidating"
-	)]
-	pub offchain_worker: OffchainWorkerEnabled,
+	#[allow(missing_docs)]
+	#[structopt(flatten)]
+	pub offchain_worker: OffchainWorkerParams,
 
 	#[allow(missing_docs)]
 	#[structopt(flatten)]
@@ -359,13 +343,7 @@ impl RunCmd {
 		// set sentry mode (i.e. act as an authority but **never** actively participate)
 		config.sentry_mode = self.sentry;
 
-		config.offchain_worker = match (&self.offchain_worker, role) {
-			(OffchainWorkerEnabled::WhenValidating, sc_service::Roles::AUTHORITY) => true,
-			(OffchainWorkerEnabled::Always, _) => true,
-			(OffchainWorkerEnabled::Never, _) => false,
-			(OffchainWorkerEnabled::WhenValidating, _) => false,
-		};
-
+		self.offchain_worker.update_config(&mut config, role)?;
 		config.roles = role;
 		config.disable_grandpa = self.no_grandpa;
 
