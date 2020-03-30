@@ -61,7 +61,11 @@ pub enum ChainSpec {
 	StagingTestnet,
 	/// Whatever the current runtime is, with just Alice as an auth and 50_000
 	/// pre-funded users.
-	Benchmark,
+	Benchmark10,
+	Benchmark100,
+	Benchmark1000,
+	Benchmark10000,
+	Benchmark100000,
 }
 
 /// Get a chain config from a spec setting.
@@ -72,7 +76,12 @@ impl ChainSpec {
 			ChainSpec::Development => chain_spec::development_config(),
 			ChainSpec::LocalTestnet => chain_spec::local_testnet_config(),
 			ChainSpec::StagingTestnet => chain_spec::staging_testnet_config(),
-			ChainSpec::Benchmark => chain_spec::benchmark_config(),
+			ChainSpec::Benchmark10 => chain_spec::benchmark_config(10),
+			ChainSpec::Benchmark100 => chain_spec::benchmark_config(100),
+			ChainSpec::Benchmark1000 => chain_spec::benchmark_config(1_000),
+			ChainSpec::Benchmark10000 => chain_spec::benchmark_config(10_000),
+			ChainSpec::Benchmark100000 => chain_spec::benchmark_config(100_000),
+
 		})
 	}
 
@@ -82,7 +91,11 @@ impl ChainSpec {
 			"local" => Some(ChainSpec::LocalTestnet),
 			"" | "fir" | "flaming-fir" => Some(ChainSpec::FlamingFir),
 			"staging" => Some(ChainSpec::StagingTestnet),
-			"benchmark" => Some(ChainSpec::Benchmark),
+			"benchmark10" => Some(ChainSpec::Benchmark10),
+			"benchmark100" => Some(ChainSpec::Benchmark100),
+			"benchmark1000" => Some(ChainSpec::Benchmark1000),
+			"benchmark10000" => Some(ChainSpec::Benchmark10000),
+			"benchmark100000" => Some(ChainSpec::Benchmark100000),
 			_ => None,
 		}
 	}

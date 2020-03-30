@@ -371,14 +371,14 @@ pub fn local_testnet_config() -> ChainSpec {
 	)
 }
 
-fn benchmark_genesis() -> GenesisConfig {
+fn benchmark_genesis(endowed: u32) -> GenesisConfig {
 	testnet_genesis(
 		vec![
 			get_authority_keys_from_seed("Alice"),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		Some({
-			(0..50_000).map(|i| {
+			(0..endowed).map(|i: u32| {
 					get_account_id_from_seed::<sr25519::Public>(&i.to_string())
 			}).collect()
 		}),
@@ -387,11 +387,11 @@ fn benchmark_genesis() -> GenesisConfig {
 }
 
 /// Benchmark config (single validator Alice) w/ 50_000 funded accounts.
-pub fn benchmark_config() -> ChainSpec {
+pub fn benchmark_config(endowed: u32) -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Benchmark",
 		"benchmark",
-		benchmark_genesis,
+		move || { benchmark_genesis(endowed) },
 		vec![],
 		None,
 		None,
