@@ -214,7 +214,9 @@ pub fn testnet_genesis(
 	endowed_accounts: Option<Vec<AccountId>>,
 	enable_println: bool,
 ) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
+	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or(Vec::new());
+
+	let mut dev_accounts =
 		vec![
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -228,8 +230,10 @@ pub fn testnet_genesis(
 			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-		]
-	});
+		];
+
+	endowed_accounts.append(&mut dev_accounts);
+
 	let num_endowed_accounts = endowed_accounts.len();
 
 	const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
@@ -271,17 +275,11 @@ pub fn testnet_genesis(
 		}),
 		pallet_democracy: Some(DemocracyConfig::default()),
 		pallet_collective_Instance1: Some(CouncilConfig {
-			members: endowed_accounts.iter()
-						.take((num_endowed_accounts + 1) / 2)
-						.cloned()
-						.collect(),
+			members: vec![],
 			phantom: Default::default(),
 		}),
 		pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
-			members: endowed_accounts.iter()
-						.take((num_endowed_accounts + 1) / 2)
-						.cloned()
-						.collect(),
+			members: vec![],
 			phantom: Default::default(),
 		}),
 		pallet_contracts: Some(ContractsConfig {
@@ -309,10 +307,7 @@ pub fn testnet_genesis(
 		pallet_membership_Instance1: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
 		pallet_society: Some(SocietyConfig {
-			members: endowed_accounts.iter()
-						.take((num_endowed_accounts + 1) / 2)
-						.cloned()
-						.collect(),
+			members: vec![],
 			pot: 0,
 			max_members: 999,
 		}),
