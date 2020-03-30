@@ -104,7 +104,7 @@ fn bench_block_import(c: &mut Criterion) {
 							.expect("RocksDB backend always provides usage info!"),
 					);
 				},
-				criterion::BatchSize::LargeInput,
+				criterion::BatchSize::PerIteration,
 			);
 		},
 		vec![Profile::Wasm, Profile::Native],
@@ -132,7 +132,7 @@ fn bench_account_reaping(c: &mut Criterion) {
 				|mut context| {
 					context.import_block(block.clone());
 				},
-				criterion::BatchSize::LargeInput,
+				criterion::BatchSize::PerIteration,
 			);
 		},
 		vec![Profile::Wasm, Profile::Native],
@@ -158,7 +158,7 @@ fn bench_account_ed25519(c: &mut Criterion) {
 				|mut context| {
 					context.import_block(block.clone());
 				},
-				criterion::BatchSize::LargeInput,
+				criterion::BatchSize::PerIteration,
 			);
 		},
 		vec![Profile::Wasm, Profile::Native],
