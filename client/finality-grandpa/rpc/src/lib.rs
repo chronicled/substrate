@@ -35,7 +35,6 @@ where
 	Env: voter::Environment<Block::Hash, NumberFor<Block>>,
 	NumberFor<Block>: BlockNumberOps,
 {
-	// WIP: sort out trait dependencies
 	shared_voter_state: SharedVoterState<Block::Hash, NumberFor<Block>, Env>,
 }
 

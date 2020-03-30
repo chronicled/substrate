@@ -23,7 +23,7 @@ use parking_lot::RwLock;
 
 use sc_consensus_babe;
 use sc_client::{self, LongestChain};
-use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
+use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider, create_shared_voter_state, voter, SharedVoterState, Environment, VotingRules};
 use node_executor;
 use node_primitives::Block;
 use node_runtime::{GenesisConfig, RuntimeApi};
@@ -36,10 +36,12 @@ use sc_network::construct_simple_protocol;
 use sc_service::{Service, NetworkStatus};
 use sc_client::{Client, LocalCallExecutor};
 use sc_client_db::Backend;
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::traits::{Block as BlockT, NumberFor};
 use node_executor::NativeExecutor;
 use sc_network::NetworkService;
 use sc_offchain::OffchainWorkers;
+use crate::factory_impl::FactoryState;
+use sc_client::in_mem::Blockchain;
 
 construct_simple_protocol! {
 	/// Demo protocol attachment for substrate.
@@ -56,7 +58,19 @@ macro_rules! new_full_start {
 		let mut import_setup = None;
 		let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 		// WIP: sort out construction
-		let shared_voter_state = Arc::new(RwLock::new(None));
+		let shared_voter_state: SharedVoterState<
+				<ConcreteBlock as BlockT>::Hash,
+				node_primitives::BlockNumber,
+				Environment<
+					ConcreteBackend,
+					LocalCallExecutor<Backend<ConcreteBlock>, NativeExecutor<node_executor::Executor>>,
+					ConcreteBlock,
+					Arc<NetworkService<ConcreteBlock, crate::service::NodeProtocol, <ConcreteBlock as BlockT>::Hash>>,
+					node_runtime::RuntimeApi,
+					sc_client::LongestChain<ConcreteBackend, ConcreteBlock>,
+					VotingRules<ConcreteBlock, Blockchain<ConcreteBlock>>,
+				>
+			> = Arc::new(RwLock::new(None));
 
 		let builder = sc_service::ServiceBuilder::new_full::<
 			node_primitives::Block, node_runtime::RuntimeApi, node_executor::Executor
@@ -271,7 +285,7 @@ macro_rules! new_full {
 }
 
 #[allow(dead_code)]
-type ConcreteBlock = node_primitives::Block;
+pub type ConcreteBlock = node_primitives::Block;
 #[allow(dead_code)]
 type ConcreteClient =
 	Client<
@@ -282,7 +296,7 @@ type ConcreteClient =
 		node_runtime::RuntimeApi
 	>;
 #[allow(dead_code)]
-type ConcreteBackend = Backend<ConcreteBlock>;
+pub type ConcreteBackend = Backend<ConcreteBlock>;
 #[allow(dead_code)]
 type ConcreteTransactionPool = sc_transaction_pool::BasicPool<
 	sc_transaction_pool::FullChainApi<ConcreteClient, ConcreteBlock>,

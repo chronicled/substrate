@@ -178,7 +178,7 @@ fn find_target<Block, B>(
 	}
 }
 
-struct VotingRules<Block, B> {
+pub struct VotingRules<Block, B> {
 	rules: Arc<Vec<Box<dyn VotingRule<Block, B>>>>,
 }
 
