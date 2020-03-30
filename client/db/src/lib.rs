@@ -302,6 +302,7 @@ pub fn new_client<E, Block, RA>(
 	execution_extensions: ExecutionExtensions<Block>,
 	spawn_handle: Box<dyn CloneableSpawn>,
 	prometheus_registry: Option<Registry>,
+	config: sc_client::ClientConfig,
 ) -> Result<(
 		sc_client::Client<
 			Backend<Block>,
@@ -328,6 +329,7 @@ pub fn new_client<E, Block, RA>(
 			bad_blocks,
 			execution_extensions,
 			prometheus_registry,
+			config,
 		)?,
 		backend,
 	))

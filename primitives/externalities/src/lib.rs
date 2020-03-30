@@ -36,6 +36,9 @@ mod scope_limited;
 ///
 /// Provides access to the storage and to other registered extensions.
 pub trait Externalities: ExtensionStore {
+	/// Write a key value pair to the offchain storage database.
+	fn local_ocw_storage_write_kv(&mut self, key: &[u8], value: &[u8]);
+
 	/// Read runtime storage.
 	fn storage(&self, key: &[u8]) -> Option<Vec<u8>>;
 

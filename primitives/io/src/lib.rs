@@ -566,7 +566,18 @@ pub trait Hashing {
 	}
 }
 
+/// Interface that provides functions to access the offchain database access.
+#[runtime_interface]
+pub trait OffchainIndex {
+	/// Write a key value pair to the offchain worker database in a buffered fashion.
+	fn write_kv(&mut self, key : &[u8], value : &[u8]) {
+		self.local_ocw_storage_write_kv(key,value)
+	}
+}
+
 /// Interface that provides functions to access the offchain functionality.
+///
+/// These functions are being made available to the runtime and are called by the runtime.
 #[runtime_interface]
 pub trait Offchain {
 	/// Returns if the local node is a potential validator.

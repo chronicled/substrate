@@ -24,6 +24,7 @@ use crate::{
 
 use hash_db::Hasher;
 use sp_core::{
+	offchain::{OffchainStorage,storage::InMemOffchainStorage},
 	storage::{ChildStorageKey, well_known_keys::is_child_storage_key, ChildInfo},
 	traits::Externalities, hexdisplay::HexDisplay,
 };
@@ -74,6 +75,8 @@ pub struct Ext<'a, H, N, B>
 {
 	/// The overlayed changes to write to.
 	overlay: &'a mut OverlayedChanges,
+	/// The overlayed changes destined for the offchain worker database.
+	offchain_overlay: &'a mut InMemOffchainStorage,
 	/// The storage backend to read from.
 	backend: &'a B,
 	/// The cache for the storage transactions.
@@ -99,13 +102,15 @@ where
 	/// Create a new `Ext` from overlayed changes and read-only backend
 	pub fn new(
 		overlay: &'a mut OverlayedChanges,
+		offchain_overlay: &'a mut InMemOffchainStorage,
 		storage_transaction_cache: &'a mut StorageTransactionCache<B::Transaction, H, N>,
 		backend: &'a B,
 		changes_trie_state: Option<ChangesTrieState<'a, H, N>>,
 		extensions: Option<&'a mut Extensions>,
 	) -> Self {
-		Ext {
+		Self {
 			overlay,
+			offchain_overlay,
 			backend,
 			changes_trie_state,
 			storage_transaction_cache,
@@ -152,6 +157,11 @@ where
 	B: 'a + Backend<H>,
 	N: crate::changes_trie::BlockNumber,
 {
+
+	fn local_ocw_storage_write_kv(&mut self, key: &[u8], value: &[u8]) {
+		self.offchain_overlay.set(b"ocw", key, value);
+	}
+
 	fn storage(&self, key: &[u8]) -> Option<StorageValue> {
 		let _guard = sp_panic_handler::AbortGuard::force_abort();
 		let result = self.overlay.storage(key).map(|x| x.map(|x| x.to_vec())).unwrap_or_else(||

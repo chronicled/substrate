@@ -18,11 +18,24 @@
 
 use std::collections::hash_map::{HashMap, Entry};
 use crate::offchain::OffchainStorage;
+use std::iter::Iterator;
 
 /// In-memory storage for offchain workers.
 #[derive(Debug, Clone, Default)]
 pub struct InMemOffchainStorage {
 	storage: HashMap<Vec<u8>, Vec<u8>>,
+}
+
+impl InMemOffchainStorage {
+	/// Consume the offchain storage and iterate over all key value pairs.
+	pub fn into_iter(self) -> impl Iterator<Item=(Vec<u8>,Vec<u8>)> {
+		self.storage.into_iter()
+	}
+
+	/// Iterate over all key value pairs by reference.
+	pub fn iter<'a>(&'a self) -> impl Iterator<Item=(&'a Vec<u8>,&'a Vec<u8>)> {
+		self.storage.iter()
+	}
 }
 
 impl OffchainStorage for InMemOffchainStorage {

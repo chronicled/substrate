@@ -25,7 +25,7 @@ use sc_client_api::{
 	execution_extensions::ExtensionsFactory,
 	ExecutorProvider, CallExecutor
 };
-use sc_client::Client;
+use sc_client::{Client, ClientConfig};
 use sc_chain_spec::get_extension;
 use sp_consensus::import_queue::ImportQueue;
 use futures::{
@@ -55,6 +55,7 @@ use sp_transaction_pool::{MaintainedTransactionPool, ChainEvent};
 use sp_blockchain;
 use prometheus_endpoint::{register, Gauge, U64, F64, Registry, PrometheusError, Opts, GaugeVec};
 
+use sp_consensus::BlockOrigin;
 struct ServiceMetrics {
 	block_height_number: GaugeVec<U64>,
 	ready_transactions_number: Gauge<U64>,
@@ -265,6 +266,10 @@ fn new_full_parts<TBl, TRtApi, TExecDisp>(
 			extensions,
 			Box::new(tasks_builder.spawn_handle()),
 			config.prometheus_config.as_ref().map(|config| config.registry.clone()),
+			ClientConfig {
+				offchain_worker_enabled : config.offchain_worker.enabled ,
+				offchain_indexing_api: config.offchain_worker.indexing_enabled,
+			}
 		)?
 	};
 

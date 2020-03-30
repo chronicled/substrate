@@ -23,6 +23,7 @@ use log::{warn, trace};
 use hash_db::Hasher;
 use codec::{Decode, Encode, Codec};
 use sp_core::{
+	offchain::storage::InMemOffchainStorage,
 	storage::ChildInfo, NativeOrEncoded, NeverNativeValue, hexdisplay::HexDisplay,
 	traits::{CodeExecutor, CallInWasmExt, RuntimeCode},
 };
@@ -187,6 +188,7 @@ pub struct StateMachine<'a, B, H, N, Exec>
 	method: &'a str,
 	call_data: &'a [u8],
 	overlay: &'a mut OverlayedChanges,
+	offchain_overlay: &'a mut InMemOffchainStorage,
 	extensions: Extensions,
 	changes_trie_state: Option<ChangesTrieState<'a, H, N>>,
 	storage_transaction_cache: Option<&'a mut StorageTransactionCache<B::Transaction, H, N>>,
@@ -216,6 +218,7 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 		backend: &'a B,
 		changes_trie_state: Option<ChangesTrieState<'a, H, N>>,
 		overlay: &'a mut OverlayedChanges,
+		offchain_overlay: &'a mut InMemOffchainStorage,
 		exec: &'a Exec,
 		method: &'a str,
 		call_data: &'a [u8],
@@ -233,6 +236,7 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 			call_data,
 			extensions,
 			overlay,
+			offchain_overlay,
 			changes_trie_state,
 			storage_transaction_cache: None,
 			runtime_code,
@@ -290,6 +294,7 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 
 		let mut ext = Ext::new(
 			self.overlay,
+			self.offchain_overlay,
 			cache,
 			self.backend,
 			self.changes_trie_state.clone(),
@@ -500,11 +505,13 @@ where
 	Exec: CodeExecutor + 'static + Clone,
 	N: crate::changes_trie::BlockNumber,
 {
+	let mut offchain_overlay = InMemOffchainStorage::default();
 	let proving_backend = proving_backend::ProvingBackend::new(trie_backend);
 	let mut sm = StateMachine::<_, H, N, Exec>::new(
 		&proving_backend,
 		None,
 		overlay,
+		&mut offchain_overlay,
 		exec,
 		method,
 		call_data,
@@ -566,10 +573,12 @@ where
 	Exec: CodeExecutor + Clone + 'static,
 	N: crate::changes_trie::BlockNumber,
 {
+	let mut offchain_overlay = InMemOffchainStorage::default();
 	let mut sm = StateMachine::<_, H, N, Exec>::new(
 		trie_backend,
 		None,
 		overlay,
+		&mut offchain_overlay,
 		exec,
 		method,
 		call_data,

@@ -27,6 +27,8 @@
 //!
 //! Besides the macros and the [`Core`] runtime api, this crates provides the [`Metadata`] runtime
 //! api, the [`ApiExt`] trait, the [`CallApiAt`] trait and the [`ConstructRuntimeApi`] trait.
+//!
+//! On a meta level this implies, the client calls the generated API from the client perspective.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -44,6 +46,8 @@ pub use sp_core::NativeOrEncoded;
 #[doc(hidden)]
 #[cfg(feature = "std")]
 pub use hash_db::Hasher;
+#[cfg(feature = "std")]
+pub use sp_core::offchain::storage::InMemOffchainStorage;
 #[doc(hidden)]
 #[cfg(not(feature = "std"))]
 pub use sp_core::to_substrate_wasm_fn_return_value;
@@ -413,30 +417,33 @@ pub enum InitializeBlock<'a, Block: BlockT> {
 /// Parameters for [`CallApiAt::call_api_at`].
 #[cfg(feature = "std")]
 pub struct CallApiAtParams<'a, Block: BlockT, C, NC, Backend: StateBackend<HashFor<Block>>> {
-	/// A reference to something that implements the [`Core`] api.
-	pub core_api: &'a C,
-	/// The block id that determines the state that should be setup when calling the function.
-	pub at: &'a BlockId<Block>,
-	/// The name of the function that should be called.
-	pub function: &'static str,
-	/// An optional native call that calls the `function`. This is an optimization to call into a
-	/// native runtime without requiring to encode/decode the parameters. The native runtime can
-	/// still be called when this value is `None`, we then just fallback to encoding/decoding the
-	/// parameters.
-	pub native_call: Option<NC>,
-	/// The encoded arguments of the function.
-	pub arguments: Vec<u8>,
-	/// The overlayed changes that are on top of the state.
-	pub overlayed_changes: &'a RefCell<OverlayedChanges>,
-	/// The cache for storage transactions.
-	pub storage_transaction_cache: &'a RefCell<StorageTransactionCache<Block, Backend>>,
-	/// Determines if the function requires that `initialize_block` should be called before calling
-	/// the actual function.
-	pub initialize_block: InitializeBlock<'a, Block>,
-	/// The context this function is executed in.
-	pub context: ExecutionContext,
-	/// The optional proof recorder for recording storage accesses.
-	pub recorder: &'a Option<ProofRecorder<Block>>,
+    /// A reference to something that implements the [`Core`] api.
+    pub core_api: &'a C,
+    /// The block id that determines the state that should be setup when calling the function.
+    pub at: &'a BlockId<Block>,
+    /// The name of the function that should be called.
+    pub function: &'static str,
+    /// An optional native call that calls the `function`. This is an optimization to call into a
+    /// native runtime without requiring to encode/decode the parameters. The native runtime can
+    /// still be called when this value is `None`, we then just fallback to encoding/decoding the
+    /// parameters.
+    pub native_call: Option<NC>,
+    /// The encoded arguments of the function.
+    pub arguments: Vec<u8>,
+    /// The overlayed changes that are on top of the state.
+    pub overlayed_changes: &'a RefCell<OverlayedChanges>,
+    /// The overlayed changes that are there on top of whatever.
+    pub offchain_changes: &'a RefCell<InMemOffchainStorage>,
+
+    /// The cache for storage transactions.
+    pub storage_transaction_cache: &'a RefCell<StorageTransactionCache<Block, Backend>>,
+    /// Determines if the function requires that `initialize_block` should be called before calling
+    /// the actual function.
+    pub initialize_block: InitializeBlock<'a, Block>,
+    /// The context this function is executed in.
+    pub context: ExecutionContext,
+    /// The optional proof recorder for recording storage accesses.
+    pub recorder: &'a Option<ProofRecorder<Block>>,
 }
 
 /// Something that can call into the an api at a given block.
