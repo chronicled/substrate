@@ -98,8 +98,8 @@ impl<
 			}
 		}
 
-		let client = self.client;
-		let mut queue = self.import_queue;
+		let client = self.client().expect("TODO");
+		let mut queue = self.import_queue().expect("TODO");
 
 		let mut io_reader_input = IoReader(input);
 		let mut count = None::<u64>;
@@ -203,7 +203,7 @@ impl<
 		to: Option<NumberFor<TBl>>,
 		binary: bool
 	) -> Pin<Box<dyn Future<Output = Result<(), Error>>>> {
-		let client = self.client;
+		let client = self.client().expect("TODO");
 		let mut block = from;
 
 		let last = match to {
@@ -269,8 +269,9 @@ impl<
 		&self,
 		blocks: NumberFor<TBl>
 	) -> Result<(), Error> {
-		let reverted = self.client.revert(blocks)?;
-		let info = self.client.chain_info();
+		let client = self.client().expect("TODO");
+		let reverted = client.revert(blocks)?;
+		let info = client.chain_info();
 
 		if reverted.is_zero() {
 			info!("There aren't any non-finalized blocks to revert.");
@@ -284,7 +285,9 @@ impl<
 		self,
 		block_id: BlockId<TBl>
 	) -> Pin<Box<dyn Future<Output = Result<(), Error>> + Send>> {
-		match self.client.block(&block_id) {
+		let client = self.client().expect("TODO");
+
+		match client.block(&block_id) {
 			Ok(Some(block)) => {
 				let mut buf = Vec::new();
 				1u64.encode_to(&mut buf);

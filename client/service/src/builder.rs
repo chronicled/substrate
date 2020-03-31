@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
+#![allow(unused_imports)]
+
 use crate::{Service, NetworkStatus, NetworkState, error::Error, DEFAULT_PROTOCOL_ID, MallocSizeOfWasm};
 use crate::{TaskManagerBuilder, start_rpc_servers, build_network_future, TransactionPoolAdapter};
 use crate::status_sinks;
@@ -21,7 +23,7 @@ use crate::config::{Configuration, DatabaseConfig, KeystoreConfig, PrometheusCon
 use sc_client_api::{
 	self,
 	BlockchainEvents,
-	backend::RemoteBackend, light::RemoteBlockchain,
+	backend::{Backend, RemoteBackend}, light::RemoteBlockchain,
 	execution_extensions::ExtensionsFactory,
 	ExecutorProvider, CallExecutor
 };
@@ -119,24 +121,46 @@ pub type BackgroundTask = Pin<Box<dyn Future<Output=()> + Send>>;
 /// The order in which the `with_*` methods are called doesn't matter, as the correct binding of
 /// generics is done when you call `build`.
 ///
-pub struct ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
-	TExPool, TRpc, Backend>
+pub struct ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 {
 	config: Configuration,
-	pub (crate) client: Arc<TCl>,
-	backend: Arc<Backend>,
-	tasks_builder: TaskManagerBuilder,
-	keystore: Arc<RwLock<Keystore>>,
+	//pub (crate) client: Arc<TCl>,
+	//backend: Arc<Backend>,
+	//tasks_builder: TaskManagerBuilder,
+	//keystore: Arc<RwLock<Keystore>>,
 	fetcher: Option<TFchr>,
-	select_chain: Option<TSc>,
-	pub (crate) import_queue: TImpQu,
-	finality_proof_request_builder: Option<TFprb>,
-	finality_proof_provider: Option<TFpp>,
-	transaction_pool: Arc<TExPool>,
-	rpc_extensions: TRpc,
+	//select_chain: Option<TSc>,
+	//pub (crate) import_queue: TImpQu,
+	//finality_proof_request_builder: Option<TFprb>,
+	//finality_proof_provider: Option<TFpp>,
+	//transaction_pool: Arc<TExPool>,
+	//rpc_extensions: TRpc,
 	remote_backend: Option<Arc<dyn RemoteBlockchain<TBl>>>,
-	marker: PhantomData<(TBl, TRtApi)>,
+	marker: PhantomData<(TBl, TRtApi, TCl, Backend, TSc, TRpc)>,
 	background_tasks: Vec<(&'static str, BackgroundTask)>,
+	execution_extensions_factory: Option<Box<dyn ExtensionsFactory>>,
+	select_chain_builder: Option<Box<dyn FnOnce(
+			&Configuration, &Arc<Backend>,
+		) -> Result<Option<TSc>, Error>>>,
+	// TODO: remove TRpc of the signature
+	rpc_ext_builder: Option<Box<dyn FnOnce(&ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu,
+	TFprb, TFpp, TExPool, TRpc, Backend>) -> Result<TRpc, Error>>>,
+	transaction_pool_builder: Option<Box<dyn FnOnce(
+		sc_transaction_pool::txpool::Options,
+		Arc<TCl>,
+		Option<TFchr>,
+	) -> Result<(TExPool, Option<BackgroundTask>), Error>>>,
+	import_queue_and_opt_fprb: Option<Box<dyn FnOnce(
+			&Configuration,
+			Arc<TCl>,
+			Arc<Backend>,
+			Option<TFchr>,
+			Option<TSc>,
+			Arc<TExPool>,
+		) -> Result<(TImpQu, Option<TFprb>), Error>>>,
+	finality_proof_provider_builder: Option<Box<dyn FnOnce(Arc<TCl>, Arc<Backend>) -> Result<Option<Arc<dyn FinalityProofProvider<TBl>>>, Error>>>,
+	import_queue_builder: Option<Box<dyn FnOnce(&Configuration, Arc<TCl>, Option<TSc>, Arc<TExPool>)
+		-> Result<TImpQu, Error>>>,
 }
 
 /// Full client type.
@@ -270,8 +294,25 @@ fn new_full_parts<TBl, TRtApi, TExecDisp>(
 	Ok((client, backend, keystore, tasks_builder))
 }
 
-impl ServiceBuilder<(), (), (), (), (), (), (), (), (), (), ()> {
+impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
+	ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend> {
 	/// Start the service builder with a configuration.
+	pub fn new_full(
+		config: Configuration,
+	) -> Result<ServiceBuilder<
+		TBl,
+		TRtApi,
+		TCl,
+		TFchr,
+		TSc,
+		TImpQu,
+		TFprb,
+		TFpp,
+		TExPool,
+		TRpc,
+		Backend,
+	>, Error> {
+	/*
 	pub fn new_full<TBl: BlockT, TRtApi, TExecDisp: NativeExecutionDispatch + 'static>(
 		config: Configuration,
 	) -> Result<ServiceBuilder<
@@ -287,29 +328,30 @@ impl ServiceBuilder<(), (), (), (), (), (), (), (), (), (), ()> {
 		(),
 		TFullBackend<TBl>,
 	>, Error> {
-		let (client, backend, keystore, tasks_builder) = new_full_parts(&config)?;
-
-		let client = Arc::new(client);
-
+	*/
 		Ok(ServiceBuilder {
 			config,
-			client,
-			backend,
-			keystore,
-			tasks_builder,
 			fetcher: None,
-			select_chain: None,
-			import_queue: (),
-			finality_proof_request_builder: None,
-			finality_proof_provider: None,
-			transaction_pool: Arc::new(()),
-			rpc_extensions: Default::default(),
+			//select_chain: None,
+			//import_queue: (),
+			//finality_proof_request_builder: None,
+			//finality_proof_provider: None,
+			//transaction_pool: Arc::new(()),
+			//rpc_extensions: Default::default(),
 			remote_backend: None,
 			background_tasks: Default::default(),
+			execution_extensions_factory: None,
+			import_queue_and_opt_fprb: None,
+			rpc_ext_builder: None,
+			select_chain_builder: None,
+			transaction_pool_builder: None,
+			finality_proof_provider_builder: None,
+			import_queue_builder: None,
 			marker: PhantomData,
 		})
 	}
 
+/*
 	/// Start the service builder with a configuration.
 	pub fn new_light<TBl: BlockT, TRtApi, TExecDisp: NativeExecutionDispatch + 'static>(
 		config: Configuration,
@@ -381,38 +423,45 @@ impl ServiceBuilder<(), (), (), (), (), (), (), (), (), (), ()> {
 
 		Ok(ServiceBuilder {
 			config,
-			client,
-			backend,
-			tasks_builder,
-			keystore,
 			fetcher: Some(fetcher.clone()),
-			select_chain: None,
-			import_queue: (),
-			finality_proof_request_builder: None,
-			finality_proof_provider: None,
-			transaction_pool: Arc::new(()),
-			rpc_extensions: Default::default(),
 			remote_backend: Some(remote_blockchain),
 			background_tasks: Default::default(),
+			execution_extensions_factory: None,
+			import_queue_and_opt_fprb: None,
+			rpc_ext_builder: None,
+			select_chain_builder: None,
+			transaction_pool_builder: None,
+			finality_proof_provider_builder: None,
+			import_queue_builder: None,
 			marker: PhantomData,
 		})
 	}
+*/
 }
 
 impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
-	ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
-	 	TExPool, TRpc, Backend> {
+	ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend> {
 
 	/// Returns a reference to the client that was stored in this builder.
-	pub fn client(&self) -> &Arc<TCl> {
-		&self.client
+	pub fn client(&self) -> Result<Arc<TCl>, Error> {
+		let (client, _backend, _keystore, _tasks_builder) = new_full_parts(&config)?;
+
+		Ok(Arc::new(client))
 	}
 
 	/// Returns a reference to the backend that was used in this builder.
-	pub fn backend(&self) -> &Arc<Backend> {
-		&self.backend
+	pub fn backend(&self) -> Result<Arc<Backend>, Error> {
+		let (_client, backend, _keystore, _tasks_builder) = new_full_parts(&config)?;
+
+		Ok(backend)
 	}
 
+	/// Returns a reference to the backend that was used in this builder.
+	pub fn import_queue(&self) -> Result<TImpQu, Error> {
+		todo!()
+	}
+
+/*
 	/// Returns a reference to the select-chain that was stored in this builder.
 	pub fn select_chain(&self) -> Option<&TSc> {
 		self.select_chain.as_ref()
@@ -427,6 +476,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 	pub fn pool(&self) -> Arc<TExPool> {
 		self.transaction_pool.clone()
 	}
+*/
 
 	/// Returns a reference to the fetcher, only available if builder
 	/// was created with `new_light`.
@@ -443,73 +493,60 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 	}
 
 	/// Defines which head-of-chain strategy to use.
-	pub fn with_opt_select_chain<USc>(
+	pub fn with_opt_select_chain(
 		self,
 		select_chain_builder: impl FnOnce(
 			&Configuration, &Arc<Backend>,
-		) -> Result<Option<USc>, Error>
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, USc, TImpQu, TFprb, TFpp,
+		) -> Result<Option<USc>, Error> + 'static
+	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 		TExPool, TRpc, Backend>, Error> {
-		let select_chain = select_chain_builder(&self.config, &self.backend)?;
-
 		Ok(ServiceBuilder {
+			select_chain_builder: Some(Box::new(select_chain_builder)),
+
 			config: self.config,
-			client: self.client,
-			backend: self.backend,
-			tasks_builder: self.tasks_builder,
-			keystore: self.keystore,
 			fetcher: self.fetcher,
-			select_chain,
-			import_queue: self.import_queue,
-			finality_proof_request_builder: self.finality_proof_request_builder,
-			finality_proof_provider: self.finality_proof_provider,
-			transaction_pool: self.transaction_pool,
-			rpc_extensions: self.rpc_extensions,
 			remote_backend: self.remote_backend,
 			background_tasks: self.background_tasks,
-			marker: self.marker,
+			execution_extensions_factory: self.execution_extensions_factory,
+			import_queue_and_opt_fprb: self.import_queue_and_opt_fprb,
+			rpc_ext_builder: self.rpc_ext_builder,
+			transaction_pool_builder: self.transaction_pool_builder,
+			finality_proof_provider_builder: self.finality_proof_provider_builder,
+			import_queue_builder: self.import_queue_builder,
+			marker: PhantomData,
 		})
 	}
 
 	/// Defines which head-of-chain strategy to use.
-	pub fn with_select_chain<USc>(
+	pub fn with_select_chain(
 		self,
 		builder: impl FnOnce(&Configuration, &Arc<Backend>) -> Result<USc, Error>,
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, USc, TImpQu, TFprb, TFpp,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 		TExPool, TRpc, Backend>, Error> {
 		self.with_opt_select_chain(|cfg, b| builder(cfg, b).map(Option::Some))
 	}
 
 	/// Defines which import queue to use.
-	pub fn with_import_queue<UImpQu>(
+	pub fn with_import_queue(
 		self,
 		builder: impl FnOnce(&Configuration, Arc<TCl>, Option<TSc>, Arc<TExPool>)
-			-> Result<UImpQu, Error>
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, UImpQu, TFprb, TFpp,
+			-> Result<TImpQu, Error> + 'static
+	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 			TExPool, TRpc, Backend>, Error>
 	where TSc: Clone {
-		let import_queue = builder(
-			&self.config,
-			self.client.clone(),
-			self.select_chain.clone(),
-			self.transaction_pool.clone()
-		)?;
-
 		Ok(ServiceBuilder {
+			import_queue_builder: Some(Box::new(builder)),
+
 			config: self.config,
-			client: self.client,
-			backend: self.backend,
-			tasks_builder: self.tasks_builder,
-			keystore: self.keystore,
 			fetcher: self.fetcher,
-			select_chain: self.select_chain,
-			import_queue,
-			finality_proof_request_builder: self.finality_proof_request_builder,
-			finality_proof_provider: self.finality_proof_provider,
-			transaction_pool: self.transaction_pool,
-			rpc_extensions: self.rpc_extensions,
 			remote_backend: self.remote_backend,
 			background_tasks: self.background_tasks,
+			execution_extensions_factory: self.execution_extensions_factory,
+			import_queue_and_opt_fprb: self.import_queue_and_opt_fprb,
+			rpc_ext_builder: self.rpc_ext_builder,
+			select_chain_builder: self.select_chain_builder,
+			transaction_pool_builder: self.transaction_pool_builder,
+			finality_proof_provider_builder: self.finality_proof_provider_builder,
 			marker: self.marker,
 		})
 	}
@@ -517,7 +554,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 	/// Defines which strategy to use for providing finality proofs.
 	pub fn with_opt_finality_proof_provider(
 		self,
-		builder: impl FnOnce(Arc<TCl>, Arc<Backend>) -> Result<Option<Arc<dyn FinalityProofProvider<TBl>>>, Error>
+		builder: impl FnOnce(Arc<TCl>, Arc<Backend>) -> Result<Option<Arc<dyn FinalityProofProvider<TBl>>>, Error> + 'static
 	) -> Result<ServiceBuilder<
 		TBl,
 		TRtApi,
@@ -526,36 +563,32 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 		TSc,
 		TImpQu,
 		TFprb,
-		Arc<dyn FinalityProofProvider<TBl>>,
+		TFpp,
 		TExPool,
 		TRpc,
 		Backend,
 	>, Error> {
-		let finality_proof_provider = builder(self.client.clone(), self.backend.clone())?;
-
 		Ok(ServiceBuilder {
+			finality_proof_provider_builder: Some(Box::new(builder)),
+
 			config: self.config,
-			client: self.client,
-			backend: self.backend,
-			tasks_builder: self.tasks_builder,
-			keystore: self.keystore,
 			fetcher: self.fetcher,
-			select_chain: self.select_chain,
-			import_queue: self.import_queue,
-			finality_proof_request_builder: self.finality_proof_request_builder,
-			finality_proof_provider,
-			transaction_pool: self.transaction_pool,
-			rpc_extensions: self.rpc_extensions,
 			remote_backend: self.remote_backend,
 			background_tasks: self.background_tasks,
-			marker: self.marker,
+			execution_extensions_factory: self.execution_extensions_factory,
+			import_queue_and_opt_fprb: self.import_queue_and_opt_fprb,
+			rpc_ext_builder: self.rpc_ext_builder,
+			select_chain_builder: self.select_chain_builder,
+			transaction_pool_builder: self.transaction_pool_builder,
+			import_queue_builder: self.import_queue_builder,
+			marker: PhantomData,
 		})
 	}
 
 	/// Defines which strategy to use for providing finality proofs.
 	pub fn with_finality_proof_provider(
 		self,
-		build: impl FnOnce(Arc<TCl>, Arc<Backend>) -> Result<Arc<dyn FinalityProofProvider<TBl>>, Error>
+		build: impl FnOnce(Arc<TCl>, Arc<Backend>) -> Result<Arc<dyn FinalityProofProvider<TBl>>, Error> + 'static
 	) -> Result<ServiceBuilder<
 		TBl,
 		TRtApi,
@@ -564,7 +597,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 		TSc,
 		TImpQu,
 		TFprb,
-		Arc<dyn FinalityProofProvider<TBl>>,
+		TFpp,
 		TExPool,
 		TRpc,
 		Backend,
@@ -573,7 +606,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 	}
 
 	/// Defines which import queue to use.
-	pub fn with_import_queue_and_opt_fprb<UImpQu, UFprb>(
+	pub fn with_import_queue_and_opt_fprb(
 		self,
 		builder: impl FnOnce(
 			&Configuration,
@@ -582,40 +615,29 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 			Option<TFchr>,
 			Option<TSc>,
 			Arc<TExPool>,
-		) -> Result<(UImpQu, Option<UFprb>), Error>
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, UImpQu, UFprb, TFpp,
+		) -> Result<(TImpQu, Option<TFprb>), Error> + 'static
+	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 		TExPool, TRpc, Backend>, Error>
 	where TSc: Clone, TFchr: Clone {
-		let (import_queue, fprb) = builder(
-			&self.config,
-			self.client.clone(),
-			self.backend.clone(),
-			self.fetcher.clone(),
-			self.select_chain.clone(),
-			self.transaction_pool.clone()
-		)?;
-
 		Ok(ServiceBuilder {
+			import_queue_and_opt_fprb: Some(Box::new(builder)),
+
 			config: self.config,
-			client: self.client,
-			backend: self.backend,
-			tasks_builder: self.tasks_builder,
-			keystore: self.keystore,
 			fetcher: self.fetcher,
-			select_chain: self.select_chain,
-			import_queue,
-			finality_proof_request_builder: fprb,
-			finality_proof_provider: self.finality_proof_provider,
-			transaction_pool: self.transaction_pool,
-			rpc_extensions: self.rpc_extensions,
 			remote_backend: self.remote_backend,
 			background_tasks: self.background_tasks,
+			execution_extensions_factory: self.execution_extensions_factory,
+			rpc_ext_builder: self.rpc_ext_builder,
+			select_chain_builder: self.select_chain_builder,
+			transaction_pool_builder: self.transaction_pool_builder,
+			finality_proof_provider_builder: self.finality_proof_provider_builder,
+			import_queue_builder: self.import_queue_builder,
 			marker: self.marker,
 		})
 	}
 
 	/// Defines which import queue to use.
-	pub fn with_import_queue_and_fprb<UImpQu, UFprb>(
+	pub fn with_import_queue_and_fprb(
 		self,
 		builder: impl FnOnce(
 			&Configuration,
@@ -624,8 +646,8 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 			Option<TFchr>,
 			Option<TSc>,
 			Arc<TExPool>,
-		) -> Result<(UImpQu, UFprb), Error>
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, UImpQu, UFprb, TFpp,
+		) -> Result<(TImpQu, TFprb), Error> + 'static
+	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 			TExPool, TRpc, Backend>, Error>
 	where TSc: Clone, TFchr: Clone {
 		self.with_import_queue_and_opt_fprb(|cfg, cl, b, f, sc, tx|
@@ -635,70 +657,54 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 	}
 
 	/// Defines which transaction pool to use.
-	pub fn with_transaction_pool<UExPool>(
+	pub fn with_transaction_pool(
 		mut self,
 		transaction_pool_builder: impl FnOnce(
 			sc_transaction_pool::txpool::Options,
 			Arc<TCl>,
 			Option<TFchr>,
-		) -> Result<(UExPool, Option<BackgroundTask>), Error>
+		) -> Result<(TExPool, Option<BackgroundTask>), Error> + 'static
 	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
-		UExPool, TRpc, Backend>, Error>
+		TExPool, TRpc, Backend>, Error>
 	where TSc: Clone, TFchr: Clone {
-		let (transaction_pool, background_task) = transaction_pool_builder(
-			self.config.transaction_pool.clone(),
-			self.client.clone(),
-			self.fetcher.clone(),
-		)?;
-
-		if let Some(background_task) = background_task{
-			self.background_tasks.push(("txpool-background", background_task));
-		}
-
 		Ok(ServiceBuilder {
+			transaction_pool_builder: Some(Box::new(transaction_pool_builder)),
+
 			config: self.config,
-			client: self.client,
-			tasks_builder: self.tasks_builder,
-			backend: self.backend,
-			keystore: self.keystore,
 			fetcher: self.fetcher,
-			select_chain: self.select_chain,
-			import_queue: self.import_queue,
-			finality_proof_request_builder: self.finality_proof_request_builder,
-			finality_proof_provider: self.finality_proof_provider,
-			transaction_pool: Arc::new(transaction_pool),
-			rpc_extensions: self.rpc_extensions,
 			remote_backend: self.remote_backend,
 			background_tasks: self.background_tasks,
+			execution_extensions_factory: self.execution_extensions_factory,
+			select_chain_builder: self.select_chain_builder,
+			rpc_ext_builder: self.rpc_ext_builder,
+			import_queue_and_opt_fprb: self.import_queue_and_opt_fprb,
+			finality_proof_provider_builder: self.finality_proof_provider_builder,
+			import_queue_builder: self.import_queue_builder,
 			marker: self.marker,
 		})
 	}
 
 	/// Defines the RPC extensions to use.
-	pub fn with_rpc_extensions<URpc>(
+	pub fn with_rpc_extensions(
 		self,
-		rpc_ext_builder: impl FnOnce(&Self) -> Result<URpc, Error>,
+		rpc_ext_builder: impl FnOnce(&ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>) -> Result<TRpc, Error> + 'static,
 	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
-		TExPool, URpc, Backend>, Error>
+		TExPool, TRpc, Backend>, Error>
 	where TSc: Clone, TFchr: Clone {
-		let rpc_extensions = rpc_ext_builder(&self)?;
-
 		Ok(ServiceBuilder {
+			rpc_ext_builder: Some(Box::new(rpc_ext_builder)),
+
 			config: self.config,
-			client: self.client,
-			backend: self.backend,
-			tasks_builder: self.tasks_builder,
-			keystore: self.keystore,
 			fetcher: self.fetcher,
-			select_chain: self.select_chain,
-			import_queue: self.import_queue,
-			finality_proof_request_builder: self.finality_proof_request_builder,
-			finality_proof_provider: self.finality_proof_provider,
-			transaction_pool: self.transaction_pool,
-			rpc_extensions,
 			remote_backend: self.remote_backend,
 			background_tasks: self.background_tasks,
-			marker: self.marker,
+			execution_extensions_factory: self.execution_extensions_factory,
+			select_chain_builder: self.select_chain_builder,
+			transaction_pool_builder: self.transaction_pool_builder,
+			import_queue_and_opt_fprb: self.import_queue_and_opt_fprb,
+			finality_proof_provider_builder: self.finality_proof_provider_builder,
+			import_queue_builder: self.import_queue_builder,
+			marker: PhantomData,
 		})
 	}
 }
@@ -773,7 +779,8 @@ ServiceBuilder<
 
 	/// Set an ExecutionExtensionsFactory
 	pub fn with_execution_extensions_factory(self, execution_extensions_factory: Box<dyn ExtensionsFactory>) -> Result<Self, Error> {
-		self.client.execution_extensions().set_extensions_factory(execution_extensions_factory);
+		self.execution_extensions_factory = Some(execution_extensions_factory);
+
 		Ok(self)
 	}
 
@@ -796,20 +803,79 @@ ServiceBuilder<
 		let ServiceBuilder {
 			marker: _,
 			mut config,
-			client,
-			tasks_builder,
+			//client,
+			//tasks_builder,
 			fetcher: on_demand,
-			backend,
-			keystore,
-			select_chain,
-			import_queue,
-			finality_proof_request_builder,
-			finality_proof_provider,
-			transaction_pool,
-			rpc_extensions,
+			//backend,
+			//keystore,
+			//select_chain,
+			//import_queue,
+			//finality_proof_request_builder,
+			//finality_proof_provider,
+			//transaction_pool,
+			//rpc_extensions,
 			remote_backend,
 			background_tasks,
+			execution_extensions_factory,
+			select_chain_builder,
+			rpc_ext_builder,
+			transaction_pool_builder,
+			import_queue_and_opt_fprb,
+			finality_proof_provider_builder,
+			import_queue_builder,
 		} = self;
+
+		let (client, backend, keystore, tasks_builder) = new_full_parts(&config)?;
+		let client = Arc::new(client);
+
+		if let Some(execution_extensions_factory) = execution_extensions_factory {
+			client.execution_extensions().set_extensions_factory(execution_extensions_factory);
+		}
+
+		let select_chain = if let Some(select_chain_builder) {
+			select_chain_builder(&self.config, &self.backend)?
+		} else {
+			None
+		};
+
+		let rpc_extensions = rpc_ext_builder.map(|f| f(&self)?).unwrap_or_default();
+
+		let transaction_pool = if let Some((transaction_pool, background_task)) = transaction_pool_builder(
+			config.transaction_pool.clone(),
+			client.clone(),
+			fetcher.clone(),
+		)? {
+			if let Some(background_task) = background_task{
+				background_tasks.push(("txpool-background", background_task));
+			}
+
+			Arc::new(transaction_pool)
+		} else {
+			Arc::new(())
+		};
+
+		let (import_queue, finality_proof_request_builder) = if let Some(builder) = import_queue_and_opt_fprb {
+			builder(
+				&config,
+				client.clone(),
+				backend.clone(),
+				fetcher.clone(),
+				select_chain.clone(),
+				transaction_pool.clone()
+			)?
+		} else {
+			((), None)
+		};
+
+		let finality_proof_provider = finality_proof_provider_builder.map(|f| f(self.client.clone(), self.backend.clone())?).unwrap_or_default();
+
+		// TODO: 2 import_queue builders
+		let import_queue = import_queue_builder.map(|f| f(
+			&self.config,
+			self.client.clone(),
+			self.select_chain.clone(),
+			self.transaction_pool.clone()
+		)?).unwrap_or_default();
 
 		sp_session::generate_initial_session_keys(
 			client.clone(),
