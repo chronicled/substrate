@@ -212,10 +212,11 @@ impl<K1, K2, V, G> storage::StorageDoubleMap<K1, K2, V> for G where
 		KArg1: ?Sized + EncodeLike<K1>
 	{
 		let prefix = Self::storage_double_map_final_key1(k1);
-		storage::PrefixIterator::<V> {
+		storage::PrefixIterator {
 			prefix: prefix.clone(),
 			previous_key: prefix,
-			phantom_data: Default::default(),
+			drain: false,
+			closure: |_raw_key, mut raw_value| V::decode(&mut raw_value),
 		}
 	}
 
@@ -406,27 +407,6 @@ impl<
 			previous_key: prefix,
 			drain: true,
 			_phantom: Default::default(),
-		}
-	}
-
-	fn translate<O: Decode, F: Fn(O) -> Option<V>>(f: F) {
-		let prefix = G::prefix_hash();
-		let mut previous_key = prefix.clone();
-		loop {
-			match sp_io::storage::next_key(&previous_key).filter(|n| n.starts_with(&prefix)) {
-				Some(next) => {
-					previous_key = next;
-					let maybe_value = unhashed::get::<O>(&previous_key);
-					match maybe_value {
-						Some(value) => match f(value) {
-							Some(new) => unhashed::put::<V>(&previous_key, &new),
-							None => unhashed::kill(&previous_key),
-						},
-						None => continue,
-					}
-				}
-				None => return,
-			}
 		}
 	}
 }
