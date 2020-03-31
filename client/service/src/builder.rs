@@ -269,7 +269,7 @@ fn new_full_parts<TBl, TRtApi, TExecDisp>(
 			ClientConfig {
 				offchain_worker_enabled : config.offchain_worker.enabled ,
 				offchain_indexing_api: config.offchain_worker.indexing_enabled,
-			}
+			},
 		)?
 	};
 
@@ -894,10 +894,10 @@ ServiceBuilder<
 
 		let offchain_storage = backend.offchain_storage();
 		let offchain_workers = match (config.offchain_worker.clone(), offchain_storage.clone()) {
-			(OffchainWorkerConfig{enabled : true, .. }, Some(db)) => {
+			(OffchainWorkerConfig {enabled : true, .. }, Some(db)) => {
 				Some(Arc::new(sc_offchain::OffchainWorkers::new(client.clone(), db)))
 			},
-			(OffchainWorkerConfig{enabled : true, .. }, None) => {
+			(OffchainWorkerConfig {enabled : true, .. }, None) => {
 				warn!("Offchain workers disabled, due to lack of offchain storage support in backend.");
 				None
 			},

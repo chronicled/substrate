@@ -156,7 +156,8 @@ pub fn new_in_mem<E, Block, S, RA>(
 		keystore,
 		spawn_handle,
 		prometheus_registry,
-		config)
+		config,
+	)
 }
 
 #[derive(Debug,Clone,Default)]
@@ -714,7 +715,8 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 					child_sc,
 					offchain_sc,
 					tx, _,
-					changes_trie_tx) = storage_changes.into_inner();
+					changes_trie_tx,
+				) = storage_changes.into_inner();
 
 				if let Some(mut offchain_storage) = self.backend.offchain_storage() {
 					offchain_sc.iter().for_each(|(k,v)| {
