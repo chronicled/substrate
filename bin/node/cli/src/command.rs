@@ -20,7 +20,7 @@ use parking_lot::RwLock;
 use sc_cli::{VersionInfo, error};
 use sc_service::{Roles as ServiceRoles};
 use node_transaction_factory::RuntimeAdapter;
-use grandpa::{voter, create_shared_voter_state, SharedVoterState, Environment, VotingRules};
+use grandpa::{voter, SharedVoterState, Environment, VotingRules};
 use crate::{Cli, service, service::{ConcreteBackend, ConcreteBlock}, ChainSpec, load_spec, Subcommand, factory_impl::FactoryState};
 use node_primitives::Block;
 use sp_runtime::traits::{Block as BlockT, NumberFor};

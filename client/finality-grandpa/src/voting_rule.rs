@@ -272,7 +272,7 @@ impl<Block, B> VotingRulesBuilder<Block, B> where
 
 	/// Return a new `VotingRule` that applies all of the previously added
 	/// voting rules in-order.
-	pub fn build(self) -> impl VotingRule<Block, B> + Clone {
+	pub fn build(self) -> VotingRules<Block, B> {
 		VotingRules {
 			rules: Arc::new(self.rules),
 		}

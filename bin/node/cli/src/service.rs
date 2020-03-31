@@ -23,7 +23,7 @@ use parking_lot::RwLock;
 
 use sc_consensus_babe;
 use sc_client::{self, LongestChain};
-use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider, create_shared_voter_state, voter, SharedVoterState, Environment, VotingRules};
+use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider, voter, SharedVoterState, Environment, VotingRules};
 use node_executor;
 use node_primitives::Block;
 use node_runtime::{GenesisConfig, RuntimeApi};
@@ -68,7 +68,7 @@ macro_rules! new_full_start {
 					Arc<NetworkService<ConcreteBlock, crate::service::NodeProtocol, <ConcreteBlock as BlockT>::Hash>>,
 					node_runtime::RuntimeApi,
 					sc_client::LongestChain<ConcreteBackend, ConcreteBlock>,
-					VotingRules<ConcreteBlock, Blockchain<ConcreteBlock>>,
+					VotingRules<ConcreteBlock, crate::service::ConcreteClient>,
 				>
 			> = Arc::new(RwLock::new(None));
 
@@ -287,7 +287,7 @@ macro_rules! new_full {
 #[allow(dead_code)]
 pub type ConcreteBlock = node_primitives::Block;
 #[allow(dead_code)]
-type ConcreteClient =
+pub type ConcreteClient =
 	Client<
 		Backend<ConcreteBlock>,
 		LocalCallExecutor<Backend<ConcreteBlock>,
