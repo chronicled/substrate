@@ -432,7 +432,7 @@ pub struct CallApiAtParams<'a, Block: BlockT, C, NC, Backend: StateBackend<HashF
     pub arguments: Vec<u8>,
     /// The overlayed changes that are on top of the state.
     pub overlayed_changes: &'a RefCell<OverlayedChanges>,
-    /// The overlayed changes that are there on top of whatever.
+    /// The overlayed changes to be applied to the offchain worker database.
     pub offchain_changes: &'a RefCell<InMemOffchainStorage>,
 
     /// The cache for storage transactions.
