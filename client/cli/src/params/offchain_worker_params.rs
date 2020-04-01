@@ -64,7 +64,7 @@ pub struct OffchainWorkerParams {
 	/// Enables runtime to write directly to the offchain worker's
 	/// DB during block import.
     #[structopt(
-        long = "enable-offchain-worker-indexing",
+        long = "enable-offchain-indexing",
         value_name = "ENABLE_OFFCHAIN_WORKER_INDEXING"
     )]
 	pub indexing_enabled: bool,
