@@ -20,7 +20,7 @@
 //!
 //! A subset of configuration parameters which are relevant to
 //! the inner working of offchain workers. The usage is solely
-//! targetd at handling input parameter parsing providing
+//! targeted at handling input parameter parsing providing
 //! a reasonable abstraction.
 
 use structopt::StructOpt;
