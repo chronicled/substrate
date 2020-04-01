@@ -65,7 +65,7 @@ pub struct OffchainWorkerParams {
 	/// DB during block import.
     #[structopt(
         long = "enable-offchain-indexing",
-        value_name = "ENABLE_OFFCHAIN_WORKER_INDEXING"
+        value_name = "ENABLE_OFFCHAIN_INDEXING"
     )]
 	pub indexing_enabled: bool,
 }
