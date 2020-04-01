@@ -33,7 +33,7 @@ use structopt::clap::arg_enum;
 use crate::error;
 
 arg_enum! {
-	/// Whether off-chain workers are enabled or not as a whole.
+	/// Whether offchain workers are enabled or not as a whole.
 	#[allow(missing_docs)]
 	#[derive(Debug, Clone)]
 	pub enum OffchainWorkerEnabled {
