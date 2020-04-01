@@ -752,11 +752,11 @@ pub trait ServiceBuilderCommand {
 	) -> Pin<Box<dyn Future<Output = Result<(), Error>> + Send>>;
 }
 
-impl<TBl, TRtApi, TExec, TSc, TImpQu, TExPool, TRpc>
+impl<TBl, TRtApi, TExecDisp, TSc, TImpQu, TExPool, TRpc>
 ServiceBuilder<
 	TBl,
 	TRtApi,
-	Client<sc_client_db::Backend<TBl>, TExec, TBl, TRtApi>,
+	Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>,
 	Arc<OnDemand<TBl>>,
 	TSc,
 	TImpQu,
@@ -764,8 +764,8 @@ ServiceBuilder<
 	TExPool,
 	TRpc,
 > where
-	Client<sc_client_db::Backend<TBl>, TExec, TBl, TRtApi>: ProvideRuntimeApi<TBl>,
-	<Client<sc_client_db::Backend<TBl>, TExec, TBl, TRtApi> as ProvideRuntimeApi<TBl>>::Api:
+	Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>: ProvideRuntimeApi<TBl>,
+	<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi> as ProvideRuntimeApi<TBl>>::Api:
 		sp_api::Metadata<TBl> +
 		sc_offchain::OffchainWorkerApi<TBl> +
 		sp_transaction_pool::runtime_api::TaggedTransactionQueue<TBl> +
@@ -774,11 +774,11 @@ ServiceBuilder<
 		sp_api::ApiExt<TBl, StateBackend = <sc_client_db::Backend<TBl> as Backend<TBl>>::State>,
 	TBl: BlockT,
 	TRtApi: 'static + Send + Sync,
-	TExec: 'static + sc_client::CallExecutor<TBl> + Send + Sync + Clone,
 	TSc: Clone,
 	TImpQu: 'static + ImportQueue<TBl>,
 	TExPool: MaintainedTransactionPool<Block=TBl, Hash = <TBl as BlockT>::Hash> + MallocSizeOfWasm + 'static,
 	TRpc: sc_rpc::RpcExtension<sc_rpc::Metadata> + Clone,
+	TExecDisp: NativeExecutionDispatch + 'static,
 {
 
 	/// Set an ExecutionExtensionsFactory
@@ -790,9 +790,9 @@ ServiceBuilder<
 	}
 
 	/// Builds the service.
-	pub fn build<TExecDisp: NativeExecutionDispatch + 'static>(self) -> Result<Service<
+	pub fn build(self) -> Result<Service<
 		TBl,
-		Client<sc_client_db::Backend<TBl>, TExec, TBl, TRtApi>,
+		Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>,
 		TSc,
 		NetworkStatus<TBl>,
 		NetworkService<TBl, <TBl as BlockT>::Hash>,
@@ -804,13 +804,9 @@ ServiceBuilder<
 		>,
 	>, Error>
 	where
-		TExec: CallExecutor<TBl, Backend = sc_client_db::Backend<TBl>>,
 		TRtApi: sp_api::ConstructRuntimeApi<TBl, sc_client::Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
 		<TRtApi as sp_api::ConstructRuntimeApi<TBl, sc_client::Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>>::RuntimeApi : sc_offchain::OffchainWorkerApi<TBl>,
 	{
-		let client = self.client()?;
-		//let backend = self.backend()?;
-
 		let ServiceBuilder {
 			marker: _,
 			mut config,
@@ -836,10 +832,8 @@ ServiceBuilder<
 			import_queue_builder,
 		} = self;
 
-		let (_client, backend, keystore, tasks_builder) = new_full_parts::<TBl, TRtApi, TExecDisp>(&config)?;
-		let _client = Arc::new(_client);
-		//let client = client as _;
-		//let backend = backend as _;
+		let (client, backend, keystore, tasks_builder) = new_full_parts::<TBl, TRtApi, TExecDisp>(&config)?;
+		let client = Arc::new(client);
 
 		if let Some(execution_extensions_factory) = execution_extensions_factory {
 			client.execution_extensions().set_extensions_factory(execution_extensions_factory);
@@ -971,7 +965,7 @@ ServiceBuilder<
 		let offchain_storage = backend.offchain_storage();
 		let offchain_workers = match (config.offchain_worker, offchain_storage.clone()) {
 			(true, Some(db)) => {
-				Some(Arc::new(sc_offchain::OffchainWorkers::new(Arc::clone(&_client), db)))
+				Some(Arc::new(sc_offchain::OffchainWorkers::new(Arc::clone(&client), db)))
 			},
 			(true, None) => {
 				warn!("Offchain workers disabled, due to lack of offchain storage support in backend.");
