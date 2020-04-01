@@ -56,6 +56,7 @@ impl<
 	TExecDisp: 'static + NativeExecutionDispatch,
 	TImpQu: 'static + ImportQueue<TBl>,
 	TRtApi: 'static + Send + Sync,
+	TExPool: Clone,
 {
 	type Block = TBl;
 	type NativeDispatch = TExecDisp;

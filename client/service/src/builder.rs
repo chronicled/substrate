@@ -136,15 +136,14 @@ pub struct ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TEx
 	//transaction_pool: Arc<TExPool>,
 	//rpc_extensions: TRpc,
 	remote_backend: Option<Arc<dyn RemoteBlockchain<TBl>>>,
-	marker: PhantomData<(TBl, TRtApi, TCl, Backend, TSc, TRpc)>,
+	marker: PhantomData<(TBl, TRtApi, TCl, Backend, TSc, TRpc, TFpp)>,
 	background_tasks: Vec<(&'static str, BackgroundTask)>,
 	execution_extensions_factory: Option<Box<dyn ExtensionsFactory>>,
 	select_chain_builder: Option<Box<dyn FnOnce(
 			&Configuration, &Arc<Backend>,
 		) -> Result<Option<TSc>, Error>>>,
 	// TODO: remove TRpc of the signature
-	rpc_ext_builder: Option<Box<dyn FnOnce(&ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu,
-	TFprb, TFpp, TExPool, TRpc, Backend>) -> Result<TRpc, Error>>>,
+	rpc_ext_builder: Option<Box<dyn FnOnce(Arc<TCl>, Arc<TExPool>, Option<&TSc>, Arc<RwLock<Keystore>>) -> Result<TRpc, Error>>>,
 	transaction_pool_builder: Option<Box<dyn FnOnce(
 		sc_transaction_pool::txpool::Options,
 		Arc<TCl>,
@@ -440,20 +439,29 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 }
 
 impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
-	ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend> {
+	ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
+where
+	TBl: BlockT,
+{
 
 	/// Returns a reference to the client that was stored in this builder.
 	pub fn client(&self) -> Result<Arc<TCl>, Error> {
-		let (client, _backend, _keystore, _tasks_builder) = new_full_parts(&config)?;
+		/*
+		let (client, _backend, _keystore, _tasks_builder) = new_full_parts(&self.config)?;
 
 		Ok(Arc::new(client))
+		*/
+		todo!()
 	}
 
 	/// Returns a reference to the backend that was used in this builder.
 	pub fn backend(&self) -> Result<Arc<Backend>, Error> {
-		let (_client, backend, _keystore, _tasks_builder) = new_full_parts(&config)?;
+		/*
+		let (_client, backend, _keystore, _tasks_builder) = new_full_parts(&self.config)?;
 
-		Ok(backend)
+		Ok(Box::new(backend))
+		*/
+		todo!()
 	}
 
 	/// Returns a reference to the backend that was used in this builder.
@@ -497,7 +505,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 		self,
 		select_chain_builder: impl FnOnce(
 			&Configuration, &Arc<Backend>,
-		) -> Result<Option<USc>, Error> + 'static
+		) -> Result<Option<TSc>, Error> + 'static
 	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 		TExPool, TRpc, Backend>, Error> {
 		Ok(ServiceBuilder {
@@ -520,7 +528,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 	/// Defines which head-of-chain strategy to use.
 	pub fn with_select_chain(
 		self,
-		builder: impl FnOnce(&Configuration, &Arc<Backend>) -> Result<USc, Error>,
+		builder: impl FnOnce(&Configuration, &Arc<Backend>) -> Result<TSc, Error> + 'static
 	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 		TExPool, TRpc, Backend>, Error> {
 		self.with_opt_select_chain(|cfg, b| builder(cfg, b).map(Option::Some))
@@ -658,7 +666,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 
 	/// Defines which transaction pool to use.
 	pub fn with_transaction_pool(
-		mut self,
+		self,
 		transaction_pool_builder: impl FnOnce(
 			sc_transaction_pool::txpool::Options,
 			Arc<TCl>,
@@ -687,7 +695,7 @@ impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>
 	/// Defines the RPC extensions to use.
 	pub fn with_rpc_extensions(
 		self,
-		rpc_ext_builder: impl FnOnce(&ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp, TExPool, TRpc, Backend>) -> Result<TRpc, Error> + 'static,
+		rpc_ext_builder: impl FnOnce(Arc<TCl>, Arc<TExPool>, Option<&TSc>, Arc<RwLock<Keystore>>) -> Result<TRpc, Error> + 'static,
 	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TFpp,
 		TExPool, TRpc, Backend>, Error>
 	where TSc: Clone, TFchr: Clone {
@@ -779,13 +787,14 @@ ServiceBuilder<
 
 	/// Set an ExecutionExtensionsFactory
 	pub fn with_execution_extensions_factory(self, execution_extensions_factory: Box<dyn ExtensionsFactory>) -> Result<Self, Error> {
-		self.execution_extensions_factory = Some(execution_extensions_factory);
-
-		Ok(self)
+		Ok(ServiceBuilder {
+			execution_extensions_factory: Some(execution_extensions_factory),
+			..self
+		})
 	}
 
 	/// Builds the service.
-	pub fn build(self) -> Result<Service<
+	pub fn build<TExecDisp: NativeExecutionDispatch + 'static>(self) -> Result<Service<
 		TBl,
 		Client<TBackend, TExec, TBl, TRtApi>,
 		TSc,
@@ -800,6 +809,9 @@ ServiceBuilder<
 	>, Error>
 		where TExec: CallExecutor<TBl, Backend = TBackend>,
 	{
+		let client = self.client()?;
+		let backend = self.backend()?;
+
 		let ServiceBuilder {
 			marker: _,
 			mut config,
@@ -815,7 +827,7 @@ ServiceBuilder<
 			//transaction_pool,
 			//rpc_extensions,
 			remote_backend,
-			background_tasks,
+			mut background_tasks,
 			execution_extensions_factory,
 			select_chain_builder,
 			rpc_ext_builder,
@@ -825,25 +837,25 @@ ServiceBuilder<
 			import_queue_builder,
 		} = self;
 
-		let (client, backend, keystore, tasks_builder) = new_full_parts(&config)?;
-		let client = Arc::new(client);
+		let (_client, _backend, keystore, tasks_builder) = new_full_parts::<TBl, TRtApi, TExecDisp>(&config)?;
+		//let client = Arc::new(client);
+		//let client = client as _;
+		//let backend = backend as _;
 
 		if let Some(execution_extensions_factory) = execution_extensions_factory {
 			client.execution_extensions().set_extensions_factory(execution_extensions_factory);
 		}
 
-		let select_chain = if let Some(select_chain_builder) {
-			select_chain_builder(&self.config, &self.backend)?
+		let select_chain = if let Some(select_chain_builder) = select_chain_builder {
+			select_chain_builder(&config, &backend)?
 		} else {
 			None
 		};
 
-		let rpc_extensions = rpc_ext_builder.map(|f| f(&self)?).unwrap_or_default();
-
-		let transaction_pool = if let Some((transaction_pool, background_task)) = transaction_pool_builder(
+		let transaction_pool = if let (transaction_pool, background_task) = transaction_pool_builder.unwrap_or_else(|| todo!())(
 			config.transaction_pool.clone(),
 			client.clone(),
-			fetcher.clone(),
+			on_demand.clone(),
 		)? {
 			if let Some(background_task) = background_task{
 				background_tasks.push(("txpool-background", background_task));
@@ -851,31 +863,37 @@ ServiceBuilder<
 
 			Arc::new(transaction_pool)
 		} else {
-			Arc::new(())
+			todo!("transaction_pool is actually a required argument");
 		};
+
+		let rpc_extensions = rpc_ext_builder.map(|f| f(client.clone(), transaction_pool.clone(), select_chain.as_ref(), keystore.clone())).transpose()?.unwrap_or_else(|| todo!("required?"));
 
 		let (import_queue, finality_proof_request_builder) = if let Some(builder) = import_queue_and_opt_fprb {
 			builder(
 				&config,
 				client.clone(),
 				backend.clone(),
-				fetcher.clone(),
+				on_demand.clone(),
 				select_chain.clone(),
 				transaction_pool.clone()
 			)?
 		} else {
-			((), None)
+			todo!("required");
 		};
 
-		let finality_proof_provider = finality_proof_provider_builder.map(|f| f(self.client.clone(), self.backend.clone())?).unwrap_or_default();
+		let finality_proof_provider = finality_proof_provider_builder.map(|f| f(client.clone(), backend.clone())).transpose()?.flatten();
 
 		// TODO: 2 import_queue builders
-		let import_queue = import_queue_builder.map(|f| f(
-			&self.config,
-			self.client.clone(),
-			self.select_chain.clone(),
-			self.transaction_pool.clone()
-		)?).unwrap_or_default();
+		let import_queue = if let Some(import_queue_builder) = import_queue_builder {
+			import_queue_builder(
+				&config,
+				client.clone(),
+				select_chain.clone(),
+				Arc::clone(&transaction_pool),
+			)?
+		} else {
+			todo!("I don't think there is a default for that")
+		};
 
 		sp_session::generate_initial_session_keys(
 			client.clone(),
@@ -886,7 +904,7 @@ ServiceBuilder<
 		// A side-channel for essential tasks to communicate shutdown.
 		let (essential_failed_tx, essential_failed_rx) = mpsc::unbounded();
 
-		let import_queue = Box::new(import_queue);
+		//let import_queue = Box::new(import_queue);
 		let chain_info = client.chain_info();
 		let chain_spec = &config.chain_spec;
 
@@ -905,7 +923,7 @@ ServiceBuilder<
 
 		let transaction_pool_adapter = Arc::new(TransactionPoolAdapter {
 			imports_external_transactions: !config.roles.is_light(),
-			pool: transaction_pool.clone(),
+			pool: Arc::clone(&transaction_pool),
 			client: client.clone(),
 			executor: tasks_builder.spawn_handle(),
 		});
@@ -940,7 +958,7 @@ ServiceBuilder<
 			finality_proof_request_builder,
 			on_demand: on_demand.clone(),
 			transaction_pool: transaction_pool_adapter.clone() as _,
-			import_queue,
+			import_queue: Box::new(import_queue),
 			protocol_id,
 			block_announce_validator,
 			metrics_registry: config.prometheus_config.as_ref().map(|config| config.registry.clone())
@@ -1035,7 +1053,7 @@ ServiceBuilder<
 		{
 			// extrinsic notifications
 			let network = Arc::downgrade(&network);
-			let transaction_pool_ = transaction_pool.clone();
+			let transaction_pool_ = Arc::clone(&transaction_pool);
 			let events = transaction_pool.import_notification_stream()
 				.for_each(move |hash| {
 					if let Some(network) = network.upgrade() {
@@ -1083,7 +1101,7 @@ ServiceBuilder<
 		};
 
 		// Periodically notify the telemetry.
-		let transaction_pool_ = transaction_pool.clone();
+		let transaction_pool_ = Arc::clone(&transaction_pool);
 		let client_ = client.clone();
 		let mut sys = System::new();
 		let self_pid = get_current_pid().ok();
@@ -1228,7 +1246,7 @@ ServiceBuilder<
 
 			let author = sc_rpc::author::Author::new(
 				client.clone(),
-				transaction_pool.clone(),
+				Arc::clone(&transaction_pool),
 				subscriptions,
 				keystore.clone(),
 			);
@@ -1342,7 +1360,7 @@ ServiceBuilder<
 			rpc_handlers,
 			_rpc: rpc,
 			_telemetry: telemetry,
-			_offchain_workers: offchain_workers,
+			_offchain_workers: offchain_workers as _,
 			_telemetry_on_connect_sinks: telemetry_connection_sinks.clone(),
 			keystore,
 			marker: PhantomData::<TBl>,
