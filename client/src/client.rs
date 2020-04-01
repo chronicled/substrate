@@ -718,11 +718,12 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 					changes_trie_tx,
 				) = storage_changes.into_inner();
 
-				if let Some(mut offchain_storage) = self.backend.offchain_storage() {
-					offchain_sc.iter().for_each(|(k,v)| {
-						offchain_storage.set(b"block_import_info", k,v)
-					});
-
+				if self.config.offchain_indexing_api {
+					if let Some(mut offchain_storage) = self.backend.offchain_storage() {
+						offchain_sc.iter().for_each(|(k,v)| {
+							offchain_storage.set(b"block_import_info", k,v)
+						});
+					}
 				}
 
 
