@@ -47,7 +47,7 @@ pub use sp_core::NativeOrEncoded;
 #[cfg(feature = "std")]
 pub use hash_db::Hasher;
 #[cfg(feature = "std")]
-pub use sp_core::offchain::storage::InMemOffchainStorage;
+pub use sp_core::offchain::storage::OffchainOverlayedChanges;
 #[doc(hidden)]
 #[cfg(not(feature = "std"))]
 pub use sp_core::to_substrate_wasm_fn_return_value;
@@ -433,7 +433,7 @@ pub struct CallApiAtParams<'a, Block: BlockT, C, NC, Backend: StateBackend<HashF
 	/// The overlayed changes that are on top of the state.
 	pub overlayed_changes: &'a RefCell<OverlayedChanges>,
 	/// The overlayed changes to be applied to the offchain worker database.
-	pub offchain_changes: &'a RefCell<InMemOffchainStorage>,
+	pub offchain_changes: &'a RefCell<OffchainOverlayedChanges>,
 	/// The cache for storage transactions.
 	pub storage_transaction_cache: &'a RefCell<StorageTransactionCache<Block, Backend>>,
 	/// Determines if the function requires that `initialize_block` should be called before calling

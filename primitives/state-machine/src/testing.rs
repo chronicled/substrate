@@ -30,7 +30,7 @@ use crate::{
 	},
 };
 use sp_core::{
-	offchain::storage::InMemOffchainStorage,
+	offchain::storage::{InMemOffchainStorage,OffchainOverlayedChanges},
 	storage::{
 		well_known_keys::{CHANGES_TRIE_CONFIG, CODE, HEAP_PAGES, is_child_storage_key},
 		Storage,
@@ -45,7 +45,7 @@ where
 	H::Out: codec::Codec,
 {
 	overlay: OverlayedChanges,
-	offchain_overlay: InMemOffchainStorage,
+	offchain_overlay: OffchainOverlayedChanges,
 	storage_transaction_cache: StorageTransactionCache<
 		<InMemoryBackend<H> as Backend<H>>::Transaction, H, N
 	>,
@@ -96,7 +96,7 @@ impl<H: Hasher, N: ChangesTrieBlockNumber> TestExternalities<H, N>
 		storage.top.insert(HEAP_PAGES.to_vec(), 8u64.encode());
 		storage.top.insert(CODE.to_vec(), code.to_vec());
 
-		let offchain_overlay = InMemOffchainStorage::default();
+		let offchain_overlay = OffchainOverlayedChanges::default();
 
 		TestExternalities {
 			overlay,

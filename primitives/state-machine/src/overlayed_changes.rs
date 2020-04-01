@@ -30,7 +30,7 @@ use std::iter::FromIterator;
 use std::collections::{HashMap, BTreeMap, BTreeSet};
 use codec::{Decode, Encode};
 use sp_core::storage::{well_known_keys::EXTRINSIC_INDEX, OwnedChildInfo, ChildInfo};
-use sp_core::offchain::storage::InMemOffchainStorage;
+use sp_core::offchain::storage::OffchainOverlayedChanges;
 use std::{mem, ops};
 
 use hash_db::Hasher;
@@ -96,7 +96,7 @@ pub struct StorageChanges<Transaction, H: Hasher, N: BlockNumber> {
 	/// All changes to the child storages.
 	pub child_storage_changes: ChildStorageCollection,
 	/// Offchain state changes to write to the offchain database.
-	pub offchain_storage_changes: InMemOffchainStorage,
+	pub offchain_storage_changes: OffchainOverlayedChanges,
 	/// A transaction for the backend that contains all changes from
 	/// [`main_storage_changes`](Self::main_storage_changes) and from
 	/// [`child_storage_changes`](Self::child_storage_changes).
@@ -114,7 +114,7 @@ impl<Transaction, H: Hasher, N: BlockNumber> StorageChanges<Transaction, H, N> {
 	pub fn into_inner(self) -> (
 		StorageCollection,
 		ChildStorageCollection,
-		InMemOffchainStorage,
+		OffchainOverlayedChanges,
 		Transaction,
 		H::Out,
 		Option<ChangesTrieTransaction<H, N>>,

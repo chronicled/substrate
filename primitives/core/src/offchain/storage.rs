@@ -77,3 +77,53 @@ impl OffchainStorage for InMemOffchainStorage {
 		}
 	}
 }
+
+
+
+
+/// Change to be applied to the offchain worker db in regards to a key.
+#[derive(Debug,Clone,Hash,Eq,PartialEq)]
+pub enum OffchainOverlayedChange {
+	/// Remove the data associated with the key
+	Remove,
+	/// Overwrite the value of an associated key
+	SetValue(Vec<u8>),
+}
+
+/// Default impl to satisfy the derive of `OffchainOverlayedChanges`
+impl Default for OffchainOverlayedChange {
+	fn default() -> Self {
+		Self::Remove
+	}
+}
+
+
+/// In-memory storage for offchain workers.
+#[derive(Debug, Clone, Default)]
+pub struct OffchainOverlayedChanges {
+	storage: HashMap<Vec<u8>, OffchainOverlayedChange>,
+}
+
+impl OffchainOverlayedChanges {
+	/// Consume the offchain storage and iterate over all key value pairs.
+	pub fn into_iter(self) -> impl Iterator<Item=(Vec<u8>,OffchainOverlayedChange)> {
+		self.storage.into_iter()
+	}
+
+	/// Iterate over all key value pairs by reference.
+	pub fn iter<'a>(&'a self) -> impl Iterator<Item=(&'a Vec<u8>,&'a OffchainOverlayedChange)> {
+		self.storage.iter()
+	}
+
+	/// Remove a key and it's associated value from the offchain database.
+	pub fn remove(&mut self, prefix: &[u8], key: &[u8]) {
+		let key: Vec<u8> = prefix.iter().chain(key).cloned().collect();
+		let _ = self.storage.insert(key, OffchainOverlayedChange::Remove);
+	}
+
+	/// Set the value associated with a key under a prefix to the value provided.
+	pub fn set(&mut self, prefix: &[u8], key: &[u8], value: &[u8]) {
+		let key = prefix.iter().chain(key).cloned().collect();
+		self.storage.insert(key, OffchainOverlayedChange::SetValue(value.to_vec()));
+	}
+}
