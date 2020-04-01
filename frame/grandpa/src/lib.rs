@@ -216,78 +216,78 @@ decl_module! {
 		fn report_equivocation(
 			origin,
 			equivocation_proof: EquivocationProof<T::Hash, T::BlockNumber>,
-			// key_owner_proof: <T::HandleEquivocation as equivocation::HandleEquivocation<T>>::KeyOwnerProof,
-			key_owner_proof: Vec<u8>,
+			key_owner_proof: <T::HandleEquivocation as equivocation::HandleEquivocation<T>>::KeyOwnerProof,
+			// key_owner_proof: Vec<u8>,
 		) {
-			use equivocation::{
-				GetSessionNumber, GetValidatorCount, GrandpaOffence, HandleEquivocation,
-			};
+			// use equivocation::{
+			// 	GetSessionNumber, GetValidatorCount, GrandpaOffence, HandleEquivocation,
+			// };
 
-			let reporter_id = ensure_signed(origin)?;
+			// let reporter_id = ensure_signed(origin)?;
 
-			// FIXME: this is a hack needed because the typed argument version above fails to
-			// compile (due to missing codec implementation)
-			let key_owner_proof: <T::HandleEquivocation as HandleEquivocation<T>>::KeyOwnerProof =
-				Decode::decode(&mut &key_owner_proof[..])
-					.map_err(|_| "Key owner proof decoding failed.")?;
+			// // FIXME: this is a hack needed because the typed argument version above fails to
+			// // compile (due to missing codec implementation)
+			// let key_owner_proof: <T::HandleEquivocation as HandleEquivocation<T>>::KeyOwnerProof =
+			// 	Decode::decode(&mut &key_owner_proof[..])
+			// 		.map_err(|_| "Key owner proof decoding failed.")?;
 
-			let (session_index, validator_set_count) = (
-				key_owner_proof.session(),
-				key_owner_proof.validator_count(),
-			);
+			// let (session_index, validator_set_count) = (
+			// 	key_owner_proof.session(),
+			// 	key_owner_proof.validator_count(),
+			// );
 
-			// validate the membership proof and extract session index and
-			// validator set count of the session that we're proving membership of
-			let offender =
-				T::HandleEquivocation::check_proof(
-					&equivocation_proof,
-					key_owner_proof,
-				).ok_or("Invalid/outdated key ownership proof.")?;
+			// // validate the membership proof and extract session index and
+			// // validator set count of the session that we're proving membership of
+			// let offender =
+			// 	T::HandleEquivocation::check_proof(
+			// 		&equivocation_proof,
+			// 		key_owner_proof,
+			// 	).ok_or("Invalid/outdated key ownership proof.")?;
 
-			// validate equivocation proof (check votes are different and
-			// signatures are valid).
-			fg_primitives::check_equivocation_proof(&equivocation_proof)
-				.map_err(|_| "Invalid equivocation proof.")?;
+			// // validate equivocation proof (check votes are different and
+			// // signatures are valid).
+			// fg_primitives::check_equivocation_proof(&equivocation_proof)
+			// 	.map_err(|_| "Invalid equivocation proof.")?;
 
-			// we check the equivocation within the context of its set id (and
-			// associated session).
-			let set_id = equivocation_proof.set_id();
+			// // we check the equivocation within the context of its set id (and
+			// // associated session).
+			// let set_id = equivocation_proof.set_id();
 
-			// fetch the current and previous sets last session index. on the
-			// genesis set there's no previous set.
-			let previous_set_id_session_index = if set_id == 0 {
-				None
-			} else {
-				let session_index = SetIdSession::get(set_id - 1)
-					.ok_or("Invalid equivocation set id.")?;
+			// // fetch the current and previous sets last session index. on the
+			// // genesis set there's no previous set.
+			// let previous_set_id_session_index = if set_id == 0 {
+			// 	None
+			// } else {
+			// 	let session_index = SetIdSession::get(set_id - 1)
+			// 		.ok_or("Invalid equivocation set id.")?;
 
-				Some(session_index)
-			};
+			// 	Some(session_index)
+			// };
 
-			let set_id_session_index = SetIdSession::get(set_id)
-				.ok_or("Invalid equivocation set id.")?;
+			// let set_id_session_index = SetIdSession::get(set_id)
+			// 	.ok_or("Invalid equivocation set id.")?;
 
-			// check that the session id for the membership proof is within the
-			// bounds of the set id reported in the equivocation.
-			if session_index > set_id_session_index ||
-				previous_set_id_session_index
-					.map(|previous_index| session_index <= previous_index)
-					.unwrap_or(false)
-			{
-				return Err("Invalid equivocation set id provided.".into());
-			}
+			// // check that the session id for the membership proof is within the
+			// // bounds of the set id reported in the equivocation.
+			// if session_index > set_id_session_index ||
+			// 	previous_set_id_session_index
+			// 		.map(|previous_index| session_index <= previous_index)
+			// 		.unwrap_or(false)
+			// {
+			// 	return Err("Invalid equivocation set id provided.".into());
+			// }
 
-			// report to the offences module rewarding the sender.
-			T::HandleEquivocation::report_offence(
-				vec![reporter_id],
-				<T::HandleEquivocation as equivocation::HandleEquivocation<T>>::Offence::new(
-					session_index,
-					validator_set_count,
-					offender,
-					set_id,
-					equivocation_proof.round(),
-				),
-			).map_err(|_| "Duplicate offence report.")?;
+			// // report to the offences module rewarding the sender.
+			// T::HandleEquivocation::report_offence(
+			// 	vec![reporter_id],
+			// 	<T::HandleEquivocation as equivocation::HandleEquivocation<T>>::Offence::new(
+			// 		session_index,
+			// 		validator_set_count,
+			// 		offender,
+			// 		set_id,
+			// 		equivocation_proof.round(),
+			// 	),
+			// ).map_err(|_| "Duplicate offence report.")?;
 		}
 
 		fn on_finalize(block_number: T::BlockNumber) {
