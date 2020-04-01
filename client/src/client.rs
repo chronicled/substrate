@@ -160,6 +160,7 @@ pub fn new_in_mem<E, Block, S, RA>(
 	)
 }
 
+/// Relevant client configuration items relevant for the client.
 #[derive(Debug,Clone,Default)]
 pub struct ClientConfig {
 	/// Enable the offchain worker db.
@@ -721,7 +722,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 				if self.config.offchain_indexing_api {
 					if let Some(mut offchain_storage) = self.backend.offchain_storage() {
 						offchain_sc.iter().for_each(|(k,v)| {
-							offchain_storage.set(b"block_import_info", k,v)
+							offchain_storage.set(b"block-import-info", k,v)
 						});
 					}
 				}

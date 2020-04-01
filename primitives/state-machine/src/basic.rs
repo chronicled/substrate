@@ -111,7 +111,7 @@ impl From<BTreeMap<StorageKey, StorageValue>> for BasicExternalities {
 }
 
 impl Externalities for BasicExternalities {
-	fn local_ocw_storage_write_kv(&mut self, _key: &[u8], _value: &[u8]) {
+	fn set_offchain_storage(&mut self, _key: &[u8], _value: Option<&[u8]>) {
 	}
 
 	fn storage(&self, key: &[u8]) -> Option<StorageValue> {

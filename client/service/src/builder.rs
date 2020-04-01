@@ -55,7 +55,6 @@ use sp_transaction_pool::{MaintainedTransactionPool, ChainEvent};
 use sp_blockchain;
 use prometheus_endpoint::{register, Gauge, U64, F64, Registry, PrometheusError, Opts, GaugeVec};
 
-use sp_consensus::BlockOrigin;
 struct ServiceMetrics {
 	block_height_number: GaugeVec<U64>,
 	ready_transactions_number: Gauge<U64>,

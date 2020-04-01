@@ -570,8 +570,13 @@ pub trait Hashing {
 #[runtime_interface]
 pub trait OffchainIndex {
 	/// Write a key value pair to the offchain worker database in a buffered fashion.
-	fn write_kv(&mut self, key: &[u8], value: &[u8]) {
-		self.local_ocw_storage_write_kv(key,value)
+	fn set_offchain_storage(&mut self, key: &[u8], value: &[u8]) {
+		self.set_offchain_storage(key, Some(value));
+	}
+
+	/// Remove a key and its associated value from the offchain worker database.
+	fn clear_offchain_storage(&mut self, key: &[u8]) {
+		self.set_offchain_storage(key, None);
 	}
 }
 

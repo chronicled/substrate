@@ -158,8 +158,12 @@ where
 	N: crate::changes_trie::BlockNumber,
 {
 
-	fn local_ocw_storage_write_kv(&mut self, key: &[u8], value: &[u8]) {
-		self.offchain_overlay.set(b"ocw", key, value);
+	fn set_offchain_storage(&mut self, key: &[u8], value: Option<&[u8]>) {
+		const PREFIX : &'static [u8] = b"block-import-info";
+		match value {
+			Some(value) => self.offchain_overlay.set(PREFIX, key, value),
+			None => self.offchain_overlay.remove(PREFIX, key),
+		}
 	}
 
 	fn storage(&self, key: &[u8]) -> Option<StorageValue> {

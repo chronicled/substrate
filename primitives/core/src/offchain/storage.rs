@@ -36,6 +36,12 @@ impl InMemOffchainStorage {
 	pub fn iter<'a>(&'a self) -> impl Iterator<Item=(&'a Vec<u8>,&'a Vec<u8>)> {
 		self.storage.iter()
 	}
+
+	/// Remove a key and it's associated value from the offchain database.
+	pub fn remove(&mut self, prefix: &[u8], key: &[u8]) {
+		let key: Vec<u8> = prefix.iter().chain(key).cloned().collect();
+		let _ = self.storage.remove(&key);
+	}
 }
 
 impl OffchainStorage for InMemOffchainStorage {
