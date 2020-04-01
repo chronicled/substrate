@@ -19,7 +19,7 @@
 //! Offchain worker related configuration parameters.
 //!
 //! A subset of configuration parameters which are relevant to
-//! the inner working of offchain workers. The usage is soley
+//! the inner working of offchain workers. The usage is solely
 //! targetd at handling input parameter parsing providing
 //! a reasonable abstraction.
 
