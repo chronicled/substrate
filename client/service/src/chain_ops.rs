@@ -49,7 +49,7 @@ impl<
 > ServiceBuilderCommand for ServiceBuilder<
 	TBl, TRtApi,
 	Client<TBackend, LocalCallExecutor<TBackend, NativeExecutor<TExecDisp>>, TBl, TRtApi>,
-	TFchr, TSc, TImpQu, TFprb, TExPool, TRpc,
+	TFchr, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp,
 > where
 	TBl: BlockT,
 	TBackend: 'static + sc_client_api::backend::Backend<TBl> + Send,
