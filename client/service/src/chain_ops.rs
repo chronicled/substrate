@@ -99,8 +99,7 @@ impl<
 			}
 		}
 
-		let client = self.client().expect("TODO");
-		let mut queue = self.import_queue().expect("TODO");
+		let (mut queue, client) = self.import_queue_and_client().expect("TODO");
 
 		let mut io_reader_input = IoReader(input);
 		let mut count = None::<u64>;

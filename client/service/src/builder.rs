@@ -456,9 +456,8 @@ where
 		Ok(Arc::new(client))
 	}
 
-	/// Returns a reference to the backend that was used in this builder.
-	pub fn import_queue(&self) -> Result<TImpQu, Error> {
-		todo!()
+	pub fn import_queue_and_client(self) -> Result<(TImpQu, Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>), Error> {
+		todo!();
 	}
 
 /*
@@ -851,34 +850,30 @@ ServiceBuilder<
 			todo!("transaction_pool is actually a required argument");
 		};
 
+		let (import_queue, finality_proof_request_builder) =
+			if let Some(builder) = import_queue_and_opt_fprb {
+				builder(
+					&config,
+					client.clone(),
+					backend.clone(),
+					on_demand.clone(),
+					select_chain.clone(),
+					transaction_pool.clone(),
+				)?
+			} else if let Some(import_queue_builder) = import_queue_builder {
+				(import_queue_builder(
+					&config,
+					client.clone(),
+					select_chain.clone(),
+					transaction_pool.clone(),
+				)?, None)
+			} else {
+				todo!("I don't think there is a default for that")
+			};
+
 		let rpc_extensions = rpc_ext_builder.map(|f| f(client.clone(), transaction_pool.clone(), select_chain.as_ref(), keystore.clone())).transpose()?.unwrap_or_else(|| todo!("required?"));
 
-		let (import_queue, finality_proof_request_builder) = if let Some(builder) = import_queue_and_opt_fprb {
-			builder(
-				&config,
-				client.clone(),
-				backend.clone(),
-				on_demand.clone(),
-				select_chain.clone(),
-				transaction_pool.clone()
-			)?
-		} else {
-			todo!("required");
-		};
-
 		let finality_proof_provider = finality_proof_provider_builder.map(|f| f(client.clone(), backend.clone())).transpose()?.flatten();
-
-		// TODO: 2 import_queue builders
-		let import_queue = if let Some(import_queue_builder) = import_queue_builder {
-			import_queue_builder(
-				&config,
-				client.clone(),
-				select_chain.clone(),
-				Arc::clone(&transaction_pool),
-			)?
-		} else {
-			todo!("I don't think there is a default for that")
-		};
 
 		sp_session::generate_initial_session_keys(
 			client.clone(),
@@ -889,7 +884,6 @@ ServiceBuilder<
 		// A side-channel for essential tasks to communicate shutdown.
 		let (essential_failed_tx, essential_failed_rx) = mpsc::unbounded();
 
-		//let import_queue = Box::new(import_queue);
 		let chain_info = client.chain_info();
 		let chain_spec = &config.chain_spec;
 
