@@ -542,6 +542,7 @@ impl<T: Trait> Module<T> {
 	/// to the validator set have a session of delay to take effect. This allows for
 	/// equivocation punishment after a fork.
 	pub fn rotate_session() {
+		sp_runtime::print("⏰ Rotating session");
 		let session_index = CurrentIndex::get();
 
 		let changed = QueuedChanged::get();

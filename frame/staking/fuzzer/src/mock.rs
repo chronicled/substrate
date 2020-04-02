@@ -16,6 +16,8 @@
 
 //! Mock file for staking fuzzing.
 
+use codec::Encode;
+use sp_core::H256;
 use sp_runtime::traits::{Convert, SaturatedConversion};
 use frame_support::{impl_outer_origin, impl_outer_dispatch, parameter_types};
 
@@ -24,11 +26,11 @@ type AccountIndex = u32;
 type BlockNumber = u64;
 type Balance = u64;
 
-type System = frame_system::Module<Test>;
-type Balances = pallet_balances::Module<Test>;
-type Staking = pallet_staking::Module<Test>;
-type Indices = pallet_indices::Module<Test>;
-type Session = pallet_session::Module<Test>;
+pub type System = frame_system::Module<Test>;
+pub type Balances = pallet_balances::Module<Test>;
+pub type Staking = pallet_staking::Module<Test>;
+pub type Indices = pallet_indices::Module<Test>;
+pub type Session = pallet_session::Module<Test>;
 
 impl_outer_origin! {
 	pub enum Origin for Test  where system = frame_system {}
@@ -49,6 +51,15 @@ impl Convert<u64, u64> for CurrencyToVoteHandler {
 impl Convert<u128, u64> for CurrencyToVoteHandler {
 	fn convert(x: u128) -> u64 {
 		x.saturated_into()
+	}
+}
+
+pub struct StaticRandomness;
+impl frame_support::traits::Randomness<H256> for StaticRandomness {
+	fn random(_subject: &[u8]) -> H256 {
+		let mut static_value = 10u32.encode();
+		static_value.resize_with(32, || 0u8);
+		H256::from_slice(&static_value)
 	}
 }
 
@@ -150,6 +161,7 @@ pallet_staking_reward_curve::build! {
 parameter_types! {
 	pub const RewardCurve: &'static sp_runtime::curve::PiecewiseLinear<'static> = &I_NPOS;
 	pub const MaxNominatorRewardedPerValidator: u32 = 64;
+	pub const MaxIterations: u32 = 20;
 }
 
 pub type Extrinsic = sp_runtime::testing::TestXt<Call, ()>;
@@ -161,7 +173,7 @@ type SubmitTransaction = frame_system::offchain::TransactionSubmitter<
 
 impl pallet_staking::Trait for Test {
 	type Currency = Balances;
-	type Time = pallet_timestamp::Module<Self>;
+	type UnixTime = pallet_timestamp::Module<Self>;
 	type CurrencyToVote = CurrencyToVoteHandler;
 	type RewardRemainder = ();
 	type Event = ();
@@ -177,6 +189,7 @@ impl pallet_staking::Trait for Test {
 	type ElectionLookahead = ();
 	type Call = Call;
 	type SubmitTransaction = SubmitTransaction;
-	type KeyType = sp_runtime::testing::UintAuthorityId;
+	type MaxIterations = MaxIterations;
+	type Randomness = StaticRandomness;
 	type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
 }
