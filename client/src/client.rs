@@ -711,7 +711,8 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 
 				operation.op.update_cache(new_cache);
 
-				let (main_sc,
+				let (
+					main_sc,
 					child_sc,
 					offchain_sc,
 					tx, _,
