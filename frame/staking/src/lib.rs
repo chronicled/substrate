@@ -1148,7 +1148,7 @@ decl_module! {
 			{
 				if let Some(next_session_change) = T::NextNewSession::estimate_next_new_session(now){
 					if let Some(remaining) = next_session_change.checked_sub(&now) {
-						debug::native::debug!(target: "staking", "remaining: {:?}", remaining);
+						debug::native::debug!(target: "staking", "now = {:?} // remaining: {:?}", now, remaining);
 						if remaining <= T::ElectionLookahead::get() && !remaining.is_zero() {
 							// create snapshot.
 							if Self::create_stakers_snapshot() {
@@ -1159,7 +1159,7 @@ decl_module! {
 								);
 								debug::native::info!(
 									target: "staking",
-									"Election window is Open({:?}). Snapshot created",
+									"🚪 Election window is Open({:?}). Snapshot created",
 									now,
 								);
 							} else {
