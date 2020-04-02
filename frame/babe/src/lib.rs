@@ -307,9 +307,14 @@ impl<T: Trait> Module<T> {
 		// epoch 0 as having started at the slot of block 1. We want to use
 		// the same randomness and validator set as signalled in the genesis,
 		// so we don't rotate the epoch.
-		now != One::one() && {
+
+		let should = now != One::one() && {
 			let diff = CurrentSlot::get().saturating_sub(Self::current_epoch_start());
 			diff >= T::EpochDuration::get()
+		};
+
+		sp_std::if_std! {
+			println!("should epoch change at block {:?} ? => ", now, should);
 		}
 	}
 
@@ -523,6 +528,9 @@ impl<T: Trait> pallet_session::OneSessionHandler<T::AccountId> for Module<T> {
 			(k, 1)
 		}).collect::<Vec<_>>();
 
+		sp_std::if_std! {
+			println!("BABE on_new_session() / authorities len = {:?} / queued len = {:?}", authorities.len(), next_authorities.len());
+		}
 		Self::enact_epoch_change(authorities, next_authorities)
 	}
 
