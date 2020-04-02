@@ -90,19 +90,24 @@ pub enum OffchainOverlayedChange {
 	SetValue(Vec<u8>),
 }
 
-/// Default impl to satisfy the derive of `OffchainOverlayedChanges`
-impl Default for OffchainOverlayedChange {
-	fn default() -> Self {
-		Self::Remove
-	}
-}
-
-
 /// In-memory storage for offchain workers.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct OffchainOverlayedChanges {
 	storage: HashMap<Vec<u8>, OffchainOverlayedChange>,
 }
+
+/// Create an empty set of overlay changes.
+///
+/// The `Default` impl has to be done manually to avoid requirement of
+/// a `Default` impl for `OffchainOverlayedChange`
+impl Default for OffchainOverlayedChanges {
+	fn default() -> Self {
+		Self {
+			storage: HashMap::new()
+		}
+	}
+}
+
 
 impl OffchainOverlayedChanges {
 	/// Consume the offchain storage and iterate over all key value pairs.
@@ -113,6 +118,11 @@ impl OffchainOverlayedChanges {
 	/// Iterate over all key value pairs by reference.
 	pub fn iter<'a>(&'a self) -> impl Iterator<Item=(&'a Vec<u8>,&'a OffchainOverlayedChange)> {
 		self.storage.iter()
+	}
+
+	/// Drain all elements of changeset.
+	pub fn drain<'a,'d>(&'a mut self) -> impl Iterator<Item=(Vec<u8>, OffchainOverlayedChange)> + 'd where 'a : 'd {
+		self.storage.drain()
 	}
 
 	/// Remove a key and it's associated value from the offchain database.

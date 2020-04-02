@@ -724,8 +724,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 					// 		offchain_storage.set(b"block-import-info", k,v)
 					// 	});
 					// }
-
-					// operation.op
+					operation.op.update_offchain_storage(offchain_sc)?;
 				}
 
 				operation.op.update_db_storage(tx)?;
