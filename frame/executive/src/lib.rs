@@ -191,6 +191,10 @@ where
 			digest,
 			frame_system::InitKind::Full,
 		);
+		frame_support::runtime_print!("Executive Oninitialize for {:?} parent hash = {:?}",
+			block_number,
+			parent_hash,
+		);
 		<frame_system::Module<System> as OnInitialize<System::BlockNumber>>::on_initialize(*block_number);
 		let weight = <AllModules as OnInitialize<System::BlockNumber>>::on_initialize(*block_number);
 		<frame_system::Module<System>>::register_extra_weight_unchecked(weight);
@@ -232,6 +236,7 @@ where
 
 	/// Actually execute all transitions for `block`.
 	pub fn execute_block(block: Block) {
+		frame_support::runtime_print!(" 🎸 execute block {} ", block.header().number());
 		Self::initialize_block(block.header());
 
 		// any initial checks
