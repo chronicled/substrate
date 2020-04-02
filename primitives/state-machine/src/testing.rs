@@ -30,7 +30,7 @@ use crate::{
 	},
 };
 use sp_core::{
-	offchain::storage::{InMemOffchainStorage,OffchainOverlayedChanges},
+	offchain::storage::OffchainOverlayedChanges,
 	storage::{
 		well_known_keys::{CHANGES_TRIE_CONFIG, CODE, HEAP_PAGES, is_child_storage_key},
 		Storage,

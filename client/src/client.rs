@@ -28,7 +28,6 @@ use hash_db::Prefix;
 use sp_core::{
 	ChangesTrieConfiguration, convert_hash, traits::CodeExecutor,
 	NativeOrEncoded, storage::{StorageKey, StorageData, well_known_keys, ChildInfo},
-	offchain::OffchainStorage,
 };
 use sc_telemetry::{telemetry, SUBSTRATE_INFO};
 use sp_runtime::{

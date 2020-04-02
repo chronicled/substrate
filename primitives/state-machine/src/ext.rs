@@ -24,7 +24,7 @@ use crate::{
 
 use hash_db::Hasher;
 use sp_core::{
-	offchain::{OffchainStorage,storage::OffchainOverlayedChanges},
+	offchain::storage::OffchainOverlayedChanges,
 	storage::{ChildStorageKey, well_known_keys::is_child_storage_key, ChildInfo},
 	traits::Externalities, hexdisplay::HexDisplay,
 };
