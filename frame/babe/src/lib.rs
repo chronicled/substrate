@@ -316,6 +316,8 @@ impl<T: Trait> Module<T> {
 		sp_std::if_std! {
 			println!("should epoch change at block {:?} ? => ", now, should);
 		}
+
+		should
 	}
 
 	/// Return the _best guess_ block number, at which the next epoch change is predicted to happen.
