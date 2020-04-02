@@ -314,7 +314,7 @@ impl<T: Trait> Module<T> {
 		};
 
 		sp_std::if_std! {
-			println!("should epoch change at block {:?} ? => ", now, should);
+			println!("should epoch change at block {:?} ? => {}", now, should);
 		}
 
 		should
