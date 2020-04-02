@@ -236,7 +236,7 @@ where
 
 	/// Actually execute all transitions for `block`.
 	pub fn execute_block(block: Block) {
-		frame_support::runtime_print!(" 🎸 execute block {} ", block.header().number());
+		frame_support::runtime_print!(" 🎸 execute block {:?} ", block.header().number());
 		Self::initialize_block(block.header());
 
 		// any initial checks
