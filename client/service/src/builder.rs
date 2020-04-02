@@ -121,7 +121,7 @@ pub type BackgroundTask = Pin<Box<dyn Future<Output=()> + Send>>;
 /// The order in which the `with_*` methods are called doesn't matter, as the correct binding of
 /// generics is done when you call `build`.
 ///
-pub struct ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
+pub struct ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
 where
 	TBl: BlockT,
 {
@@ -130,7 +130,7 @@ where
 	//backend: Arc<Backend>,
 	//tasks_builder: TaskManagerBuilder,
 	//keystore: Arc<RwLock<Keystore>>,
-	fetcher: Option<TFchr>,
+	fetcher: Option<Arc<OnDemand<TBl>>>,
 	//select_chain: Option<TSc>,
 	//pub (crate) import_queue: TImpQu,
 	//finality_proof_request_builder: Option<TFprb>,
@@ -145,22 +145,22 @@ where
 			&Configuration, &Arc<sc_client_db::Backend<TBl>>,
 		) -> Result<Option<TSc>, Error>>>,
 	// TODO: remove TRpc of the signature
-	rpc_ext_builder: Option<Box<dyn FnOnce(Arc<TCl>, Arc<TExPool>, Option<&TSc>, Arc<RwLock<Keystore>>) -> Result<TRpc, Error>>>,
+	rpc_ext_builder: Option<Box<dyn FnOnce(Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>, Arc<TExPool>, Option<&TSc>, Arc<RwLock<Keystore>>, Option<Arc<OnDemand<TBl>>>, Option<Arc<dyn RemoteBlockchain<TBl>>>) -> Result<TRpc, Error>>>,
 	transaction_pool_builder: Option<Box<dyn FnOnce(
 		sc_transaction_pool::txpool::Options,
-		Arc<TCl>,
-		Option<TFchr>,
+		Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
+		Option<Arc<OnDemand<TBl>>>,
 	) -> Result<(TExPool, Option<BackgroundTask>), Error>>>,
 	import_queue_and_opt_fprb: Option<Box<dyn FnOnce(
 			&Configuration,
-			Arc<TCl>,
+			Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
 			Arc<sc_client_db::Backend<TBl>>,
-			Option<TFchr>,
+			Option<Arc<OnDemand<TBl>>>,
 			Option<TSc>,
 			Arc<TExPool>,
 		) -> Result<(TImpQu, Option<TFprb>), Error>>>,
-	finality_proof_provider_builder: Option<Box<dyn FnOnce(Arc<TCl>, Arc<sc_client_db::Backend<TBl>>) -> Result<Option<Arc<dyn FinalityProofProvider<TBl>>>, Error>>>,
-	import_queue_builder: Option<Box<dyn FnOnce(&Configuration, Arc<TCl>, Option<TSc>, Arc<TExPool>)
+	finality_proof_provider_builder: Option<Box<dyn FnOnce(Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>, Arc<sc_client_db::Backend<TBl>>) -> Result<Option<Arc<dyn FinalityProofProvider<TBl>>>, Error>>>,
+	import_queue_builder: Option<Box<dyn FnOnce(&Configuration, Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>, Option<TSc>, Arc<TExPool>)
 		-> Result<TImpQu, Error>>>,
 }
 
@@ -295,8 +295,8 @@ fn new_full_parts<TBl, TRtApi, TExecDisp>(
 	Ok((client, backend, keystore, tasks_builder))
 }
 
-impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
-	ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
+impl<TBl, TRtApi, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
+	ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
 where
 	TBl: BlockT,
 {
@@ -306,8 +306,6 @@ where
 	) -> Result<ServiceBuilder<
 		TBl,
 		TRtApi,
-		TCl,
-		TFchr,
 		TSc,
 		TImpQu,
 		TFprb,
@@ -354,11 +352,19 @@ where
 		})
 	}
 
-/*
 	/// Start the service builder with a configuration.
-	pub fn new_light<TBl: BlockT, TRtApi, TExecDisp: NativeExecutionDispatch + 'static>(
+	pub fn new_light(
 		config: Configuration,
 	) -> Result<ServiceBuilder<
+		TBl,
+		TRtApi,
+		TSc,
+		TImpQu,
+		TFprb,
+		TExPool,
+		TRpc,
+		TExecDisp,
+		/*
 		TBl,
 		TRtApi,
 		TLightClient<TBl, TRtApi, TExecDisp>,
@@ -370,7 +376,11 @@ where
 		(),
 		(),
 		TLightBackend<TBl>,
-	>, Error> {
+		*/
+	>, Error>
+	where
+		TExecDisp: NativeExecutionDispatch + 'static,
+	{
 		let tasks_builder = TaskManagerBuilder::new();
 
 		let keystore = match &config.keystore {
@@ -416,6 +426,7 @@ where
 		let fetcher = Arc::new(sc_network::config::OnDemand::new(fetch_checker));
 		let backend = sc_client::light::new_light_backend(light_blockchain);
 		let remote_blockchain = backend.remote_blockchain();
+		/*
 		let client = Arc::new(sc_client::light::new_light(
 			backend.clone(),
 			config.chain_spec.as_storage_builder(),
@@ -423,6 +434,7 @@ where
 			Box::new(tasks_builder.spawn_handle()),
 			config.prometheus_config.as_ref().map(|config| config.registry.clone()),
 		)?);
+		*/
 
 		Ok(ServiceBuilder {
 			config,
@@ -439,11 +451,10 @@ where
 			marker: PhantomData,
 		})
 	}
-*/
 }
 
-impl<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
-	ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
+impl<TBl, TRtApi, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
+	ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp>
 where
 	TBl: BlockT,
 	TExecDisp: sc_executor::NativeExecutionDispatch + 'static,
@@ -456,11 +467,82 @@ where
 		Ok(Arc::new(client))
 	}
 
+	/// Builds the service to import blocks.
+	pub fn build_for_import(self) -> Result<(TImpQu, Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>), Error>
+	where
+		TRtApi: sp_api::ConstructRuntimeApi<TBl, sc_client::Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
+		<TRtApi as sp_api::ConstructRuntimeApi<TBl, sc_client::Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>>::RuntimeApi : sc_offchain::OffchainWorkerApi<TBl>,
+		TSc: Clone,
+	{
+		let ServiceBuilder {
+			marker: _,
+			config,
+			fetcher: on_demand,
+			remote_backend: _,
+			mut background_tasks,
+			execution_extensions_factory,
+			select_chain_builder,
+			rpc_ext_builder: _,
+			transaction_pool_builder,
+			import_queue_and_opt_fprb,
+			finality_proof_provider_builder: _,
+			import_queue_builder,
+		} = self;
+
+		let (client, backend, _keystore, _tasks_builder) = new_full_parts::<TBl, TRtApi, TExecDisp>(&config)?;
+		let client = Arc::new(client);
+
+		if let Some(execution_extensions_factory) = execution_extensions_factory {
+			client.execution_extensions().set_extensions_factory(execution_extensions_factory);
+		}
+
+		let select_chain = if let Some(select_chain_builder) = select_chain_builder {
+			select_chain_builder(&config, &backend)?
+		} else {
+			None
+		};
+
+		let (transaction_pool, background_task) = transaction_pool_builder.unwrap_or_else(|| todo!())(
+			config.transaction_pool.clone(),
+			client.clone(),
+			on_demand.clone(),
+		)?;
+
+		if let Some(background_task) = background_task {
+			background_tasks.push(("txpool-background", background_task));
+		};
+
+		let transaction_pool = Arc::new(transaction_pool);
+
+		let (import_queue, _finality_proof_request_builder) =
+			if let Some(builder) = import_queue_and_opt_fprb {
+				builder(
+					&config,
+					client.clone(),
+					backend.clone(),
+					on_demand.clone(),
+					select_chain.clone(),
+					transaction_pool.clone(),
+				)?
+			} else if let Some(import_queue_builder) = import_queue_builder {
+				(import_queue_builder(
+					&config,
+					client.clone(),
+					select_chain.clone(),
+					transaction_pool.clone(),
+				)?, None)
+			} else {
+				todo!("I don't think there is a default for that")
+			};
+
+		Ok((import_queue, client))
+	}
+
+/*
 	pub fn import_queue_and_client(self) -> Result<(TImpQu, Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>), Error> {
 		todo!();
 	}
 
-/*
 	/// Returns a reference to the select-chain that was stored in this builder.
 	pub fn select_chain(&self) -> Option<&TSc> {
 		self.select_chain.as_ref()
@@ -479,8 +561,7 @@ where
 
 	/// Returns a reference to the fetcher, only available if builder
 	/// was created with `new_light`.
-	pub fn fetcher(&self) -> Option<TFchr>
-		where TFchr: Clone
+	pub fn fetcher(&self) -> Option<Arc<OnDemand<TBl>>>
 	{
 		self.fetcher.clone()
 	}
@@ -497,7 +578,7 @@ where
 		select_chain_builder: impl FnOnce(
 			&Configuration, &Arc<sc_client_db::Backend<TBl>>,
 		) -> Result<Option<TSc>, Error> + 'static
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb,
 		TExPool, TRpc, TExecDisp>, Error> {
 		Ok(ServiceBuilder {
 			select_chain_builder: Some(Box::new(select_chain_builder)),
@@ -520,7 +601,7 @@ where
 	pub fn with_select_chain(
 		self,
 		builder: impl FnOnce(&Configuration, &Arc<sc_client_db::Backend<TBl>>) -> Result<TSc, Error> + 'static
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb,
 		TExPool, TRpc, TExecDisp>, Error> {
 		self.with_opt_select_chain(|cfg, b| builder(cfg, b).map(Option::Some))
 	}
@@ -528,9 +609,9 @@ where
 	/// Defines which import queue to use.
 	pub fn with_import_queue(
 		self,
-		builder: impl FnOnce(&Configuration, Arc<TCl>, Option<TSc>, Arc<TExPool>)
+		builder: impl FnOnce(&Configuration, Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>, Option<TSc>, Arc<TExPool>)
 			-> Result<TImpQu, Error> + 'static
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb,
 			TExPool, TRpc, TExecDisp>, Error>
 	where TSc: Clone {
 		Ok(ServiceBuilder {
@@ -553,12 +634,10 @@ where
 	/// Defines which strategy to use for providing finality proofs.
 	pub fn with_opt_finality_proof_provider(
 		self,
-		builder: impl FnOnce(Arc<TCl>, Arc<sc_client_db::Backend<TBl>>) -> Result<Option<Arc<dyn FinalityProofProvider<TBl>>>, Error> + 'static
+		builder: impl FnOnce(Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>, Arc<sc_client_db::Backend<TBl>>) -> Result<Option<Arc<dyn FinalityProofProvider<TBl>>>, Error> + 'static
 	) -> Result<ServiceBuilder<
 		TBl,
 		TRtApi,
-		TCl,
-		TFchr,
 		TSc,
 		TImpQu,
 		TFprb,
@@ -586,12 +665,10 @@ where
 	/// Defines which strategy to use for providing finality proofs.
 	pub fn with_finality_proof_provider(
 		self,
-		build: impl FnOnce(Arc<TCl>, Arc<sc_client_db::Backend<TBl>>) -> Result<Arc<dyn FinalityProofProvider<TBl>>, Error> + 'static
+		build: impl FnOnce(Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>, Arc<sc_client_db::Backend<TBl>>) -> Result<Arc<dyn FinalityProofProvider<TBl>>, Error> + 'static
 	) -> Result<ServiceBuilder<
 		TBl,
 		TRtApi,
-		TCl,
-		TFchr,
 		TSc,
 		TImpQu,
 		TFprb,
@@ -607,15 +684,15 @@ where
 		self,
 		builder: impl FnOnce(
 			&Configuration,
-			Arc<TCl>,
+			Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
 			Arc<sc_client_db::Backend<TBl>>,
-			Option<TFchr>,
+			Option<Arc<OnDemand<TBl>>>,
 			Option<TSc>,
 			Arc<TExPool>,
 		) -> Result<(TImpQu, Option<TFprb>), Error> + 'static
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb,
 		TExPool, TRpc, TExecDisp>, Error>
-	where TSc: Clone, TFchr: Clone {
+	where TSc: Clone {
 		Ok(ServiceBuilder {
 			import_queue_and_opt_fprb: Some(Box::new(builder)),
 
@@ -638,15 +715,15 @@ where
 		self,
 		builder: impl FnOnce(
 			&Configuration,
-			Arc<TCl>,
+			Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
 			Arc<sc_client_db::Backend<TBl>>,
-			Option<TFchr>,
+			Option<Arc<OnDemand<TBl>>>,
 			Option<TSc>,
 			Arc<TExPool>,
 		) -> Result<(TImpQu, TFprb), Error> + 'static
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb,
 			TExPool, TRpc, TExecDisp>, Error>
-	where TSc: Clone, TFchr: Clone {
+	where TSc: Clone {
 		self.with_import_queue_and_opt_fprb(|cfg, cl, b, f, sc, tx|
 			builder(cfg, cl, b, f, sc, tx)
 				.map(|(q, f)| (q, Some(f)))
@@ -658,12 +735,12 @@ where
 		self,
 		transaction_pool_builder: impl FnOnce(
 			sc_transaction_pool::txpool::Options,
-			Arc<TCl>,
-			Option<TFchr>,
+			Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
+			Option<Arc<OnDemand<TBl>>>,
 		) -> Result<(TExPool, Option<BackgroundTask>), Error> + 'static
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb,
 		TExPool, TRpc, TExecDisp>, Error>
-	where TSc: Clone, TFchr: Clone {
+	where TSc: Clone {
 		Ok(ServiceBuilder {
 			transaction_pool_builder: Some(Box::new(transaction_pool_builder)),
 
@@ -684,10 +761,10 @@ where
 	/// Defines the RPC extensions to use.
 	pub fn with_rpc_extensions(
 		self,
-		rpc_ext_builder: impl FnOnce(Arc<TCl>, Arc<TExPool>, Option<&TSc>, Arc<RwLock<Keystore>>) -> Result<TRpc, Error> + 'static,
-	) -> Result<ServiceBuilder<TBl, TRtApi, TCl, TFchr, TSc, TImpQu, TFprb,
+		rpc_ext_builder: impl FnOnce(Arc<Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, NativeExecutor<TExecDisp>>, TBl, TRtApi>>, Arc<TExPool>, Option<&TSc>, Arc<RwLock<Keystore>>, Option<Arc<OnDemand<TBl>>>, Option<Arc<dyn RemoteBlockchain<TBl>>>) -> Result<TRpc, Error> + 'static,
+	) -> Result<ServiceBuilder<TBl, TRtApi, TSc, TImpQu, TFprb,
 		TExPool, TRpc, TExecDisp>, Error>
-	where TSc: Clone, TFchr: Clone {
+	where TSc: Clone {
 		Ok(ServiceBuilder {
 			rpc_ext_builder: Some(Box::new(rpc_ext_builder)),
 
@@ -746,8 +823,6 @@ impl<TBl, TRtApi, TSc, TImpQu, TExPool, TRpc, TExecDisp>
 ServiceBuilder<
 	TBl,
 	TRtApi,
-	Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>,
-	Arc<OnDemand<TBl>>,
 	TSc,
 	TImpQu,
 	BoxFinalityProofRequestBuilder<TBl>,
@@ -836,19 +911,17 @@ ServiceBuilder<
 			None
 		};
 
-		let transaction_pool = if let (transaction_pool, background_task) = transaction_pool_builder.unwrap_or_else(|| todo!())(
+		let (transaction_pool, background_task) = transaction_pool_builder.unwrap_or_else(|| todo!())(
 			config.transaction_pool.clone(),
 			client.clone(),
 			on_demand.clone(),
-		)? {
-			if let Some(background_task) = background_task{
-				background_tasks.push(("txpool-background", background_task));
-			}
+		)?;
 
-			Arc::new(transaction_pool)
-		} else {
-			todo!("transaction_pool is actually a required argument");
+		if let Some(background_task) = background_task {
+			background_tasks.push(("txpool-background", background_task));
 		};
+
+		let transaction_pool = Arc::new(transaction_pool);
 
 		let (import_queue, finality_proof_request_builder) =
 			if let Some(builder) = import_queue_and_opt_fprb {
@@ -871,7 +944,7 @@ ServiceBuilder<
 				todo!("I don't think there is a default for that")
 			};
 
-		let rpc_extensions = rpc_ext_builder.map(|f| f(client.clone(), transaction_pool.clone(), select_chain.as_ref(), keystore.clone())).transpose()?.unwrap_or_else(|| todo!("required?"));
+		let rpc_extensions = rpc_ext_builder.map(|f| f(client.clone(), transaction_pool.clone(), select_chain.as_ref(), keystore.clone(), on_demand.clone(), remote_backend.clone())).transpose()?.unwrap_or_else(|| todo!("required?"));
 
 		let finality_proof_provider = finality_proof_provider_builder.map(|f| f(client.clone(), backend.clone())).transpose()?.flatten();
 

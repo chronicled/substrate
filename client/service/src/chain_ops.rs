@@ -43,20 +43,21 @@ pub fn build_spec(spec: &dyn ChainSpec, raw: bool) -> error::Result<String> {
 }
 
 impl<
-	TBl, TRtApi, TBackend,
-	TExecDisp, TFchr, TSc, TImpQu, TFprb,
+	TBl, TRtApi,
+	TExecDisp, TSc, TImpQu, TFprb,
 	TExPool, TRpc,
 > ServiceBuilderCommand for ServiceBuilder<
 	TBl, TRtApi,
-	Client<TBackend, LocalCallExecutor<TBackend, NativeExecutor<TExecDisp>>, TBl, TRtApi>,
-	TFchr, TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp,
+	TSc, TImpQu, TFprb, TExPool, TRpc, TExecDisp,
 > where
 	TBl: BlockT,
-	TBackend: 'static + sc_client_api::backend::Backend<TBl> + Send,
 	TExecDisp: 'static + NativeExecutionDispatch,
 	TImpQu: 'static + ImportQueue<TBl>,
 	TRtApi: 'static + Send + Sync,
 	TExPool: Clone,
+	TSc: Clone,
+	TRtApi: sp_api::ConstructRuntimeApi<TBl, sc_client::Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>,
+	<TRtApi as sp_api::ConstructRuntimeApi<TBl, sc_client::Client<sc_client_db::Backend<TBl>, sc_client::LocalCallExecutor<sc_client_db::Backend<TBl>, sc_executor::NativeExecutor<TExecDisp>>, TBl, TRtApi>>>::RuntimeApi : sc_offchain::OffchainWorkerApi<TBl>,
 {
 	type Block = TBl;
 	type NativeDispatch = TExecDisp;
@@ -99,7 +100,7 @@ impl<
 			}
 		}
 
-		let (mut queue, client) = self.import_queue_and_client().expect("TODO");
+		let (mut queue, client) = self.build_for_import().expect("TODO");
 
 		let mut io_reader_input = IoReader(input);
 		let mut count = None::<u64>;

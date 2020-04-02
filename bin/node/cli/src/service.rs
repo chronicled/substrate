@@ -50,9 +50,7 @@ macro_rules! new_full_start {
 		let mut import_setup = None;
 		let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
-		let builder = sc_service::ServiceBuilder::new_full::<
-			node_primitives::Block, node_runtime::RuntimeApi, node_executor::Executor
-		>($config)?
+		let builder = sc_service::ServiceBuilder::new_full($config)?
 			.with_select_chain(|_config, backend| {
 				Ok(sc_client::LongestChain::new(backend.clone()))
 			})?
@@ -88,16 +86,16 @@ macro_rules! new_full_start {
 				import_setup = Some((block_import, grandpa_link, babe_link));
 				Ok(import_queue)
 			})?
-			.with_rpc_extensions(|builder| -> std::result::Result<RpcExtension, _> {
+			.with_rpc_extensions(|client, pool, select_chain, keystore, _fetcher, _remote_backend| -> std::result::Result<RpcExtension, _> {
 				let babe_link = import_setup.as_ref().map(|s| &s.2)
 					.expect("BabeLink is present for full services or set up failed; qed.");
 				let deps = node_rpc::FullDeps {
-					client: builder.client().clone(),
-					pool: builder.pool(),
-					select_chain: builder.select_chain().cloned()
+					client: client.clone(),
+					pool: pool,
+					select_chain: select_chain.cloned()
 						.expect("SelectChain is present for full services or set up failed; qed."),
 					babe: node_rpc::BabeDeps {
-						keystore: builder.keystore(),
+						keystore: keystore,
 						babe_config: sc_consensus_babe::BabeLink::config(babe_link).clone(),
 						shared_epoch_changes: sc_consensus_babe::BabeLink::epoch_changes(babe_link).clone()
 					}
@@ -298,7 +296,7 @@ pub fn new_light(config: Configuration)
 	type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 	let inherent_data_providers = InherentDataProviders::new();
 
-	let service = ServiceBuilder::new_light::<Block, RuntimeApi, node_executor::Executor>(config)?
+	let service = ServiceBuilder::<_, node_runtime::RuntimeApi, _, _, _, _, _, node_executor::Executor>::new_light(config)?
 		.with_select_chain(|_config, backend| {
 			Ok(LongestChain::new(backend.clone()))
 		})?
@@ -348,19 +346,19 @@ pub fn new_light(config: Configuration)
 			let provider = client as Arc<dyn StorageAndProofProvider<_, _>>;
 			Ok(Arc::new(GrandpaFinalityProofProvider::new(backend, provider)) as _)
 		})?
-		.with_rpc_extensions(|builder,| ->
+		.with_rpc_extensions(|client, pool, select_chain, keystore, fetcher, remote_backend| ->
 			Result<RpcExtension, _>
 		{
-			let fetcher = builder.fetcher()
+			let fetcher = fetcher
 				.ok_or_else(|| "Trying to start node RPC without active fetcher")?;
-			let remote_blockchain = builder.remote_backend()
+			let remote_blockchain = remote_backend
 				.ok_or_else(|| "Trying to start node RPC without active remote blockchain")?;
 
 			let light_deps = node_rpc::LightDeps {
 				remote_blockchain,
 				fetcher,
-				client: builder.client().clone(),
-				pool: builder.pool(),
+				client: client.clone(),
+				pool: pool,
 			};
 			Ok(node_rpc::create_light(light_deps))
 		})?
