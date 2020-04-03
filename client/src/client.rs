@@ -163,7 +163,7 @@ pub fn new_in_mem<E, Block, S, RA>(
 #[derive(Debug,Clone,Default)]
 pub struct ClientConfig {
 	/// Enable the offchain worker db.
-	pub offchain_worker_enabled : bool,
+	pub offchain_worker_enabled: bool,
 	/// If true, allows access from the runtime to write into offchain worker db.
 	pub offchain_indexing_api: bool,
 }
@@ -185,7 +185,7 @@ pub fn new_with_backend<B, E, Block, S, RA>(
 		Block: BlockT,
 		B: backend::LocalBackend<Block> + 'static,
 {
-	let call_executor = LocalCallExecutor::new(backend.clone(), executor, spawn_handle);
+	let call_executor = LocalCallExecutor::new(backend.clone(), executor, spawn_handle, config.clone());
 	let extensions = ExecutionExtensions::new(Default::default(), keystore);
 	Client::new(
 		backend,

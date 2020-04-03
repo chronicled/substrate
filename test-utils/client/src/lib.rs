@@ -246,7 +246,7 @@ impl<Block: BlockT, E, Backend, G: GenesisInit> TestClientBuilder<
 		let executor = executor.into().unwrap_or_else(||
 			NativeExecutor::new(WasmExecutionMethod::Interpreted, None, 8)
 		);
-		let executor = LocalCallExecutor::new(self.backend.clone(), executor, tasks_executor());
+		let executor = LocalCallExecutor::new(self.backend.clone(), executor, tasks_executor(), Default::default());
 
 		self.build_with_executor(executor)
 	}

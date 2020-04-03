@@ -321,7 +321,7 @@ pub fn new_client<E, Block, RA>(
 		E: CodeExecutor + RuntimeInfo,
 {
 	let backend = Arc::new(Backend::new(settings, CANONICALIZATION_DELAY)?);
-	let executor = sc_client::LocalCallExecutor::new(backend.clone(), executor, spawn_handle);
+	let executor = sc_client::LocalCallExecutor::new(backend.clone(), executor, spawn_handle, config.clone());
 	Ok((
 		sc_client::Client::new(
 			backend.clone(),

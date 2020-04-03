@@ -28,6 +28,7 @@ use sp_externalities::Extensions;
 use sp_core::{NativeOrEncoded, NeverNativeValue, traits::CodeExecutor, offchain::storage::OffchainOverlayedChanges};
 use sp_api::{ProofRecorder, InitializeBlock, StorageTransactionCache};
 use sc_client_api::{backend, call_executor::CallExecutor, CloneableSpawn};
+use crate::client::ClientConfig;
 
 /// Call executor that executes methods locally, querying all required
 /// data from local backend.
@@ -35,6 +36,7 @@ pub struct LocalCallExecutor<B, E> {
 	backend: Arc<B>,
 	executor: E,
 	spawn_handle: Box<dyn CloneableSpawn>,
+	client_config: ClientConfig,
 }
 
 impl<B, E> LocalCallExecutor<B, E> {
@@ -43,11 +45,13 @@ impl<B, E> LocalCallExecutor<B, E> {
 		backend: Arc<B>,
 		executor: E,
 		spawn_handle: Box<dyn CloneableSpawn>,
+		client_config: ClientConfig,
 	) -> Self {
 		LocalCallExecutor {
 			backend,
 			executor,
 			spawn_handle,
+			client_config,
 		}
 	}
 }
@@ -58,6 +62,7 @@ impl<B, E> Clone for LocalCallExecutor<B, E> where E: Clone {
 			backend: self.backend.clone(),
 			executor: self.executor.clone(),
 			spawn_handle: self.spawn_handle.clone(),
+			client_config: self.client_config.clone(),
 		}
 	}
 }
@@ -81,7 +86,11 @@ where
 		extensions: Option<Extensions>,
 	) -> sp_blockchain::Result<Vec<u8>> {
 		let mut changes = OverlayedChanges::default();
-		let mut offchain_changes = OffchainOverlayedChanges::default();
+		let mut offchain_changes = if self.client_config.offchain_indexing_api {
+			OffchainOverlayedChanges::enabled()
+		} else {
+			OffchainOverlayedChanges::disabled()
+		};
 		let changes_trie = backend::changes_tries_state_at_block(
 			id, self.backend.changes_trie_storage()
 		)?;
@@ -146,6 +155,9 @@ where
 
 		let mut state = self.backend.state_at(*at)?;
 
+		let changes = &mut *changes.borrow_mut();
+		let offchain_changes = &mut *offchain_changes.borrow_mut();
+
 		match recorder {
 			Some(recorder) => {
 				let trie_state = state.as_trie_backend()
@@ -163,8 +175,6 @@ where
 					recorder.clone(),
 				);
 
-				let changes = &mut *changes.borrow_mut();
-				let offchain_changes = &mut *offchain_changes.borrow_mut();
 				let mut state_machine = StateMachine::new(
 					&backend,
 					changes_trie_state,
@@ -184,7 +194,6 @@ where
 			None => {
 				let state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(&state);
 				let runtime_code = state_runtime_code.runtime_code()?;
-				let changes = &mut *changes.borrow_mut();
 				let mut state_machine = StateMachine::new(
 					&state,
 					changes_trie_state,
