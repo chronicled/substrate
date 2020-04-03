@@ -1434,7 +1434,7 @@ impl<Block: BlockT> sc_client_api::backend::Backend<Block> for Backend<Block> {
 			db_updates: PrefixedMemoryDB::default(),
 			storage_updates: Default::default(),
 			child_storage_updates: Default::default(),
-			offchain_storage_updates: OffchainOverlayedChanges::default(),
+			offchain_storage_updates: Default::default(),
 			changes_trie_config_update: None,
 			changes_trie_updates: MemoryDB::default(),
 			changes_trie_build_cache_update: None,
