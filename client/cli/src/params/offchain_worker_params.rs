@@ -15,7 +15,6 @@
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
 
-
 //! Offchain worker related configuration parameters.
 //!
 //! A subset of configuration parameters which are relevant to
