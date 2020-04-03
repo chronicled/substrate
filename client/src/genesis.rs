@@ -93,6 +93,7 @@ mod tests {
 		let backend_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(&backend);
 		let runtime_code = backend_runtime_code.runtime_code().expect("Code is part of the backend");
 
+		println!("StateMachine calling into initialize_block()");
 		StateMachine::new(
 			backend,
 			sp_state_machine::disabled_changes_trie_state::<_, u64>(),
