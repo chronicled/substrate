@@ -893,7 +893,7 @@ ServiceBuilder<
 
 		let offchain_storage = backend.offchain_storage();
 		let offchain_workers = match (config.offchain_worker.clone(), offchain_storage.clone()) {
-			(OffchainWorkerConfig {enabled : true, .. }, Some(db)) => {
+			(OffchainWorkerConfig {enabled: true, .. }, Some(db)) => {
 				Some(Arc::new(sc_offchain::OffchainWorkers::new(client.clone(), db)))
 			},
 			(OffchainWorkerConfig {enabled : true, .. }, None) => {
