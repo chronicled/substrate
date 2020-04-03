@@ -240,3 +240,37 @@ impl<'d> OffchainOverlayedChangesDrain<'d> {
 		}
 	}
 }
+
+
+#[cfg(test)]
+mod test {
+	#[test]
+	fn test_drain() {
+		let mut ooc = OffchainOverlayedChanges::enabled();
+		ooc.set(b"kkk", b"vvv");
+		let drained = ooc.drain().count();
+		assert_eq!(drained, 1);
+		let leftover = ooc.iter().count();
+		assert_eq!(leftover, 0);
+
+		ooc.set(b"a", b"v");
+		ooc.set(b"b", b"v");
+		ooc.set(b"c", b"v");
+		ooc.set(b"d", b"v");
+		ooc.set(b"e", b"v");
+		assert_eq!(ooc.iter().count(), 5);
+	}
+
+	#[test]
+	fn test_accumulated_set_remove_set() {
+		let mut ooc = OffchainOverlayedChanges::enabled();
+		ooc.set(b"ppp", b"qqq");
+		ooc.remove(b"ppp");
+		assert_eq!(ooc.iter().count(), 0);
+
+		ooc.set(b"ppp", b"rrr");
+		let mut iter = ooc.into_iter();
+		assert_eq!(iter.next(), Some((b"ppp".to_vec(),OffchainOverlayedChange::SetValue("rrr"))));
+		assert_eq!(iter.count(), 0);
+	}
+}

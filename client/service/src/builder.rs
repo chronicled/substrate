@@ -896,7 +896,7 @@ ServiceBuilder<
 			(OffchainWorkerConfig {enabled: true, .. }, Some(db)) => {
 				Some(Arc::new(sc_offchain::OffchainWorkers::new(client.clone(), db)))
 			},
-			(OffchainWorkerConfig {enabled : true, .. }, None) => {
+			(OffchainWorkerConfig {enabled: true, .. }, None) => {
 				warn!("Offchain workers disabled, due to lack of offchain storage support in backend.");
 				None
 			},
