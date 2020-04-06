@@ -40,6 +40,7 @@ mod storage_cache;
 mod upgrade;
 mod utils;
 mod stats;
+mod parity_db;
 
 use std::sync::Arc;
 use std::path::PathBuf;
@@ -286,6 +287,12 @@ pub enum DatabaseSettingsSrc {
 		path: PathBuf,
 		/// Cache size in bytes. If `None` default is used.
 		cache_size: Option<usize>,
+	},
+
+	/// Load a database from a given path. Recommended for most uses.
+	ParityDb {
+		/// Path to the database.
+		path: PathBuf,
 	},
 
 	/// Use a custom already-open database.

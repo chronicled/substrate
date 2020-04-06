@@ -253,6 +253,12 @@ pub fn open_database<Block: BlockT>(
 			return Err(sp_blockchain::Error::Backend(msg));
 		},
 		DatabaseSettingsSrc::Custom(db) => db.clone(),
+		DatabaseSettingsSrc::ParityDb { path, .. } => {
+			let db_config = crate::parity_db::DatabaseConfig::with_columns(NUM_COLUMNS);
+			let path = path.to_str()
+				.ok_or_else(|| sp_blockchain::Error::Backend("Invalid database path".into()))?;
+			Arc::new(crate::parity_db::Database::open(&db_config, &path).map_err(db_err)?)
+		}
 	};
 
 	check_database_type(&*db, db_type)?;

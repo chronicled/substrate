@@ -195,10 +195,9 @@ fn new_full_parts<TBl, TRtApi, TExecDisp>(
 			config.state_cache_child_ratio.map(|v| (v, 100)),
 			pruning: config.pruning.clone(),
 			source: match config.expect_database() {
-				DatabaseConfig::Path { path, cache_size } =>
-					sc_client_db::DatabaseSettingsSrc::Path {
+				DatabaseConfig::Path { path, .. } =>
+					sc_client_db::DatabaseSettingsSrc::ParityDb {
 						path: path.clone(),
-						cache_size: cache_size.clone().map(|u| u as usize),
 					},
 				DatabaseConfig::Custom(db) =>
 					sc_client_db::DatabaseSettingsSrc::Custom(db.clone()),
