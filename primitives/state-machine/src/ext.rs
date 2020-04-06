@@ -609,6 +609,13 @@ mod tests {
 		}
 	}
 
+	fn prepare_offchain_overlay_with_changes() -> OffchainOverlayedChanges {
+		let mut ooc = OffchainOverlayedChanges::enabled();
+		ooc.set(OffchainOverlayedChanges::PERSISTENT, b"k1", b"v1");
+		ooc.set(OffchainOverlayedChanges::PERSISTENT, b"k2", b"v2");
+		ooc
+	}
+
 	fn changes_trie_config() -> ChangesTrieConfiguration {
 		ChangesTrieConfiguration {
 			digest_interval: 0,
@@ -619,29 +626,32 @@ mod tests {
 	#[test]
 	fn storage_changes_root_is_none_when_storage_is_not_provided() {
 		let mut overlay = prepare_overlay_with_changes();
+		let mut offchain_overlay = prepare_offchain_overlay_with_changes();
 		let mut cache = StorageTransactionCache::default();
 		let backend = TestBackend::default();
-		let mut ext = TestExt::new(&mut overlay, &mut cache, &backend, None, None);
+		let mut ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, None, None);
 		assert_eq!(ext.storage_changes_root(&H256::default().encode()).unwrap(), None);
 	}
 
 	#[test]
 	fn storage_changes_root_is_none_when_state_is_not_provided() {
 		let mut overlay = prepare_overlay_with_changes();
+		let mut offchain_overlay = prepare_offchain_overlay_with_changes();
 		let mut cache = StorageTransactionCache::default();
 		let backend = TestBackend::default();
-		let mut ext = TestExt::new(&mut overlay, &mut cache, &backend, None, None);
+		let mut ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, None, None);
 		assert_eq!(ext.storage_changes_root(&H256::default().encode()).unwrap(), None);
 	}
 
 	#[test]
 	fn storage_changes_root_is_some_when_extrinsic_changes_are_non_empty() {
 		let mut overlay = prepare_overlay_with_changes();
+		let mut offchain_overlay = prepare_offchain_overlay_with_changes();
 		let mut cache = StorageTransactionCache::default();
 		let storage = TestChangesTrieStorage::with_blocks(vec![(99, Default::default())]);
 		let state = Some(ChangesTrieState::new(changes_trie_config(), Zero::zero(), &storage));
 		let backend = TestBackend::default();
-		let mut ext = TestExt::new(&mut overlay, &mut cache, &backend, state, None);
+		let mut ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, state, None);
 		assert_eq!(
 			ext.storage_changes_root(&H256::default().encode()).unwrap(),
 			Some(hex!("bb0c2ef6e1d36d5490f9766cfcc7dfe2a6ca804504c3bb206053890d6dd02376").to_vec()),
@@ -651,12 +661,13 @@ mod tests {
 	#[test]
 	fn storage_changes_root_is_some_when_extrinsic_changes_are_empty() {
 		let mut overlay = prepare_overlay_with_changes();
+		let mut offchain_overlay = prepare_offchain_overlay_with_changes();
 		let mut cache = StorageTransactionCache::default();
 		overlay.prospective.top.get_mut(&vec![1]).unwrap().value = None;
 		let storage = TestChangesTrieStorage::with_blocks(vec![(99, Default::default())]);
 		let state = Some(ChangesTrieState::new(changes_trie_config(), Zero::zero(), &storage));
 		let backend = TestBackend::default();
-		let mut ext = TestExt::new(&mut overlay, &mut cache, &backend, state, None);
+		let mut ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, state, None);
 		assert_eq!(
 			ext.storage_changes_root(&H256::default().encode()).unwrap(),
 			Some(hex!("96f5aae4690e7302737b6f9b7f8567d5bbb9eac1c315f80101235a92d9ec27f4").to_vec()),
@@ -669,6 +680,7 @@ mod tests {
 		let mut overlay = OverlayedChanges::default();
 		overlay.set_storage(vec![20], None);
 		overlay.set_storage(vec![30], Some(vec![31]));
+		let mut offchain_overlay = prepare_offchain_overlay_with_changes();
 		let backend = Storage {
 			top: map![
 				vec![10] => vec![10],
@@ -678,7 +690,7 @@ mod tests {
 			children: map![]
 		}.into();
 
-		let ext = TestExt::new(&mut overlay, &mut cache, &backend, None, None);
+		let ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, None, None);
 
 		// next_backend < next_overlay
 		assert_eq!(ext.next_storage_key(&[5]), Some(vec![10]));
@@ -694,7 +706,7 @@ mod tests {
 
 		drop(ext);
 		overlay.set_storage(vec![50], Some(vec![50]));
-		let ext = TestExt::new(&mut overlay, &mut cache, &backend, None, None);
+		let ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, None, None);
 
 		// next_overlay exist but next_backend doesn't exist
 		assert_eq!(ext.next_storage_key(&[40]), Some(vec![50]));
@@ -727,7 +739,9 @@ mod tests {
 		}.into();
 
 
-		let ext = TestExt::new(&mut overlay, &mut cache, &backend, None, None);
+		let mut offchain_overlay = prepare_offchain_overlay_with_changes();
+
+		let ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, None, None);
 
 		// next_backend < next_overlay
 		assert_eq!(ext.next_child_storage_key(child(), CHILD_INFO_1, &[5]), Some(vec![10]));
@@ -743,7 +757,7 @@ mod tests {
 
 		drop(ext);
 		overlay.set_child_storage(child().as_ref().to_vec(), CHILD_INFO_1, vec![50], Some(vec![50]));
-		let ext = TestExt::new(&mut overlay, &mut cache, &backend, None, None);
+		let ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, None, None);
 
 		// next_overlay exist but next_backend doesn't exist
 		assert_eq!(ext.next_child_storage_key(child(), CHILD_INFO_1, &[40]), Some(vec![50]));
@@ -756,6 +770,7 @@ mod tests {
 		let mut overlay = OverlayedChanges::default();
 		overlay.set_child_storage(child().as_ref().to_vec(), CHILD_INFO_1, vec![20], None);
 		overlay.set_child_storage(child().as_ref().to_vec(), CHILD_INFO_1, vec![30], Some(vec![31]));
+		let mut offchain_overlay = prepare_offchain_overlay_with_changes();
 		let backend = Storage {
 			top: map![],
 			children: map![
@@ -770,7 +785,7 @@ mod tests {
 			],
 		}.into();
 
-		let ext = TestExt::new(&mut overlay, &mut cache, &backend, None, None);
+		let ext = TestExt::new(&mut overlay, &mut offchain_overlay, &mut cache, &backend, None, None);
 
 		assert_eq!(ext.child_storage(child(), CHILD_INFO_1, &[10]), Some(vec![10]));
 		assert_eq!(

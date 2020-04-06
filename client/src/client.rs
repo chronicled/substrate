@@ -3531,6 +3531,7 @@ pub(crate) mod tests {
 				None,
 				None,
 				sp_core::tasks::executor(),
+				Default::default(),
 			)
 			.unwrap();
 

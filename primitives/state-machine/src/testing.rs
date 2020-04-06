@@ -96,7 +96,7 @@ impl<H: Hasher, N: ChangesTrieBlockNumber> TestExternalities<H, N>
 		storage.top.insert(HEAP_PAGES.to_vec(), 8u64.encode());
 		storage.top.insert(CODE.to_vec(), code.to_vec());
 
-		let offchain_overlay = OffchainOverlayedChanges::default();
+		let offchain_overlay = OffchainOverlayedChanges::enabled();
 
 		TestExternalities {
 			overlay,

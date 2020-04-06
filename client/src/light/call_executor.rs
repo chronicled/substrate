@@ -340,6 +340,7 @@ mod tests {
 			_method: &str,
 			_call_data: &[u8],
 			_changes: &RefCell<OverlayedChanges>,
+			_offchain_changes: &RefCell<OffchainOverlayedChanges>,
 			_storage_transaction_cache: Option<&RefCell<
 				StorageTransactionCache<
 					Block,

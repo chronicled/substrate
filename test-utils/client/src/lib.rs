@@ -212,6 +212,7 @@ impl<Block: BlockT, Executor, Backend, G: GenesisInit> TestClientBuilder<Block, 
 				self.keystore.clone(),
 			),
 			None,
+			sc_client::ClientConfig::default(),
 		).expect("Creates new client");
 
 		let longest_chain = sc_client::LongestChain::new(self.backend);

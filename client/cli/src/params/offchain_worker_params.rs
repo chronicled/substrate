@@ -31,6 +31,7 @@ use structopt::clap::arg_enum;
 
 use crate::error;
 
+#[allow(missing_docs)]
 arg_enum! {
 	/// Whether offchain workers are enabled or not as a whole.
 	#[allow(missing_docs)]

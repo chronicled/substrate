@@ -199,6 +199,7 @@ impl BenchDb {
 			ExecutionExtensions::new(profile.into_execution_strategies(), None),
 			sp_core::tasks::executor(),
 			None,
+			Default::default(),
 		).expect("Should not fail");
 
 		(client, backend)
