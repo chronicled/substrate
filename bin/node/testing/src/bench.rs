@@ -131,6 +131,8 @@ pub enum BlockType {
 	RandomTransfers(usize),
 	/// Bunch of random transfers that drain all of the source balance.
 	RandomTransfersReaping(usize),
+	/// Bunch of timestamps, weight-limited
+	Timestamps,
 }
 
 impl BlockType {
@@ -138,6 +140,7 @@ impl BlockType {
 	pub fn transactions(&self) -> usize {
 		match self {
 			Self::RandomTransfers(v) | Self::RandomTransfersReaping(v) => *v,
+			Self::Timestamps => 99999,
 		}
 	}
 }
@@ -247,32 +250,54 @@ impl BenchDb {
 		let start = std::time::Instant::now();
 		for _ in 0..block_type.transactions() {
 
-			let sender = self.keyring.at(iteration);
-			let receiver = get_account_id_from_seed::<sr25519::Public>(
-				&format!("random-user//{}", iteration)
-			);
+			let opaque = match block_type {
+				block_type @ BlockType::RandomTransfers(_) | block_type @ BlockType::RandomTransfersReaping(_) =>  {
+					let sender = self.keyring.at(iteration);
+					let receiver = get_account_id_from_seed::<sr25519::Public>(
+						&format!("random-user//{}", iteration)
+					);
 
-			let signed = self.keyring.sign(
-				CheckedExtrinsic {
-					signed: Some((sender, signed_extra(0, node_runtime::ExistentialDeposit::get() + 1))),
-					function: Call::Balances(
-						BalancesCall::transfer(
-							pallet_indices::address::Address::Id(receiver),
-							match block_type {
-								BlockType::RandomTransfers(_) => node_runtime::ExistentialDeposit::get() + 1,
-								BlockType::RandomTransfersReaping(_) => 100*DOLLARS - node_runtime::ExistentialDeposit::get() - 1,
-							}
-						)
-					),
+					let signed = self.keyring.sign(
+						CheckedExtrinsic {
+							signed: Some((sender, signed_extra(0, node_runtime::ExistentialDeposit::get() + 1))),
+							function: Call::Balances(
+								BalancesCall::transfer(
+									pallet_indices::address::Address::Id(receiver),
+									match block_type {
+										BlockType::RandomTransfers(_) => node_runtime::ExistentialDeposit::get() + 1,
+										BlockType::RandomTransfersReaping(_) => 100*DOLLARS - node_runtime::ExistentialDeposit::get() - 1,
+										_ => unreachable!(),
+									}
+								)
+							),
+						},
+						version,
+						genesis_hash,
+					);
+
+					let encoded = Encode::encode(&signed);
+
+					OpaqueExtrinsic::decode(&mut &encoded[..])
+						.expect("Failed  to decode opaque")
 				},
-				version,
-				genesis_hash,
-			);
+				BlockType::Timestamps =>  {
+					let sender = self.keyring.at(iteration);
 
-			let encoded = Encode::encode(&signed);
+					let signed = self.keyring.sign(
+						CheckedExtrinsic {
+							signed: Some((sender, signed_extra(0, 0))),
+							function: Call::Timestamp(pallet_timestamp::Call::set(42 * 1000)),
+						},
+						version,
+						genesis_hash,
+					);
 
-			let opaque = OpaqueExtrinsic::decode(&mut &encoded[..])
-				.expect("Failed  to decode opaque");
+					let encoded = Encode::encode(&signed);
+
+					OpaqueExtrinsic::decode(&mut &encoded[..])
+						.expect("Failed  to decode opaque")
+				},
+			};
 
 			match block.push(opaque) {
 				Err(sp_blockchain::Error::ApplyExtrinsicFailed(
@@ -486,4 +511,20 @@ impl BenchContext {
 	pub fn path(&self) -> &Path {
 		self.db_guard.path()
 	}
+}
+
+
+#[test]
+fn test_that_degenerate_block_is_no_longer_than2s() {
+	let mut db = BenchDb::new(1000);
+
+	let block = db.generate_block(BlockType::Timestamps);
+
+	let started = std::time::Instant::now();
+
+	db.create_context(Profile::Wasm).import_block(block);
+
+	let elapsed = started.elapsed();
+
+	assert!(elapsed < std::time::Duration::from_secs(2));
 }
