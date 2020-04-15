@@ -75,7 +75,7 @@ pub fn import_queue<Block, B>(
 {
 	BasicQueue::new(
 		ManualSealVerifier,
-		Box::new(block_import),
+		block_import,
 		None,
 		None,
 	)
