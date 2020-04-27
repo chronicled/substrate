@@ -406,25 +406,7 @@ pub trait Crypto {
 		msg: &[u8],
 		pub_key: &ed25519::Public,
 	) -> bool {
-		// TODO: see #5554, this is used outside of externalities context/runtime, thus this manual
-		// `with_externalities`.
-		//
-		// This `with_externalities(..)` block returns Some(Some(result)) if signature verification was successfully
-		// batched, everything else (Some(None)/None) means it was not batched and needs to be verified.
-		let evaluated = sp_externalities::with_externalities(|mut instance|
-			instance.extension::<VerificationExt>().map(
-				|extension| extension.push_ed25519(
-					sig.clone(),
-					pub_key.clone(),
-					msg.to_vec(),
-				)
-			)
-		);
-
-		match evaluated {
-			Some(Some(val)) => val,
-			_ => ed25519::Pair::verify(sig, msg, pub_key),
-		}
+		ed25519::Pair::verify(sig, msg, pub_key)
 	}
 
 	/// Verify `sr25519` signature.
