@@ -38,6 +38,7 @@ use crate::{
 	light_client_handler, block_requests, finality_requests,
 	protocol::{self, event::Event, LegacyConnectionKillError, sync::SyncState, PeerInfo, Protocol},
 	transport, ReputationChange,
+	utils::interval,
 };
 use futures::prelude::*;
 use libp2p::{PeerId, Multiaddr};
@@ -69,6 +70,7 @@ use std::{
 		Arc,
 	},
 	task::Poll,
+	time::Duration,
 };
 
 mod out_events;
@@ -335,6 +337,7 @@ impl<B: BlockT + 'static, H: ExHashT> NetworkWorker<B, H> {
 			event_streams: out_events::OutChannels::new(params.metrics_registry.as_ref())?,
 			metrics,
 			boot_node_ids,
+			flush_nodes: Box::pin(interval(Duration::from_secs(60)))
 		})
 	}
 
@@ -789,6 +792,8 @@ pub struct NetworkWorker<B: BlockT + 'static, H: ExHashT> {
 	metrics: Option<Metrics>,
 	/// The `PeerId`'s of all boot nodes.
 	boot_node_ids: Arc<HashSet<PeerId>>,
+	/// Interval at which we flush the node list to disk
+	flush_nodes: Pin<Box<dyn Stream<Item = ()> + Send>>,
 }
 
 struct Metrics {
@@ -1033,6 +1038,10 @@ impl<B: BlockT + 'static, H: ExHashT> Future for NetworkWorker<B, H> {
 		this.import_queue.poll_actions(cx, &mut NetworkLink {
 			protocol: &mut this.network_service,
 		});
+
+		if let Poll::Ready(Some(())) = this.flush_nodes.poll_next_unpin(cx) {
+			(&mut *this.network_service).serialize(std::fs::File::create("ASHLEYNODESJSON.json").unwrap());
+		}
 
 		// Check for new incoming light client requests.
 		if let Some(light_client_rqs) = this.light_client_rqs.as_mut() {

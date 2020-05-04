@@ -29,7 +29,7 @@ use libp2p::swarm::{NetworkBehaviourAction, NetworkBehaviourEventProcess, PollPa
 use log::debug;
 use sp_consensus::{BlockOrigin, import_queue::{IncomingBlock, Origin}};
 use sp_runtime::{traits::{Block as BlockT, NumberFor}, ConsensusEngineId, Justification};
-use std::{borrow::Cow, iter, task::{Context, Poll}, time::Duration};
+use std::{borrow::Cow, iter, task::{Context, Poll}, time::Duration, io::Write};
 
 /// General behaviour of the network. Combines all protocols together.
 #[derive(NetworkBehaviour)]
@@ -210,6 +210,10 @@ impl<B: BlockT, H: ExHashT> Behaviour<B, H> {
 	/// Issue a light client request.
 	pub fn light_client_request(&mut self, r: light_client_handler::Request<B>) -> Result<(), light_client_handler::Error> {
 		self.light_client_handler.request(r)
+	}
+
+	pub fn serialize<W: Write>(&mut self, writer: W) {
+		self.discovery.serialize(writer);
 	}
 }
 

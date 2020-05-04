@@ -65,6 +65,7 @@ use libp2p::multiaddr::Protocol;
 use log::{debug, info, trace, warn, error};
 use std::{cmp, collections::{HashMap, HashSet, VecDeque}, io, time::Duration};
 use std::task::{Context, Poll};
+use std::io::Write;
 use sp_core::hexdisplay::HexDisplay;
 
 /// `DiscoveryBehaviour` configuration.
@@ -330,6 +331,27 @@ impl DiscoveryBehaviour {
 			_ => return false
 		};
 		ip.is_global()
+	}
+
+	fn connected_peers(&mut self) -> HashMap<String, Vec<Multiaddr>> {
+		let known_peers: Vec<_> = self.known_peers().cloned().collect();
+		let mut hashmap = HashMap::new();
+
+		for peer_id in known_peers {
+			let known_addresses = self.addresses_of_peer(&peer_id);
+
+			if !known_addresses.is_empty() {
+				hashmap.insert(peer_id.to_base58(), known_addresses);
+			} else {
+				log::info!("No peers for {}, rejecting", peer_id);
+			}
+		}
+
+		hashmap
+	}
+
+	pub fn serialize<W: Write>(&mut self, writer: W) {
+		serde_json::to_writer_pretty(writer, &self.connected_peers());
 	}
 }
 
