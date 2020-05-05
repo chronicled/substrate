@@ -27,7 +27,6 @@ use sp_core::{
 	storage::ChildInfo, NativeOrEncoded, NeverNativeValue, hexdisplay::HexDisplay,
 	traits::{CodeExecutor, CallInWasmExt, RuntimeCode},
 };
-use overlayed_changes::OverlayedChangeSet;
 use sp_externalities::Extensions;
 
 pub mod backend;
@@ -335,7 +334,6 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 	fn execute_call_with_both_strategy<Handler, R, NC>(
 		&mut self,
 		mut native_call: Option<NC>,
-		orig_prospective: OverlayedChangeSet,
 		on_consensus_failure: Handler,
 	) -> CallResult<R, Exec::Error>
 		where
@@ -346,10 +344,11 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 				CallResult<R, Exec::Error>,
 			) -> CallResult<R, Exec::Error>
 	{
+		let pending_changes = self.overlay.clone_pending();
 		let (result, was_native) = self.execute_aux(true, native_call.take());
 
 		if was_native {
-			self.overlay.prospective = orig_prospective.clone();
+			self.overlay.set_pending(pending_changes);
 			let (wasm_result, _) = self.execute_aux(
 				false,
 				native_call,
@@ -371,12 +370,12 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 	fn execute_call_with_native_else_wasm_strategy<R, NC>(
 		&mut self,
 		mut native_call: Option<NC>,
-		orig_prospective: OverlayedChangeSet,
 	) -> CallResult<R, Exec::Error>
 		where
 			R: Decode + Encode + PartialEq,
 			NC: FnOnce() -> result::Result<R, String> + UnwindSafe,
 	{
+		let pending_changes = self.overlay.clone_pending();
 		let (result, was_native) = self.execute_aux(
 			true,
 			native_call.take(),
@@ -385,7 +384,7 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 		if !was_native || result.is_ok() {
 			result
 		} else {
-			self.overlay.prospective = orig_prospective.clone();
+			self.overlay.set_pending(pending_changes);
 			let (wasm_result, _) = self.execute_aux(
 				false,
 				native_call,
@@ -420,20 +419,16 @@ impl<'a, B, H, N, Exec> StateMachine<'a, B, H, N, Exec> where
 		self.overlay.set_collect_extrinsics(changes_tries_enabled);
 
 		let result = {
-			let orig_prospective = self.overlay.prospective.clone();
-
 			match manager {
 				ExecutionManager::Both(on_consensus_failure) => {
 					self.execute_call_with_both_strategy(
 						native_call.take(),
-						orig_prospective,
 						on_consensus_failure,
 					)
 				},
 				ExecutionManager::NativeElseWasm => {
 					self.execute_call_with_native_else_wasm_strategy(
 						native_call.take(),
-						orig_prospective,
 					)
 				},
 				ExecutionManager::AlwaysWasm(trust_level) => {
