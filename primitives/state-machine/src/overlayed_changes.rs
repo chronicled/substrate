@@ -187,10 +187,12 @@ impl FromIterator<(StorageKey, OverlayedValue)> for OverlayedChangeSet {
 }
 
 impl OverlayedValue {
+	/// The most recent value contained in this overlay.
 	pub fn value(&self) -> Option<&StorageValue> {
 		self.value.as_ref()
 	}
 
+	/// List of indices of extrinsics which modified the value using this overlay.
 	pub fn extrinsics(&self) -> Option<impl Iterator<Item=&u32>> {
 		self.extrinsics.as_ref().map(|v| v.iter())
 	}
@@ -508,7 +510,7 @@ impl OverlayedChanges {
 		)
 	}
 
-	/// Get an iterator over all child trees that are stored in the overlay.
+	/// Get an iterator over all child tries that are stored in the overlay.
 	pub fn child_infos(&self) -> impl Iterator<Item=&ChildInfo> {
 		self.prospective.children_default.iter()
 			.chain(self.committed.children_default.iter())
@@ -518,8 +520,8 @@ impl OverlayedChanges {
 	/// Get an iterator over all pending and committed changes.
 	///
 	/// Supplying `None` for `child_info` will only return changes that are in the top
-	/// tree. Specifying some `child_info` will return only the changes in that
-	/// child tree.
+	/// trie. Specifying some `child_info` will return only the changes in that
+	/// child trie.
 	pub fn changes(&self, child_info: Option<&ChildInfo>) -> impl Iterator<Item=(&StorageKey, &OverlayedValue)> {
 		let (committed, prospective) = if let Some(child_info) = child_info {
 			match child_info.child_type() {
