@@ -544,7 +544,7 @@ impl OverlayedChanges {
 	}
 
 	/// Replace the currently pending changes.
-	pub fn set_pending(&mut self, pending: OverlayedChangeSet) {
+	pub fn replace_pending(&mut self, pending: OverlayedChangeSet) {
 		self.prospective = pending;
 	}
 
