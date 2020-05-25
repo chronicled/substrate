@@ -436,7 +436,7 @@ impl<PoolApi, Block> MaintainedTransactionPool for BasicPool<PoolApi, Block>
 {
 	fn maintain(&self, event: ChainEvent<Self::Block>) -> Pin<Box<dyn Future<Output=()> + Send>> {
 		match event {
-			ChainEvent::NewBlock { id, retracted, .. } => {
+			ChainEvent::NewBlock { id, retracted, is_new_best, .. } => {
 				let id = id.clone();
 				let pool = self.pool.clone();
 				let api = self.api.clone();
@@ -461,7 +461,7 @@ impl<PoolApi, Block> MaintainedTransactionPool for BasicPool<PoolApi, Block>
 
 				async move {
 					// We don't query block if we won't prune anything
-					if !pool.validated_pool().status().is_empty() {
+					if !pool.validated_pool().status().is_empty() && is_new_best {
 						let hashes = api.block_body(&id).await
 							.unwrap_or_else(|e| {
 								log::warn!("Prune known transactions: error request {:?}!", e);
