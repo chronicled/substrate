@@ -8,6 +8,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use core::convert::TryFrom;
 use sp_std::prelude::*;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
@@ -269,13 +270,15 @@ impl pallet_authorship::Trait for Runtime {
 }
 
 // This struct is (supposed to be) an adapter type that converts an AuraId into an AccountId
-struct AuraAccountAdapter;
+pub struct AuraAccountAdapter;
 
 impl FindAuthor<AccountId> for AuraAccountAdapter {
 	fn find_author<'a, I>(digests: I) -> Option<AccountId>
 		where I: 'a + IntoIterator<Item=(ConsensusEngineId, &'a [u8])>
 	{
-		aura::AuraAuthorId::<Runtime>::find_author(digests).map(|k| k.into())
+		aura::AuraAuthorId::<Runtime>::find_author(digests).and_then(|k| {
+			AccountId::try_from(k.as_ref()).ok()
+		})
 	}
 }
 
