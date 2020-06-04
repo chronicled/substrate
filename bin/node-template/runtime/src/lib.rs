@@ -32,8 +32,8 @@ pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
-	construct_runtime, parameter_types, StorageValue,
-	traits::{KeyOwnerProofSystem, Randomness},
+	ConsensusEngineId, construct_runtime, parameter_types, StorageValue,
+	traits::{FindAuthor, KeyOwnerProofSystem, Randomness},
 	weights::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -257,6 +257,28 @@ impl template::Trait for Runtime {
 	type Event = Event;
 }
 
+impl pallet_authorship::Trait for Runtime {
+	// I wanted to do this, but the types were incompatible
+	// type FindAuthor = aura::AuraAuthorId<Self>;
+
+	// So instead I tried this. The adapter is defined immediately below
+	type FindAuthor = AuraAccountAdapter;
+	type UncleGenerations = ();
+	type FilterUncle = ();
+	type EventHandler = ();
+}
+
+// This struct is (supposed to be) an adapter type that converts an AuraId into an AccountId
+struct AuraAccountAdapter;
+
+impl FindAuthor<AccountId> for AuraAccountAdapter {
+	fn find_author<'a, I>(digests: I) -> Option<AccountId>
+		where I: 'a + IntoIterator<Item=(ConsensusEngineId, &'a [u8])>
+	{
+		aura::AuraAuthorId::<Runtime>::find_author(digests).map(|k| k.into())
+	}
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -273,6 +295,7 @@ construct_runtime!(
 		Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Used for the module template in `./template.rs`
 		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		Authorship: pallet_authorship::{Module, Call, Storage},
 	}
 );
 

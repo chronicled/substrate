@@ -3564,6 +3564,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-aura",
+ "pallet-authorship",
  "pallet-balances",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
