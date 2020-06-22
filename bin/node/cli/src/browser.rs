@@ -24,7 +24,6 @@ use browser_utils::{
 	browser_configuration, set_console_error_panic_hook, init_console_log,
 };
 use std::str::FromStr;
-use sc_network::config::MultiaddrWithPeerId;
 
 /// Starts the client.
 #[wasm_bindgen]
@@ -39,11 +38,11 @@ pub async fn start_client(chain_spec: Option<String>, log_level: String) -> Resu
 	start_from_chain_spec(chain_spec).await
 }
 
+/// Starts the development client.
 #[wasm_bindgen]
-pub async fn start_dev_client(addr: String, log_level: String) -> Result<Client, JsValue> {
+pub async fn start_dev_client(log_level: String) -> Result<Client, JsValue> {
 	init_logging(log_level)?;
-	let mut chain_spec = crate::chain_spec::development_config();
-	chain_spec.add_boot_node(addr.parse().map_err(|e| format!("!{:?}", e))?);
+	let chain_spec = crate::chain_spec::browser_test_config();
 	start_from_chain_spec(chain_spec).await
 }
 

@@ -15,10 +15,7 @@ async function start() {
 	log('Loading WASM');
 	await init('./pkg/node_cli_bg.wasm');
 	// Build our client.
-	let client = await start_dev_client(
-		"/ip4/127.0.0.1/tcp/30334/ws/p2p/<Peer ID>",
-		"debug",
-	);
+	let client = await start_dev_client("trace");
 	log('Client started');
 
 	client.rpcSubscribe('{"method":"chain_subscribeNewHead","params":[],"id":1,"jsonrpc":"2.0"}',

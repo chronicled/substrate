@@ -350,6 +350,23 @@ pub fn development_config() -> ChainSpec {
 	)
 }
 
+pub fn browser_test_config() -> ChainSpec {
+	// Node key: b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde
+	let addr = "/ip4/127.0.0.1/tcp/30334/ws/p2p/12D3KooWGVfJnUcaMge6XsTCCdGNk66MSmtFe6rpHExzJXbtkHMa";
+
+	ChainSpec::from_genesis(
+		"Browser Test",
+		"browser-test",
+		ChainType::Development,
+		development_config_genesis,
+		vec![addr.parse().unwrap()],
+		None,
+		None,
+		None,
+		Default::default(),
+	)	
+}
+
 fn local_testnet_genesis() -> GenesisConfig {
 	testnet_genesis(
 		vec![
