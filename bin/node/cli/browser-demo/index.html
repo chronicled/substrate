@@ -5,7 +5,7 @@
 	<title>Substrate node</title>
 	<link rel="shortcut icon" href="/favicon.png" />
 	<script type="module">
-import { start_client, default as init } from './pkg/node_cli.js';
+import { start_dev_client, default as init } from './pkg/node_cli.js';
 
 function log(msg) {
 	document.getElementsByTagName('body')[0].innerHTML += msg + '\n';
@@ -14,12 +14,11 @@ function log(msg) {
 async function start() {
 	log('Loading WASM');
 	await init('./pkg/node_cli_bg.wasm');
-	log('Fetching chain spec');
-	const chain_spec_response = await fetch("https://raw.githubusercontent.com/paritytech/substrate/master/bin/node/cli/res/flaming-fir.json");
-	const chain_spec_text = await chain_spec_response.text();
-
 	// Build our client.
-	let client = await start_client(chain_spec_text, 'info');
+	let client = await start_dev_client(
+		"/ip4/127.0.0.1/tcp/30334/ws/p2p/<Peer ID>",
+		"debug",
+	);
 	log('Client started');
 
 	client.rpcSubscribe('{"method":"chain_subscribeNewHead","params":[],"id":1,"jsonrpc":"2.0"}',

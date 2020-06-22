@@ -24,25 +24,42 @@ use browser_utils::{
 	browser_configuration, set_console_error_panic_hook, init_console_log,
 };
 use std::str::FromStr;
+use sc_network::config::MultiaddrWithPeerId;
 
 /// Starts the client.
 #[wasm_bindgen]
 pub async fn start_client(chain_spec: Option<String>, log_level: String) -> Result<Client, JsValue> {
-	start_inner(chain_spec, log_level)
-		.await
-		.map_err(|err| JsValue::from_str(&err.to_string()))
-}
-
-async fn start_inner(chain_spec: Option<String>, log_level: String) -> Result<Client, Box<dyn std::error::Error>> {
-	set_console_error_panic_hook();
-	init_console_log(log::Level::from_str(&log_level)?)?;
+	init_logging(log_level)?;
 	let chain_spec = match chain_spec {
 		Some(chain_spec) => ChainSpec::from_json_bytes(chain_spec.as_bytes().to_vec())
 			.map_err(|e| format!("{:?}", e))?,
 		None => crate::chain_spec::development_config(),
 	};
 
-	let config = browser_configuration(chain_spec).await?;
+	start_from_chain_spec(chain_spec).await
+}
+
+#[wasm_bindgen]
+pub async fn start_dev_client(addr: String, log_level: String) -> Result<Client, JsValue> {
+	init_logging(log_level)?;
+	let mut chain_spec = crate::chain_spec::development_config();
+	chain_spec.add_boot_node(addr.parse().map_err(|e| format!("!{:?}", e))?);
+	start_from_chain_spec(chain_spec).await
+}
+
+fn init_logging(log_level: String) -> Result<(), JsValue> {
+	set_console_error_panic_hook();
+	init_console_log(
+		log::Level::from_str(&log_level)
+			.map_err(|e| format!("{:?}", e))?
+	).map_err(|e| format!("{:?}", e))?;
+
+	Ok(())
+}
+
+async fn start_from_chain_spec(chain_spec: ChainSpec) -> Result<Client, JsValue> {
+	let config = browser_configuration(chain_spec).await
+		.map_err(|e| format!("{:?}", e))?;
 
 	info!("Substrate browser node");
 	info!("✌️  version {}", config.impl_version);
