@@ -22,17 +22,60 @@ use frame_support_procedural_tools::{generate_crate_access, generate_hidden_incl
 use parse::{ModuleDeclaration, RuntimeDefinition, WhereSection};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
-use syn::{Ident, Result, TypePath};
+use quote::{quote, quote_spanned};
+use syn::{Ident, Result, TypePath, spanned::Spanned};
 
 /// The fixed name of the system module.
 const SYSTEM_MODULE_NAME: &str = "System";
 
 pub fn construct_runtime(input: TokenStream) -> TokenStream {
+	let input_clone = input.clone().into();
 	let definition = syn::parse_macro_input!(input as RuntimeDefinition);
+
+	if let Some(preprocess) = construct_runtime_preprocess(&definition, input_clone)
+		.unwrap_or_else(|e| Some(e.to_compile_error()))
+	{
+		return preprocess.into()
+	}
+
 	construct_runtime_parsed(definition)
 		.unwrap_or_else(|e| e.to_compile_error())
 		.into()
+}
+
+fn construct_runtime_preprocess(
+	definition: &RuntimeDefinition,
+	input_clone: TokenStream2,
+) -> Result<Option<TokenStream2>> {
+	let mut auto_modules = vec![];
+	for module in definition.modules.content.inner.iter() {
+		if module.module_parts.iter().any(|p| p.keyword.name() == "auto") {
+			if module.module_parts.len() != 1 {
+				return Err(syn::Error::new(
+					module.module_parts[0].keyword.span(),
+					"Module parts must either provide explicit parts or use `auto` keyword but
+					cannot combine."
+				))
+			}
+
+			auto_modules.push(module.module.clone());
+		}
+	}
+	
+	if !auto_modules.is_empty() {
+		let mut expand = input_clone;
+
+		while let Some(module) = auto_modules.pop()  {
+			expand = quote_spanned!(module.span() => #module::auto_construct_runtime!{
+				construct_runtime! { #expand   }
+			}
+			)
+		}
+
+		Ok(Some(expand))
+	} else {
+		Ok(None)
+	}
 }
 
 fn construct_runtime_parsed(definition: RuntimeDefinition) -> Result<TokenStream2> {

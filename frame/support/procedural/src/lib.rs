@@ -23,6 +23,7 @@
 
 mod storage;
 mod construct_runtime;
+mod replace_auto_with;
 
 use proc_macro::TokenStream;
 
@@ -260,6 +261,8 @@ pub fn decl_storage(input: TokenStream) -> TokenStream {
 ///         // Module with instances
 ///         Test3_Instance1: test3::<Instance1>::{Module, Call, Storage, Event<T, I>, Config<T, I>, Origin<T, I>},
 ///         Test3_DefaultInstance: test3::{Module, Call, Storage, Event<T>, Config<T>, Origin<T>},
+///
+///         TestAuto: pallet_with_auto_construct_runtime::{auto},
 ///     }
 /// )
 /// ```
@@ -282,6 +285,9 @@ pub fn decl_storage(input: TokenStream) -> TokenStream {
 ///                             inherent.
 /// - `ValidateUnsigned`      - If the module validates unsigned extrinsics.
 ///
+/// alternatively if the pallet provide the auto_contruct_runtime macro, parts can be automatically
+/// filled using `auto` keyword.
+///
 /// # Note
 ///
 /// The population of the genesis storage depends on the order of modules. So, if one of your
@@ -290,4 +296,25 @@ pub fn decl_storage(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn construct_runtime(input: TokenStream) -> TokenStream {
 	construct_runtime::construct_runtime(input)
+}
+
+/// Macro than replace the first found `auto` ident with some specified content.
+///
+/// # Example:
+///
+/// ```nocompile
+/// replace_auto_with!(
+///     { something or else } // content inside braces can be anything.
+///     Some content with at some point { an ident named auto } other auto are ignored
+/// )
+/// ```
+///
+/// will generate:
+///
+/// ```nocompile
+///     Some content with at some point { an ident named something or else } other auto are ignored
+/// ```
+#[proc_macro]
+pub fn replace_auto_with(input: TokenStream) -> TokenStream {
+	replace_auto_with::replace_auto_with(input)
 }

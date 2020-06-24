@@ -111,6 +111,16 @@ type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trai
 type PositiveImbalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
 type NegativeImbalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
 
+#[macro_export]
+macro_rules! auto_construct_runtime {
+	( $( $t:tt )* ) => {
+		frame_support::replace_auto_with! {
+			{ Module, Call, Storage, Config, Event<T> }
+			$( $t )*
+		}
+	}
+}
+
 pub trait Trait: frame_system::Trait {
 	/// The treasury's module id, used for deriving its sovereign account ID.
 	type ModuleId: Get<ModuleId>;

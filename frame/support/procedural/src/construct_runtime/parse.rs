@@ -24,7 +24,7 @@ use syn::{
 	token, Error, Ident, Result, Token,
 };
 
-mod keyword {
+pub mod keyword {
 	syn::custom_keyword!(Block);
 	syn::custom_keyword!(NodeBlock);
 	syn::custom_keyword!(UncheckedExtrinsic);
@@ -36,6 +36,7 @@ mod keyword {
 	syn::custom_keyword!(Origin);
 	syn::custom_keyword!(Inherent);
 	syn::custom_keyword!(ValidateUnsigned);
+	syn::custom_keyword!(auto);
 }
 
 #[derive(Debug)]
@@ -231,6 +232,7 @@ pub enum ModulePartKeyword {
 	Origin(keyword::Origin),
 	Inherent(keyword::Inherent),
 	ValidateUnsigned(keyword::ValidateUnsigned),
+	Auto(keyword::auto),
 }
 
 impl Parse for ModulePartKeyword {
@@ -253,6 +255,8 @@ impl Parse for ModulePartKeyword {
 			Ok(Self::Inherent(input.parse()?))
 		} else if lookahead.peek(keyword::ValidateUnsigned) {
 			Ok(Self::ValidateUnsigned(input.parse()?))
+		} else if lookahead.peek(keyword::auto) {
+			Ok(Self::Auto(input.parse()?))
 		} else {
 			Err(lookahead.error())
 		}
@@ -261,7 +265,7 @@ impl Parse for ModulePartKeyword {
 
 impl ModulePartKeyword {
 	/// Returns the name of `Self`.
-	fn name(&self) -> &'static str {
+	pub fn name(&self) -> &'static str {
 		match self {
 			Self::Module(_) => "Module",
 			Self::Call(_) => "Call",
@@ -271,6 +275,7 @@ impl ModulePartKeyword {
 			Self::Origin(_) => "Origin",
 			Self::Inherent(_) => "Inherent",
 			Self::ValidateUnsigned(_) => "ValidateUnsigned",
+			Self::Auto(_) => "auto",
 		}
 	}
 
@@ -313,6 +318,7 @@ impl Spanned for ModulePartKeyword {
 			Self::Origin(inner) => inner.span(),
 			Self::Inherent(inner) => inner.span(),
 			Self::ValidateUnsigned(inner) => inner.span(),
+			Self::Auto(inner) => inner.span(),
 		}
 	}
 }
