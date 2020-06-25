@@ -23,7 +23,7 @@ use parse::{ModuleDeclaration, RuntimeDefinition, WhereSection};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, quote_spanned};
-use syn::{Ident, Result, TypePath, spanned::Spanned};
+use syn::{Ident, Result, TypePath};
 
 /// The fixed name of the system module.
 const SYSTEM_MODULE_NAME: &str = "System";
@@ -49,28 +49,31 @@ fn construct_runtime_preprocess(
 ) -> Result<Option<TokenStream2>> {
 	let mut auto_modules = vec![];
 	for module in definition.modules.content.inner.iter() {
-		if module.module_parts.iter().any(|p| p.keyword.name() == "auto") {
-			if module.module_parts.len() != 1 {
-				return Err(syn::Error::new(
-					module.module_parts[0].keyword.span(),
-					"Module parts must either provide explicit parts or use `auto` keyword but
-					cannot combine."
-				))
-			}
-
-			auto_modules.push(module.module.clone());
+		if module.module_parts.is_none() {
+			auto_modules.push((module.name.clone(), module.module.clone()));
 		}
 	}
 	
 	if !auto_modules.is_empty() {
 		let mut expand = input_clone;
 
-		while let Some(module) = auto_modules.pop()  {
-			expand = quote_spanned!(module.span() => #module::auto_construct_runtime!{
-				construct_runtime! { #expand   }
-			}
-			)
+		while let Some((name, module)) = auto_modules.pop()  {
+			expand = quote_spanned!(name.span() =>
+				#module::construct_runtime_args!{
+					{ #name : #module }
+					construct_runtime! { #expand }
+				}
+			);
 		}
+
+		// Make frame-support available to construct_runtime_args
+		let hidden_crate_name = "construct_runtime_preprocess";
+		let scrate_decl = generate_hidden_includes(&hidden_crate_name, "frame-support");
+
+		expand = quote!(
+			#scrate_decl
+			#expand
+		);
 
 		Ok(Some(expand))
 	} else {
@@ -264,6 +267,7 @@ fn decl_runtime_metadata<'a>(
 			module_declaration.find_part("Module").map(|_| {
 				let filtered_names: Vec<_> = module_declaration
 					.module_parts()
+					.expect("Preprocessing has expanded module parts")
 					.into_iter()
 					.filter(|part| part.name() != "Module")
 					.map(|part| part.ident())

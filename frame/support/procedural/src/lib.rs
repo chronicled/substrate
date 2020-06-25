@@ -23,7 +23,7 @@
 
 mod storage;
 mod construct_runtime;
-mod replace_auto_with;
+mod expand_after;
 
 use proc_macro::TokenStream;
 
@@ -262,7 +262,7 @@ pub fn decl_storage(input: TokenStream) -> TokenStream {
 ///         Test3_Instance1: test3::<Instance1>::{Module, Call, Storage, Event<T, I>, Config<T, I>, Origin<T, I>},
 ///         Test3_DefaultInstance: test3::{Module, Call, Storage, Event<T>, Config<T>, Origin<T>},
 ///
-///         TestAuto: pallet_with_auto_construct_runtime::{auto},
+///         TestAuto: pallet_with_automatic_expansion,
 ///     }
 /// )
 /// ```
@@ -285,8 +285,8 @@ pub fn decl_storage(input: TokenStream) -> TokenStream {
 ///                             inherent.
 /// - `ValidateUnsigned`      - If the module validates unsigned extrinsics.
 ///
-/// alternatively if the pallet provide the auto_contruct_runtime macro, parts can be automatically
-/// filled using `auto` keyword.
+/// if no module parts is provided construct_runtime will try to use the expansion provided by the
+/// crate thourgh `decl_construct_runtime_args`.
 ///
 /// # Note
 ///
@@ -298,23 +298,71 @@ pub fn construct_runtime(input: TokenStream) -> TokenStream {
 	construct_runtime::construct_runtime(input)
 }
 
-/// Macro than replace the first found `auto` ident with some specified content.
+/// Macro than expand after the first finding of some pattern.
 ///
 /// # Example:
 ///
 /// ```nocompile
-/// replace_auto_with!(
-///     { something or else } // content inside braces can be anything.
-///     Some content with at some point { an ident named auto } other auto are ignored
-/// )
+/// expand_after!(
+///     { match pattern } // the match pattern cannot contains any group: `[]`, `()`, `{}`.
+///     { expansion tokens } // content inside braces can be anything including groups.
+///     Some content with { at some point match pattern } other match pattern are ignored
+/// );
 /// ```
 ///
 /// will generate:
 ///
 /// ```nocompile
-///     Some content with at some point { an ident named something or else } other auto are ignored
+///     Some content with { at some point something or else } other match pattern are ignored
 /// ```
 #[proc_macro]
-pub fn replace_auto_with(input: TokenStream) -> TokenStream {
-	replace_auto_with::replace_auto_with(input)
+pub fn expand_after(input: TokenStream) -> TokenStream {
+	expand_after::expand_after(input)
+}
+
+/// Declare the construct_runtime_args to be used in construct_runtime to get the default pallet
+/// parts.
+///
+/// # Example:
+///
+/// if pallet want to give the given args:
+/// ```nocompile
+/// construct_runtime!(
+///     ...
+///     {
+///         ...
+///         Example: frame_example::{Module, Call, Event<T>},
+///         ...
+///     }
+/// );
+/// ```
+///
+/// then it must define:
+///
+/// ```nocompile
+/// decl_construct_runtime_args!(Module, Call, Event<T>)
+/// ```
+#[proc_macro]
+pub fn decl_construct_runtime_args(input: TokenStream) -> TokenStream {
+	use frame_support_procedural_tools::generate_crate_access;
+
+	let input: proc_macro2::TokenStream = input.into();
+
+	// frame-support is made available by construct_runtime_preprocess
+	let hidden_crate_name = "construct_runtime_preprocess";
+	let scrate = generate_crate_access(&hidden_crate_name, "frame-support");
+
+	quote::quote!(
+		/// This can be internally called by `construct_runtime` to builds the pallet args.
+		#[macro_export]
+		macro_rules! construct_runtime_args {
+			( { $( $pattern:tt )* } $( $t:tt )* ) => {
+				#scrate::expand_after! {
+					{ $( $pattern )* }
+					{ ::{ #input } }
+					$( $t )*
+				}
+			}
+		}
+	).into()
 }

@@ -36,7 +36,6 @@ pub mod keyword {
 	syn::custom_keyword!(Origin);
 	syn::custom_keyword!(Inherent);
 	syn::custom_keyword!(ValidateUnsigned);
-	syn::custom_keyword!(auto);
 }
 
 #[derive(Debug)]
@@ -155,7 +154,7 @@ pub struct ModuleDeclaration {
 	pub name: Ident,
 	pub module: Ident,
 	pub instance: Option<Ident>,
-	pub module_parts: Vec<ModulePart>,
+	pub module_parts: Option<Vec<ModulePart>>,
 }
 
 impl Parse for ModuleDeclaration {
@@ -173,8 +172,12 @@ impl Parse for ModuleDeclaration {
 			None
 		};
 
-		let _: Token![::] = input.parse()?;
-		let module_parts = parse_module_parts(input)?;
+		let module_parts = if input.peek(Token![::]) {
+			let _: Token![::] = input.parse()?;
+			Some(parse_module_parts(input)?)
+		} else {
+			None
+		};
 
 		let parsed = Self {
 			name,
@@ -189,12 +192,12 @@ impl Parse for ModuleDeclaration {
 
 impl ModuleDeclaration {
 	/// Get resolved module parts
-	pub fn module_parts(&self) -> &[ModulePart] {
-		&self.module_parts
+	pub fn module_parts(&self) -> Option<&Vec<ModulePart>> {
+		self.module_parts.as_ref()
 	}
 
 	pub fn find_part(&self, name: &str) -> Option<&ModulePart> {
-		self.module_parts.iter().find(|part| part.name() == name)
+		self.module_parts.as_ref().and_then(|p| p.iter().find(|part| part.name() == name))
 	}
 
 	pub fn exists_part(&self, name: &str) -> bool {
@@ -232,7 +235,6 @@ pub enum ModulePartKeyword {
 	Origin(keyword::Origin),
 	Inherent(keyword::Inherent),
 	ValidateUnsigned(keyword::ValidateUnsigned),
-	Auto(keyword::auto),
 }
 
 impl Parse for ModulePartKeyword {
@@ -255,8 +257,6 @@ impl Parse for ModulePartKeyword {
 			Ok(Self::Inherent(input.parse()?))
 		} else if lookahead.peek(keyword::ValidateUnsigned) {
 			Ok(Self::ValidateUnsigned(input.parse()?))
-		} else if lookahead.peek(keyword::auto) {
-			Ok(Self::Auto(input.parse()?))
 		} else {
 			Err(lookahead.error())
 		}
@@ -275,7 +275,6 @@ impl ModulePartKeyword {
 			Self::Origin(_) => "Origin",
 			Self::Inherent(_) => "Inherent",
 			Self::ValidateUnsigned(_) => "ValidateUnsigned",
-			Self::Auto(_) => "auto",
 		}
 	}
 
@@ -318,7 +317,6 @@ impl Spanned for ModulePartKeyword {
 			Self::Origin(inner) => inner.span(),
 			Self::Inherent(inner) => inner.span(),
 			Self::ValidateUnsigned(inner) => inner.span(),
-			Self::Auto(inner) => inner.span(),
 		}
 	}
 }

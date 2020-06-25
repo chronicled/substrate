@@ -819,7 +819,7 @@ construct_runtime!(
 		TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
 		FinalityTracker: pallet_finality_tracker::{Module, Call, Inherent},
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
-		Treasury: pallet_treasury::{auto},
+		Treasury: pallet_treasury,
 		Contracts: pallet_contracts::{Module, Call, Config, Storage, Event<T>},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
