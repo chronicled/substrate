@@ -286,13 +286,33 @@ pub fn decl_storage(input: TokenStream) -> TokenStream {
 /// - `ValidateUnsigned`      - If the module validates unsigned extrinsics.
 ///
 /// if no module parts is provided construct_runtime will try to use the expansion provided by the
-/// crate thourgh `decl_construct_runtime_args`.
+/// crate through `decl_construct_runtime_args`.
 ///
 /// # Note
 ///
 /// The population of the genesis storage depends on the order of modules. So, if one of your
 /// modules depends on another module, the module that is depended upon needs to come before
 /// the module depending on it.
+///
+/// # Use an inside pallet
+///
+/// The attribute `#[local_inner_macro(pallet_name)]` can be provided if the pallet is defined in
+/// the same crate as construct_runtime is called. Usage is:
+///
+/// ```nocompile
+/// use crate as pallet_name;
+/// construct_runtime!(
+///     #[local_inner_macro(pallet_name)]
+///     pub enum Runtime where
+///         Block = Block,
+///         NodeBlock = runtime::Block,
+///         UncheckedExtrinsic = UncheckedExtrinsic
+///     {
+///         System: system,
+///         MyPallet: pallet_name,
+///     }
+/// )
+/// ```
 #[proc_macro]
 pub fn construct_runtime(input: TokenStream) -> TokenStream {
 	construct_runtime::construct_runtime(input)
@@ -354,7 +374,7 @@ pub fn decl_construct_runtime_args(input: TokenStream) -> TokenStream {
 
 	quote::quote!(
 		/// This can be internally called by `construct_runtime` to builds the pallet args.
-		#[macro_export]
+		#[macro_export(local_inner_macros)]
 		macro_rules! construct_runtime_args {
 			( { $( $pattern:tt )* } $( $t:tt )* ) => {
 				#scrate::expand_after! {

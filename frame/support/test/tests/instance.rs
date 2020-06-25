@@ -270,9 +270,11 @@ frame_support::construct_runtime!(
 	}
 );
 
+type TestHeaderFor<T> = generic::Header<<T as system::Trait>::BlockNumber, BlakeTwo256>;
+
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<u32, Call, Signature, ()>;
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<(), Call, (), ()>;
 
 fn new_test_ext() -> sp_io::TestExternalities {
 	GenesisConfig{

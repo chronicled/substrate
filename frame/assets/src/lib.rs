@@ -133,10 +133,15 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{Parameter, decl_module, decl_event, decl_storage, decl_error, ensure};
+use frame_support::{
+	Parameter, decl_module, decl_event, decl_storage, decl_error, decl_construct_runtime_args,
+	ensure
+};
 use sp_runtime::traits::{Member, AtLeast32Bit, Zero, StaticLookup};
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::traits::One;
+
+decl_construct_runtime_args!(Module, Call, Storage, Event<T>);
 
 /// The module configuration trait.
 pub trait Trait: frame_system::Trait {
@@ -280,23 +285,30 @@ impl<T: Trait> Module<T> {
 
 #[cfg(test)]
 mod tests {
+	use crate as frame_assets;
 	use super::*;
 
-	use frame_support::{impl_outer_origin, assert_ok, assert_noop, parameter_types, weights::Weight};
+	use frame_support::{construct_runtime, assert_ok, assert_noop, parameter_types, weights::Weight};
 	use sp_core::H256;
 	// The testing primitives are very useful for avoiding having to work with signatures
 	// or public keys. `u64` is used as the `AccountId` and no `Signature`s are required.
 	use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 
-	impl_outer_origin! {
-		pub enum Origin for Test  where system = frame_system {}
-	}
+	#[allow(unused)]
+	type UncheckedExtrinsic = frame_system::MockUncheckedExtrinsic<Test>;
+	type Block = frame_system::MockBlock<Test>;
 
-	// For testing the pallet, we construct most of a mock runtime. This means
-	// first constructing a configuration type (`Test`) which `impl`s each of the
-	// configuration traits of pallets we want to use.
-	#[derive(Clone, Eq, PartialEq)]
-	pub struct Test;
+	construct_runtime!(#[local_inner_macro(frame_assets)]
+		pub enum Test where
+			Block = Block,
+			NodeBlock = Block,
+			UncheckedExtrinsic = UncheckedExtrinsic,
+		{
+			System: frame_system,
+			Asset: frame_assets,
+		}
+	);
+
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
 		pub const MaximumBlockWeight: Weight = 1024;
@@ -307,7 +319,7 @@ mod tests {
 		type BaseCallFilter = ();
 		type Origin = Origin;
 		type Index = u64;
-		type Call = ();
+		type Call = Call;
 		type BlockNumber = u64;
 		type Hash = H256;
 		type Hashing = BlakeTwo256;

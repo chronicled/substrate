@@ -55,13 +55,19 @@ fn construct_runtime_preprocess(
 	}
 	
 	if !auto_modules.is_empty() {
-		let mut expand = input_clone;
+		let mut expand = quote!( construct_runtime! { #input_clone } );
 
 		while let Some((name, module)) = auto_modules.pop()  {
+			let macro_call = if definition.local_inner_macro == module {
+				quote!( construct_runtime_args! )
+			} else {
+				quote!( #module::construct_runtime_args! )
+			};
+
 			expand = quote_spanned!(name.span() =>
-				#module::construct_runtime_args!{
+				#macro_call {
 					{ #name : #module }
-					construct_runtime! { #expand }
+					#expand
 				}
 			);
 		}
