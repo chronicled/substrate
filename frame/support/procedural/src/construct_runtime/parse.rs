@@ -174,7 +174,7 @@ impl Parse for WhereDefinition {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleDeclaration {
 	pub name: Ident,
 	pub module: Ident,

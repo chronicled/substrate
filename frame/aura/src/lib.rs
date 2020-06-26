@@ -50,7 +50,7 @@ use sp_std::{result, prelude::*};
 use codec::{Encode, Decode};
 use frame_support::{
 	decl_storage, decl_module, Parameter, traits::{Get, FindAuthor},
-	ConsensusEngineId,
+	ConsensusEngineId, decl_construct_runtime_args,
 };
 use sp_runtime::{
 	RuntimeAppPublic,
@@ -62,6 +62,8 @@ use sp_consensus_aura::{
 	AURA_ENGINE_ID, ConsensusLog, AuthorityIndex,
 	inherents::{INHERENT_IDENTIFIER, AuraInherentData},
 };
+
+decl_construct_runtime_args!(Module, Call, Storage, Config<T>);
 
 mod mock;
 mod tests;

@@ -50,31 +50,39 @@ fn construct_runtime_preprocess(
 	let mut auto_modules = vec![];
 	for module in definition.modules.content.inner.iter() {
 		if module.module_parts.is_none() {
-			auto_modules.push((module.name.clone(), module.module.clone()));
+			auto_modules.push(module.clone())
 		}
 	}
 	
 	if !auto_modules.is_empty() {
-		let mut expand = quote!( construct_runtime! { #input_clone } );
-
-		while let Some((name, module)) = auto_modules.pop()  {
-			let macro_call = if definition.local_macro == module {
-				quote!( construct_runtime_args! )
-			} else {
-				quote!( #module::construct_runtime_args! )
-			};
-
-			expand = quote_spanned!(name.span() =>
-				#macro_call {
-					{ #name : #module }
-					#expand
-				}
-			);
-		}
 
 		// Make frame-support available to construct_runtime_args
 		let hidden_crate_name = "construct_runtime_preprocess";
 		let scrate_decl = generate_hidden_includes(&hidden_crate_name, "frame-support");
+		let scrate = generate_crate_access(&hidden_crate_name, "frame-support");
+
+		let mut expand = quote!( #scrate::construct_runtime! { #input_clone } );
+
+		while let Some(module) = auto_modules.pop()  {
+			let macro_call = if definition.local_macro == module.module {
+				quote!( construct_runtime_args! )
+			} else {
+				let module = &module.module;
+				quote!( #module::construct_runtime_args! )
+			};
+
+			let module_name = &module.name;
+			let module_module = &module.module;
+			let module_instance = module.instance.as_ref()
+				.map(|instance| quote!( ::< #instance > ));
+
+			expand = quote_spanned!(module_name.span() =>
+				#macro_call {
+					{ #module_name : #module_module #module_instance}
+					#expand
+				}
+			);
+		}
 
 		expand = quote!(
 			#scrate_decl
@@ -253,6 +261,7 @@ fn decl_outer_config<'a>(
 					#module #(#instance)* #(#generics)*,
 			)
 		});
+
 	quote!(
 		#scrate::sp_runtime::impl_outer_config! {
 			pub struct GenesisConfig for #runtime {

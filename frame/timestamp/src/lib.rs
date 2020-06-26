@@ -99,7 +99,7 @@ use sp_inherents::{ProvideInherent, InherentData, InherentIdentifier};
 #[cfg(feature = "std")]
 use frame_support::debug;
 use frame_support::{
-	Parameter, decl_storage, decl_module,
+	Parameter, decl_storage, decl_module, decl_construct_runtime_args,
 	traits::{Time, UnixTime, Get},
 	weights::{DispatchClass, Weight},
 };
@@ -114,6 +114,8 @@ use sp_timestamp::{
 	InherentError, INHERENT_IDENTIFIER, InherentType,
 	OnTimestampSet,
 };
+
+decl_construct_runtime_args!(Module, Call, Storage);
 
 /// The module configuration trait
 pub trait Trait: frame_system::Trait {

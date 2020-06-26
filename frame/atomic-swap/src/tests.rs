@@ -1,10 +1,9 @@
 #![cfg(test)]
 
+use crate as pallet_atomic_swap;
 use super::*;
 
-use frame_support::{
-	impl_outer_origin, parameter_types, weights::Weight,
-};
+use frame_support::{parameter_types, weights::Weight, construct_runtime};
 use sp_core::H256;
 // The testing primitives are very useful for avoiding having to work with signatures
 // or public keys. `u64` is used as the `AccountId` and no `Signature`s are required.
@@ -14,15 +13,22 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
-impl_outer_origin! {
-	pub enum Origin for Test where system = frame_system {}
-}
+#[allow(unused)]
+type UncheckedExtrinsic = frame_system::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::MockBlock<Test>;
 
-// For testing the pallet, we construct most of a mock runtime. This means
-// first constructing a configuration type (`Test`) which `impl`s each of the
-// configuration traits of pallets we want to use.
-#[derive(Clone, Eq, Debug, PartialEq)]
-pub struct Test;
+construct_runtime!(#[local_macro(pallet_atomic_swap)]
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system,
+		AtomicSwap: pallet_atomic_swap,
+		Balances: pallet_balances,
+	}
+);
+
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: Weight = 1024;
@@ -35,7 +41,7 @@ impl frame_system::Trait for Test {
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Call = ();
+	type Call = Call;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
@@ -74,9 +80,6 @@ impl Trait for Test {
 	type SwapAction = BalanceSwapAction<Test, Balances>;
 	type ProofLimit = ProofLimit;
 }
-type System = frame_system::Module<Test>;
-type Balances = pallet_balances::Module<Test>;
-type AtomicSwap = Module<Test>;
 
 const A: u64 = 1;
 const B: u64 = 2;

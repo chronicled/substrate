@@ -46,7 +46,7 @@ use sp_runtime::{RuntimeDebug, traits::Hash};
 
 use frame_support::{
 	codec::{Decode, Encode},
-	debug, decl_error, decl_event, decl_module, decl_storage,
+	debug, decl_error, decl_event, decl_module, decl_storage, decl_construct_runtime_args,
 	dispatch::{
 		DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, Parameter,
 		PostDispatchInfo,
@@ -56,6 +56,8 @@ use frame_support::{
 	weights::{DispatchClass, GetDispatchInfo, Weight},
 };
 use frame_system::{self as system, ensure_signed, ensure_root};
+
+decl_construct_runtime_args!(Module, Call, Storage, Config<T>, Event<T>, Origin<T>);
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -1000,10 +1002,7 @@ mod tests {
 	use frame_system::{self as system, EventRecord, Phase};
 	use hex_literal::hex;
 	use sp_core::H256;
-	use sp_runtime::{
-		Perbill, traits::{BlakeTwo256, IdentityLookup, Block as BlockT}, testing::Header,
-		BuildStorage,
-	};
+	use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header, BuildStorage};
 	use crate as collective;
 
 	parameter_types! {
@@ -1055,23 +1054,25 @@ mod tests {
 		type MaxProposals = MaxProposals;
 	}
 
-	pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
-	pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u64, Call, ()>;
+	#[allow(unused)]
+	type UncheckedExtrinsic = frame_system::MockUncheckedExtrinsic<Test>;
+	type Block = frame_system::MockBlock<Test>;
 
-	frame_support::construct_runtime!(
+	frame_support::construct_runtime!(#[local_macro(collective)]
 		pub enum Test where
 			Block = Block,
 			NodeBlock = Block,
 			UncheckedExtrinsic = UncheckedExtrinsic
 		{
-			System: system::{Module, Call, Event<T>},
-			Collective: collective::<Instance1>::{Module, Call, Event<T>, Origin<T>, Config<T>},
-			DefaultCollective: collective::{Module, Call, Event<T>, Origin<T>, Config<T>},
+			System: system,
+			Collective: collective::<Instance1>,
+			DefaultCollective: collective,
 		}
 	);
 
 	pub fn new_test_ext() -> sp_io::TestExternalities {
 		let mut ext: sp_io::TestExternalities = GenesisConfig {
+			system: None,
 			collective_Instance1: Some(collective::GenesisConfig {
 				members: vec![1, 2, 3],
 				phantom: Default::default(),
