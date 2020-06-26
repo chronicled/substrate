@@ -24,7 +24,7 @@ use syn::{
 	token, Error, Ident, Result, Token,
 };
 
-pub mod keyword {
+mod keyword {
 	syn::custom_keyword!(Block);
 	syn::custom_keyword!(NodeBlock);
 	syn::custom_keyword!(UncheckedExtrinsic);
@@ -290,7 +290,7 @@ impl Parse for ModulePartKeyword {
 
 impl ModulePartKeyword {
 	/// Returns the name of `Self`.
-	pub fn name(&self) -> &'static str {
+	fn name(&self) -> &'static str {
 		match self {
 			Self::Module(_) => "Module",
 			Self::Call(_) => "Call",
