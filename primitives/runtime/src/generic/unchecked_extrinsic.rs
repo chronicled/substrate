@@ -128,6 +128,7 @@ where
 				let signed = lookup.lookup(signed)?;
 				let raw_payload = SignedPayload::new(self.function, extra)?;
 				if !raw_payload.using_encoded(|payload| signature.verify(payload, &signed)) {
+					panic!("boo!");
 					return Err(InvalidTransaction::BadProof.into())
 				}
 
@@ -174,6 +175,8 @@ impl<Call, Extra> SignedPayload<Call, Extra> where
 	/// This function may fail if `additional_signed` of `Extra` is not available.
 	pub fn new(call: Call, extra: Extra) -> Result<Self, TransactionValidityError> {
 		let additional_signed = extra.additional_signed()?;
+		#[cfg(feature = "std")]
+		println!("additional_signed: {:?}", additional_signed);
 		let raw_payload = (call, extra, additional_signed);
 		Ok(Self(raw_payload))
 	}

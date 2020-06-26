@@ -700,7 +700,7 @@ pub trait SignedExtension: Codec + Debug + Sync + Send + Clone + Eq + PartialEq 
 
 	/// Any additional data that will go into the signed payload. This may be created dynamically
 	/// from the transaction using the `additional_signed` function.
-	type AdditionalSigned: Encode;
+	type AdditionalSigned: Encode + Debug;
 
 	/// The type that encodes information that can be passed from pre_dispatch to post-dispatch.
 	type Pre: Default;
