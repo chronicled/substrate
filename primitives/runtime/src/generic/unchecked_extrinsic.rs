@@ -319,6 +319,20 @@ where
 	}
 }
 
+impl<Address, Call, Signature, Extra> From<UncheckedExtrinsic<Address, Call, Signature, Extra>>
+	for crate::OpaqueExtrinsic
+where
+	Address: Encode,
+	Signature: Encode,
+	Call: Encode,
+	Extra: SignedExtension,
+{
+	fn from(extrinsic: UncheckedExtrinsic<Address, Call, Signature, Extra>) -> Self {
+		crate::OpaqueExtrinsic::decode(&mut extrinsic.encode().as_slice())
+			.expect("decoding from something we have encoded cannot fail; qed")
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
