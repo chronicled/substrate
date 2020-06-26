@@ -36,13 +36,13 @@ pub mod keyword {
 	syn::custom_keyword!(Origin);
 	syn::custom_keyword!(Inherent);
 	syn::custom_keyword!(ValidateUnsigned);
-	syn::custom_keyword!(local_inner_macro);
+	syn::custom_keyword!(local_macro);
 }
 
 #[derive(Debug)]
 pub struct RuntimeDefinition {
-	// Specified through inner attribute: `#[local_inner_macro(my_pallet)]`
-	pub local_inner_macro: Ident,
+	// Specified through inner attribute: `#[local_macro(my_pallet)]`
+	pub local_macro: Ident,
 	pub visibility_token: Token![pub],
 	pub enum_token: Token![enum],
 	pub name: Ident,
@@ -50,13 +50,13 @@ pub struct RuntimeDefinition {
 	pub modules: ext::Braces<ext::Punctuated<ModuleDeclaration, Token![,]>>,
 }
 
-pub struct LocalInnerMacroDef(Ident);
-impl Parse for LocalInnerMacroDef {
+pub struct LocalMacroDef(Ident);
+impl Parse for LocalMacroDef {
 	fn parse(input: ParseStream) -> Result<Self> {
 		input.parse::<Token![#]>()?;
 		let attr;
 		syn::bracketed!(attr in input);
-		attr.parse::<keyword::local_inner_macro>()?;
+		attr.parse::<keyword::local_macro>()?;
 		let pallet;
 		syn::parenthesized!(pallet in attr);
 		let pallet = pallet.parse()?;
@@ -71,10 +71,10 @@ impl Parse for RuntimeDefinition {
 			let msg = "Only one optional outer attribute is accepted, found multiple ones";
 			return Err(Error::new(outer_attrs[2].span(), msg));
 		}
-		let local_inner_macro = input.parse::<LocalInnerMacroDef>()?.0;
+		let local_macro = input.parse::<LocalMacroDef>()?.0;
 
 		Ok(Self {
-			local_inner_macro,
+			local_macro,
 			visibility_token: input.parse()?,
 			enum_token: input.parse()?,
 			name: input.parse()?,

@@ -298,7 +298,7 @@ mod tests {
 	type UncheckedExtrinsic = frame_system::MockUncheckedExtrinsic<Test>;
 	type Block = frame_system::MockBlock<Test>;
 
-	construct_runtime!(#[local_inner_macro(frame_assets)]
+	construct_runtime!(#[local_macro(frame_assets)]
 		pub enum Test where
 			Block = Block,
 			NodeBlock = Block,

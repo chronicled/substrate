@@ -58,7 +58,7 @@ fn construct_runtime_preprocess(
 		let mut expand = quote!( construct_runtime! { #input_clone } );
 
 		while let Some((name, module)) = auto_modules.pop()  {
-			let macro_call = if definition.local_inner_macro == module {
+			let macro_call = if definition.local_macro == module {
 				quote!( construct_runtime_args! )
 			} else {
 				quote!( #module::construct_runtime_args! )
