@@ -136,7 +136,7 @@ impl Config {
 	/// - request timeout = 40s
 	pub fn new(id: &ProtocolId) -> Self {
 		let mut c = Config {
-			max_block_data_response: 64,
+			max_block_data_response: 128,
 			max_request_len: 1024 * 1024,
 			max_response_len: 32 * 1024 * 1024,
 			inactivity_timeout: Duration::from_secs(15),
