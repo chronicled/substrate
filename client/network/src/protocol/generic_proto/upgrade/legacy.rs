@@ -256,7 +256,7 @@ where TSubstream: AsyncRead + AsyncWrite + Unpin,
 	) -> Self::Future {
 		let framed = {
 			let mut codec = UviBytes::default();
-			codec.set_max_len(16 * 1024 * 1024);		// 16 MiB hard limit for packets.
+			codec.set_max_len(32 * 1024 * 1024);		// 32 MiB hard limit for packets.
 			Framed::new(socket, codec)
 		};
 
