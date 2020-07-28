@@ -952,7 +952,7 @@ impl<B, E, Block, RA> Client<B, E, Block, RA> where
 		if notify {
 			// sometimes when syncing, tons of blocks can be finalized at once.
 			// we'll send notifications spuriously in that case.
-			const MAX_TO_NOTIFY: usize = 64;
+			const MAX_TO_NOTIFY: usize = 128;
 			let enacted = route_from_finalized.enacted();
 			let start = enacted.len() - std::cmp::min(enacted.len(), MAX_TO_NOTIFY);
 			for finalized in &enacted[start..] {
