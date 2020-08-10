@@ -1,6 +1,6 @@
 [package]
 name = "sc-cli"
-version = "0.8.0-alpha.8.chron.1"
+version = "0.8.0-alpha.8.chron.2"
 authors = ["Parity Technologies <admin@parity.io>"]
 description = "Substrate CLI interface."
 edition = "2018"
@@ -12,6 +12,7 @@ repository = "https://github.com/paritytech/substrate/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+base64 = "0.12.3"
 clap = "2.33.0"
 derive_more = "0.99.2"
 env_logger = "0.7.0"

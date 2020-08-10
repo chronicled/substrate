@@ -15,6 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+use base64;
 use sc_network::config::NodeKeyConfig;
 use sp_core::H256;
 use std::{path::PathBuf, str::FromStr};
@@ -97,7 +98,8 @@ impl NodeKeyParams {
 		Ok(match self.node_key_type {
 			NodeKeyType::Ed25519 => {
 				let secret = if let Some(node_key) = self.node_key.as_ref() {
-					parse_ed25519_secret(node_key)?
+					let key_bytes = base64::decode(node_key).expect("The node key is not a valid base64 encoding");
+					parse_ed25519_secret(key_bytes)?
 				} else {
 					let path = self
 						.node_key_file
@@ -119,14 +121,10 @@ fn invalid_node_key(e: impl std::fmt::Display) -> error::Error {
 }
 
 /// Parse a Ed25519 secret key from a hex string into a `sc_network::Secret`.
-fn parse_ed25519_secret(hex: &str) -> error::Result<sc_network::config::Ed25519Secret> {
-	H256::from_str(&hex)
-		.map_err(invalid_node_key)
-		.and_then(|bytes| {
-			sc_network::config::identity::ed25519::SecretKey::from_bytes(bytes)
-				.map(sc_network::config::Secret::Input)
-				.map_err(invalid_node_key)
-		})
+fn parse_ed25519_secret(mut key_bytes: Vec<u8>) -> error::Result<sc_network::config::Ed25519Secret> {
+		sc_network::config::identity::ed25519::SecretKey::from_bytes(key_bytes.as_mut_slice())
+			.map(sc_network::config::Secret::Input)
+			.map_err(invalid_node_key)
 }
 
 #[cfg(test)]
