@@ -15,6 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+use base64;
 use sc_network::config::NodeKeyConfig;
 use sp_core::H256;
 use std::{path::PathBuf, str::FromStr};
@@ -48,6 +49,13 @@ pub struct NodeKeyParams {
 	/// an externally managed secret key, use `--node-key-file` instead.
 	#[structopt(long = "node-key", value_name = "KEY")]
 	pub node_key: Option<String>,
+
+	/// Enable base64 encoding of the secret key
+	///
+	/// If not specified the node-key should be specified in Hexadecimal.
+	/// By default this flag is not set,
+	#[structopt(long = "node-key-base64")]
+	pub node_key_base64: bool,
 
 	/// The type of secret key to use for libp2p networking.
 	///
@@ -97,7 +105,12 @@ impl NodeKeyParams {
 		Ok(match self.node_key_type {
 			NodeKeyType::Ed25519 => {
 				let secret = if let Some(node_key) = self.node_key.as_ref() {
-					parse_ed25519_secret(node_key)?
+					if self.node_key_base64 {
+						let key_bytes = base64::decode(node_key).expect("The node key is not a valid base64 encoding");
+						parse_ed25519_secret_base64(key_bytes)?
+					} else {
+						parse_ed25519_secret(node_key)?
+					}
 				} else {
 					let path = self
 						.node_key_file
@@ -120,13 +133,20 @@ fn invalid_node_key(e: impl std::fmt::Display) -> error::Error {
 
 /// Parse a Ed25519 secret key from a hex string into a `sc_network::Secret`.
 fn parse_ed25519_secret(hex: &str) -> error::Result<sc_network::config::Ed25519Secret> {
-	H256::from_str(&hex)
-		.map_err(invalid_node_key)
-		.and_then(|bytes| {
-			sc_network::config::identity::ed25519::SecretKey::from_bytes(bytes)
-				.map(sc_network::config::Secret::Input)
-				.map_err(invalid_node_key)
-		})
+		H256::from_str(&hex)
+			.map_err(invalid_node_key)
+			.and_then(|bytes| {
+				sc_network::config::identity::ed25519::SecretKey::from_bytes(bytes)
+					.map(sc_network::config::Secret::Input)
+					.map_err(invalid_node_key)
+			})
+}
+
+/// Parse a Ed25519 secret key from a basee64 string into a `sc_network::Secret`.
+fn parse_ed25519_secret_base64(mut key_bytes: Vec<u8>) -> error::Result<sc_network::config::Ed25519Secret> {
+		sc_network::config::identity::ed25519::SecretKey::from_bytes(key_bytes.as_mut_slice())
+			.map(sc_network::config::Secret::Input)
+			.map_err(invalid_node_key)
 }
 
 #[cfg(test)]
