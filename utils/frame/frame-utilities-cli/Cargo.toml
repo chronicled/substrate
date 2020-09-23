@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 sp-core = { version = "2.0.0", path = "../../../primitives/core" }
-sc-cli = { version = "0.8.0", path = "../../../client/cli" }
+sc-cli = { version = "0.8.0-chron.1", path = "../../../client/cli" }
 sp-runtime = { version = "2.0.0", path = "../../../primitives/runtime" }
 structopt = "0.3.8"
 frame-system = { version = "2.0.0", path = "../../../frame/system" }

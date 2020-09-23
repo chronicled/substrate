@@ -6310,10 +6310,11 @@ dependencies = [
 
 [[package]]
 name = "sc-cli"
-version = "0.8.0"
+version = "0.8.0-chron.1"
 dependencies = [
  "ansi_term 0.12.1",
  "atty",
+ "base64 0.12.3",
  "bip39",
  "chrono",
  "derive_more",
@@ -6881,7 +6882,7 @@ dependencies = [
 
 [[package]]
 name = "sc-network"
-version = "0.8.0"
+version = "0.8.0-chron.1"
 dependencies = [
  "assert_matches",
  "async-std",
@@ -7132,7 +7133,7 @@ dependencies = [
 
 [[package]]
 name = "sc-service"
-version = "0.8.0"
+version = "0.8.0-chron.1"
 dependencies = [
  "async-std",
  "derive_more",
