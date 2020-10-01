@@ -857,8 +857,12 @@ impl<B: BlockT> ChainSync<B> {
 				Vec::new()
 			};
 
-        let block_numbers = new_blocks.iter().map(|b| b.number);
-        debug!(target: "sync", "New block numbers {:?}", block_numbers);
+        for block in &new_blocks {
+            match &block.header {
+                Some(header) => debug!(target: "sync", "New block number {:?}", header.number()),
+                None => debug!(target: "sync", "New block without header"),
+            }
+        }
 
 		// When doing initial sync we don't request blocks in parallel.
 		// So the only way this can happen is when peers lie about the
@@ -870,8 +874,6 @@ impl<B: BlockT> ChainSync<B> {
 			.unwrap_or(false);
 
 		if !is_recent && new_blocks.last().map_or(false, |b| self.is_known(&b.hash)) {
-            debug!("Does queue contain block hash {:?}? {}", b.hash, self.queue_blocks.contains(&hash));
-
 			// When doing initial sync we don't request blocks in parallel.
 			// So the only way this can happen is when peers lie about the
 			// common block.
@@ -1299,6 +1301,7 @@ impl<B: BlockT> ChainSync<B> {
 	/// What is the status of the block corresponding to the given hash?
 	fn block_status(&self, hash: &B::Hash) -> Result<BlockStatus, ClientError> {
 		if self.queue_blocks.contains(hash) {
+            debug!("Queue contain block hash {}", hash);
 			return Ok(BlockStatus::Queued)
 		}
 		self.client.block_status(&BlockId::Hash(*hash))
