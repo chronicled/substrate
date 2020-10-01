@@ -27,7 +27,7 @@ node-primitives = { version = "2.0.0", path = "../primitives" }
 node-runtime = { version = "2.0.0", path = "../runtime" }
 sp-core = { version = "2.0.0", path = "../../../primitives/core" }
 sp-io = { version = "2.0.0", path = "../../../primitives/io" }
-frame-support = { version = "2.0.0", path = "../../../frame/support" }
+frame-support = { version = "2.0.0-chron.1", path = "../../../frame/support" }
 pallet-session = { version = "2.0.0", path = "../../../frame/session" }
 pallet-society = { version = "2.0.0", path = "../../../frame/society" }
 sp-runtime = { version = "2.0.0", path = "../../../primitives/runtime" }

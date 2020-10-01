@@ -857,6 +857,13 @@ impl<B: BlockT> ChainSync<B> {
 				Vec::new()
 			};
 
+        for block in &new_blocks {
+            match &block.header {
+                Some(header) => debug!(target: "sync", "New block number {:?}", header.number()),
+                None => debug!(target: "sync", "New block without header"),
+            }
+        }
+
 		// When doing initial sync we don't request blocks in parallel.
 		// So the only way this can happen is when peers lie about the
 		// common block.
@@ -871,7 +878,10 @@ impl<B: BlockT> ChainSync<B> {
 			// So the only way this can happen is when peers lie about the
 			// common block.
 			debug!(target: "sync", "Ignoring known blocks from {}", who);
-			return Err(BadPeer(who.clone(), rep::KNOWN_BLOCK));
+			// This is a test to prove a Bug in the code base
+			// We want to force the bootnode to provide us the recent blocks even with duplicates
+			// return Err(BadPeer(who.clone(), rep::KNOWN_BLOCK));
+			info!(target: "sync", "XXX Substrate v2.0 bug proof XXX the sync would have stopped here and, peer: {} would have been dropped", who);
 		}
 		let orig_len = new_blocks.len();
 		new_blocks.retain(|b| !self.queue_blocks.contains(&b.hash));
@@ -1291,6 +1301,7 @@ impl<B: BlockT> ChainSync<B> {
 	/// What is the status of the block corresponding to the given hash?
 	fn block_status(&self, hash: &B::Hash) -> Result<BlockStatus, ClientError> {
 		if self.queue_blocks.contains(hash) {
+            debug!("Queue contain block hash {}", hash);
 			return Ok(BlockStatus::Queued)
 		}
 		self.client.block_status(&BlockId::Hash(*hash))

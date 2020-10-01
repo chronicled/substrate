@@ -21,7 +21,7 @@ sp-inherents = { version = "2.0.0", default-features = false, path = "../../prim
 sp-std = { version = "2.0.0", default-features = false, path = "../../primitives/std" }
 sp-runtime = { version = "2.0.0", default-features = false, path = "../../primitives/runtime" }
 sp-finality-tracker = { version = "2.0.0", default-features = false, path = "../../primitives/finality-tracker" }
-frame-support = { version = "2.0.0", default-features = false, path = "../support" }
+frame-support = { version = "2.0.0-chron.1", default-features = false, path = "../support" }
 frame-system = { version = "2.0.0", default-features = false, path = "../system" }
 impl-trait-for-tuples = "0.1.3"
 
