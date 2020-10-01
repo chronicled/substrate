@@ -857,6 +857,9 @@ impl<B: BlockT> ChainSync<B> {
 				Vec::new()
 			};
 
+        let block_numbers = new_blocks.iter().map(|b| b.number);
+        debug!(target: "sync", "New block numbers {:?}", block_numbers);
+
 		// When doing initial sync we don't request blocks in parallel.
 		// So the only way this can happen is when peers lie about the
 		// common block.
@@ -867,6 +870,8 @@ impl<B: BlockT> ChainSync<B> {
 			.unwrap_or(false);
 
 		if !is_recent && new_blocks.last().map_or(false, |b| self.is_known(&b.hash)) {
+            debug!("Does queue contain block hash {:?}? {}", b.hash, self.queue_blocks.contains(&hash));
+
 			// When doing initial sync we don't request blocks in parallel.
 			// So the only way this can happen is when peers lie about the
 			// common block.
