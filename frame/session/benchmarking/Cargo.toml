@@ -18,7 +18,7 @@ sp-session = { version = "2.0.0", default-features = false, path = "../../../pri
 sp-runtime = { version = "2.0.0", default-features = false, path = "../../../primitives/runtime" }
 frame-system = { version = "2.0.0", default-features = false, path = "../../system" }
 frame-benchmarking = { version = "2.0.0", default-features = false, path = "../../benchmarking" }
-frame-support = { version = "2.0.0", default-features = false, path = "../../support" }
+frame-support = { version = "2.0.0-chron.1", default-features = false, path = "../../support" }
 pallet-staking = { version = "2.0.0", default-features = false, features = ["runtime-benchmarks"], path = "../../staking" }
 pallet-session = { version = "2.0.0", default-features = false, path = "../../session" }
 rand = { version = "0.7.2", default-features = false }

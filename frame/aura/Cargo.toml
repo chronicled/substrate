@@ -20,7 +20,7 @@ sp-std = { version = "2.0.0", default-features = false, path = "../../primitives
 serde = { version = "1.0.101", optional = true }
 pallet-session = { version = "2.0.0", default-features = false, path = "../session" }
 sp-runtime = { version = "2.0.0", default-features = false, path = "../../primitives/runtime" }
-frame-support = { version = "2.0.0", default-features = false, path = "../support" }
+frame-support = { version = "2.0.0-chron.1", default-features = false, path = "../support" }
 sp-consensus-aura = { version = "0.8.0", path = "../../primitives/consensus/aura", default-features = false }
 frame-system = { version = "2.0.0", default-features = false, path = "../system" }
 sp-timestamp = { version = "2.0.0", default-features = false, path = "../../primitives/timestamp" }

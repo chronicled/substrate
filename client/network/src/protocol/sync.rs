@@ -871,7 +871,10 @@ impl<B: BlockT> ChainSync<B> {
 			// So the only way this can happen is when peers lie about the
 			// common block.
 			debug!(target: "sync", "Ignoring known blocks from {}", who);
-			return Err(BadPeer(who.clone(), rep::KNOWN_BLOCK));
+			// This is a test to prove a Bug in the code base
+			// We want to force the bootnode to provide us the recent blocks even with duplicates
+			// return Err(BadPeer(who.clone(), rep::KNOWN_BLOCK));
+			info!(target: "sync", "XXX Substrate v2.0 bug proof XXX the sync would have stopped here and, peer: {} would have been dropped", who);
 		}
 		let orig_len = new_blocks.len();
 		new_blocks.retain(|b| !self.queue_blocks.contains(&b.hash));
