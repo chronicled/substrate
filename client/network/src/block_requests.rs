@@ -140,7 +140,7 @@ impl Config {
 			max_block_data_response: 128,
 			max_block_body_bytes: 8 * 1024 * 1024,
 			max_request_len: 1024 * 1024,
-			max_response_len: 64 * 1024 * 1024,
+			max_response_len: 1 * 1024 * 1024 * 1024,
 			inactivity_timeout: Duration::from_secs(15),
 			request_timeout: Duration::from_secs(40),
 			protocol: String::new(),
