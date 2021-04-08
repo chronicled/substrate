@@ -1,6 +1,6 @@
 [package]
 name = "sc-service"
-version = "0.8.0"
+version = "0.8.0-chron.3"
 authors = ["Parity Technologies <admin@parity.io>"]
 edition = "2018"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
@@ -55,7 +55,7 @@ sp-state-machine = { version = "0.8.0", registry = "crates-io" }
 sp-application-crypto = { version = "2.0.0", registry = "crates-io" }
 sp-consensus = { version = "0.8.0", registry = "crates-io" }
 sp-inherents = { version = "2.0.0", registry = "crates-io" }
-sc-network = { version = "0.8.0-chron.1" } 
+sc-network = { version = "0.8.0", registry = "crates-io" } 
 sc-chain-spec = { version = "2.0.0", registry = "crates-io" }
 sc-light = { version = "2.0.0", registry = "crates-io" }
 sc-client-api = { version = "2.0.0", registry = "crates-io" }

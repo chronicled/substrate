@@ -31,7 +31,7 @@ mod builder;
 #[cfg(feature = "test-helpers")]
 pub mod client;
 #[cfg(not(feature = "test-helpers"))]
-mod client;
+pub mod client;
 mod task_manager;
 
 use std::{io, pin::Pin};
