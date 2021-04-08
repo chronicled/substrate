@@ -13,7 +13,7 @@ log = "0.4.8"
 node-primitives = { version = "2.0.0", path = "../primitives" }
 node-testing = { version = "2.0.0", path = "../testing" }
 node-runtime = { version = "2.0.0", path = "../runtime" }
-sc-cli = { version = "0.8.0", path = "../../../client/cli" }
+sc-cli = { version = "0.8.0-chron.1", path = "../../../client/cli" }
 sc-client-api = { version = "2.0.0", path = "../../../client/api/" }
 sp-runtime = { version = "2.0.0", path = "../../../primitives/runtime" }
 sp-state-machine = { version = "0.8.0", path = "../../../primitives/state-machine" }
