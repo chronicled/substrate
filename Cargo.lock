@@ -1546,7 +1546,7 @@ dependencies = [
  "sc-cli",
  "sc-client-db 0.8.0",
  "sc-executor 0.8.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sp-core 2.0.0",
  "sp-externalities 0.8.0",
  "sp-runtime 2.0.0",
@@ -3714,10 +3714,10 @@ dependencies = [
  "sc-consensus-epochs",
  "sc-finality-grandpa 0.8.0",
  "sc-keystore 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-offchain 2.0.0",
  "sc-rpc 2.0.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sc-service-test",
  "sc-telemetry 2.0.0",
  "sc-tracing 2.0.0",
@@ -3790,7 +3790,7 @@ dependencies = [
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api 2.0.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sp-blockchain 2.0.0",
  "sp-core 2.0.0",
  "sp-runtime 2.0.0",
@@ -3938,7 +3938,7 @@ dependencies = [
  "sc-finality-grandpa 0.8.0",
  "sc-rpc 2.0.0",
  "sc-rpc-api 0.8.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sc-transaction-pool 2.0.0",
  "sp-api 2.0.0",
  "sp-block-builder 2.0.0",
@@ -4020,7 +4020,7 @@ dependencies = [
  "sc-client-api 2.0.0",
  "sc-client-db 0.8.0",
  "sc-executor 0.8.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sp-api 2.0.0",
  "sp-block-builder 2.0.0",
  "sp-blockchain 2.0.0",
@@ -6234,7 +6234,7 @@ dependencies = [
  "rand 0.7.3",
  "sc-client-api 2.0.0",
  "sc-keystore 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-peerset 2.0.0",
  "serde_json",
  "sp-api 2.0.0",
@@ -6316,7 +6316,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "sc-chain-spec-derive 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-telemetry 2.0.0",
  "serde",
  "serde_json",
@@ -6334,7 +6334,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
  "sc-chain-spec-derive 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-telemetry 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
@@ -6367,7 +6367,7 @@ dependencies = [
 
 [[package]]
 name = "sc-cli"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "ansi_term 0.12.1",
  "atty",
@@ -6391,8 +6391,8 @@ dependencies = [
  "sc-client-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-informant 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-keystore 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-service 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-service 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-telemetry 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-tracing 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
@@ -6594,9 +6594,9 @@ dependencies = [
  "sc-consensus-slots",
  "sc-executor 0.8.0",
  "sc-keystore 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-network-test",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sc-telemetry 2.0.0",
  "sp-api 2.0.0",
  "sp-application-crypto 2.0.0",
@@ -6643,9 +6643,9 @@ dependencies = [
  "sc-consensus-uncles",
  "sc-executor 0.8.0",
  "sc-keystore 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-network-test",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sc-telemetry 2.0.0",
  "schnorrkel",
  "serde",
@@ -6992,7 +6992,7 @@ dependencies = [
  "sc-client-api 2.0.0",
  "sc-consensus 0.8.0",
  "sc-keystore 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-network-gossip 0.8.0",
  "sc-network-test",
  "sc-telemetry 2.0.0",
@@ -7038,7 +7038,7 @@ dependencies = [
  "sc-client-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-consensus 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-keystore 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-network-gossip 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-telemetry 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json",
@@ -7095,7 +7095,7 @@ dependencies = [
  "log",
  "parity-util-mem",
  "sc-client-api 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sp-blockchain 2.0.0",
  "sp-runtime 2.0.0",
  "sp-transaction-pool 2.0.0",
@@ -7114,7 +7114,7 @@ dependencies = [
  "log",
  "parity-util-mem",
  "sc-client-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-blockchain 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-transaction-pool 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7195,7 +7195,7 @@ dependencies = [
 
 [[package]]
 name = "sc-network"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "assert_matches",
  "async-std",
@@ -7253,9 +7253,9 @@ dependencies = [
 
 [[package]]
 name = "sc-network"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e58ccd69ea8dd0c1e1d98e5e7ed2969aaf14d45dcf98416c679a968e752850"
+checksum = "7e41944816f2543f1a350576325b2f43937589df99911440b41edd85accbe793"
 dependencies = [
  "async-std",
  "async-trait",
@@ -7318,7 +7318,7 @@ dependencies = [
  "lru 0.4.3",
  "quickcheck",
  "rand 0.7.3",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sp-runtime 2.0.0",
  "substrate-test-runtime-client",
  "wasm-timer",
@@ -7335,7 +7335,7 @@ dependencies = [
  "libp2p",
  "log",
  "lru 0.4.3",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-timer",
 ]
@@ -7353,8 +7353,8 @@ dependencies = [
  "sc-block-builder 0.8.0",
  "sc-client-api 2.0.0",
  "sc-consensus 0.8.0",
- "sc-network 0.8.0",
- "sc-service 0.8.0",
+ "sc-network 0.8.1",
+ "sc-service 0.8.1",
  "sp-blockchain 2.0.0",
  "sp-consensus 0.8.0",
  "sp-consensus-babe 0.8.0",
@@ -7385,7 +7385,7 @@ dependencies = [
  "sc-client-api 2.0.0",
  "sc-client-db 0.8.0",
  "sc-keystore 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-transaction-pool 2.0.0",
  "sp-api 2.0.0",
  "sp-core 2.0.0",
@@ -7418,7 +7418,7 @@ dependencies = [
  "rand 0.7.3",
  "sc-client-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-keystore 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-offchain 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7480,7 +7480,7 @@ dependencies = [
  "sc-client-api 2.0.0",
  "sc-executor 0.8.0",
  "sc-keystore 2.0.0",
- "sc-network 0.8.0",
+ "sc-network 0.8.1",
  "sc-rpc-api 0.8.0",
  "sc-transaction-pool 2.0.0",
  "serde_json",
@@ -7633,7 +7633,7 @@ dependencies = [
 
 [[package]]
 name = "sc-service"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "async-std",
  "derive_more",
@@ -7661,7 +7661,7 @@ dependencies = [
  "sc-informant 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-keystore 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-light 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-offchain 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-rpc 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-rpc-server 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7699,9 +7699,9 @@ dependencies = [
 
 [[package]]
 name = "sc-service"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e04b2096d7dac26c52656cd2c85bc208d2ca3316ea2185fd775763d558a980da"
+checksum = "53ea41ceed173954e72f8fb04a1f52c3472331156a31039b90b018d256f4d15f"
 dependencies = [
  "derive_more",
  "directories",
@@ -7727,7 +7727,7 @@ dependencies = [
  "sc-informant 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-keystore 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-light 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sc-network 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-network 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-offchain 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-rpc 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sc-rpc-server 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7776,8 +7776,8 @@ dependencies = [
  "sc-client-db 0.8.0",
  "sc-executor 0.8.0",
  "sc-light 2.0.0",
- "sc-network 0.8.0",
- "sc-service 0.8.0",
+ "sc-network 0.8.1",
+ "sc-service 0.8.1",
  "sp-api 2.0.0",
  "sp-blockchain 2.0.0",
  "sp-consensus 0.8.0",
@@ -9896,8 +9896,8 @@ dependencies = [
  "rand 0.7.3",
  "sc-chain-spec 2.0.0",
  "sc-informant 0.8.0",
- "sc-network 0.8.0",
- "sc-service 0.8.0",
+ "sc-network 0.8.1",
+ "sc-service 0.8.1",
  "sp-database 2.0.0",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -10004,7 +10004,7 @@ dependencies = [
  "sc-consensus 0.8.0",
  "sc-executor 0.8.0",
  "sc-light 2.0.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "serde",
  "serde_json",
  "sp-blockchain 2.0.0",
@@ -10032,7 +10032,7 @@ dependencies = [
  "parity-util-mem",
  "sc-block-builder 0.8.0",
  "sc-executor 0.8.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "serde",
  "sp-api 2.0.0",
  "sp-application-crypto 2.0.0",
@@ -10069,7 +10069,7 @@ dependencies = [
  "sc-client-api 2.0.0",
  "sc-consensus 0.8.0",
  "sc-light 2.0.0",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "sp-api 2.0.0",
  "sp-blockchain 2.0.0",
  "sp-consensus 0.8.0",
@@ -10099,7 +10099,7 @@ name = "substrate-test-utils"
 version = "2.0.0"
 dependencies = [
  "futures 0.3.5",
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "substrate-test-utils-derive",
  "tokio 0.2.22",
  "trybuild",
@@ -10118,7 +10118,7 @@ dependencies = [
 name = "substrate-test-utils-test-crate"
 version = "0.1.0"
 dependencies = [
- "sc-service 0.8.0",
+ "sc-service 0.8.1",
  "substrate-test-utils",
  "tokio 0.2.22",
 ]

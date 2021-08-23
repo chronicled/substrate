@@ -65,7 +65,7 @@ pub mod sync;
 
 pub use generic_proto::{NotificationsSink, Ready, NotifsHandlerError, LegacyConnectionKillError};
 
-const REQUEST_TIMEOUT_SEC: u64 = 40;
+const REQUEST_TIMEOUT_SEC: u64 = 300;
 /// Interval at which we perform time based maintenance
 const TICK_TIMEOUT: time::Duration = time::Duration::from_millis(1100);
 /// Interval at which we propagate transactions;

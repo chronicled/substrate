@@ -142,7 +142,7 @@ impl Config {
 			max_request_len: 1024 * 1024,
 			max_response_len: 1 * 1024 * 1024 * 1024,
 			inactivity_timeout: Duration::from_secs(15),
-			request_timeout: Duration::from_secs(40),
+			request_timeout: Duration::from_secs(300),
 			protocol: String::new(),
 		};
 		c.set_protocol(id);

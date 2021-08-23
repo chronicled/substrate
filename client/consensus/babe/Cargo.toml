@@ -56,9 +56,9 @@ retain_mut = "0.1.1"
 sp-keyring = { version = "2.0.0", path = "../../../primitives/keyring" }
 sp-tracing = { version = "2.0.0", path = "../../../primitives/tracing" }
 sc-executor = { version = "0.8.0", path = "../../executor" }
-sc-network = { version = "0.8.0-chron.1", path = "../../network" }
+sc-network = { version = "0.8.1", path = "../../network" }
 sc-network-test = { version = "0.8.0", path = "../../network/test" }
-sc-service = { version = "0.8.0-chron.1", default-features = false, path = "../../service" }
+sc-service = { version = "0.8.1", default-features = false, path = "../../service" }
 substrate-test-runtime-client = { version = "2.0.0", path = "../../../test-utils/runtime/client" }
 sc-block-builder = { version = "0.8.0", path = "../../block-builder" }
 rand_chacha = "0.2.2"
