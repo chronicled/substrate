@@ -63,14 +63,14 @@ sc-client-api = { version = "2.0.0", path = "../../../client/api" }
 sc-chain-spec = { version = "2.0.0", path = "../../../client/chain-spec" }
 sc-consensus = { version = "0.8.0", path = "../../../client/consensus/common" }
 sc-transaction-pool = { version = "2.0.0", path = "../../../client/transaction-pool" }
-sc-network = { version = "0.8.0", path = "../../../client/network" }
+sc-network = { version = "0.8.2", path = "../../../client/network" }
 sc-consensus-babe = { version = "0.8.0", path = "../../../client/consensus/babe" }
 grandpa = { version = "0.8.0", package = "sc-finality-grandpa", path = "../../../client/finality-grandpa" }
 sc-client-db = { version = "0.8.0", default-features = false, path = "../../../client/db" }
 sc-offchain = { version = "2.0.0", path = "../../../client/offchain" }
 sc-rpc = { version = "2.0.0", path = "../../../client/rpc" }
 sc-basic-authorship = { version = "0.8.0", path = "../../../client/basic-authorship" }
-sc-service = { version = "0.8.0", default-features = false, path = "../../../client/service" }
+sc-service = { version = "0.8.2", default-features = false, path = "../../../client/service" }
 sc-tracing = { version = "2.0.0", path = "../../../client/tracing" }
 sc-telemetry = { version = "2.0.0", path = "../../../client/telemetry" }
 sc-authority-discovery = { version = "0.8.0",  path = "../../../client/authority-discovery" }
@@ -95,7 +95,7 @@ node-primitives = { version = "2.0.0", path = "../primitives" }
 node-executor = { version = "2.0.0", path = "../executor" }
 
 # CLI-specific dependencies
-sc-cli = { version = "0.8.0", optional = true, path = "../../../client/cli" }
+sc-cli = { version = "0.8.2", optional = true, path = "../../../client/cli" }
 frame-benchmarking-cli = { version = "2.0.0", optional = true, path = "../../../utils/frame/benchmarking-cli" }
 node-inspect = { version = "0.8.0", optional = true, path = "../inspect" }
 
@@ -106,8 +106,8 @@ browser-utils = { package = "substrate-browser-utils", path = "../../../utils/br
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 node-executor = { version = "2.0.0", path = "../executor", features = [ "wasmtime" ] }
-sc-cli = { version = "0.8.0", optional = true, path = "../../../client/cli", features = [ "wasmtime" ] }
-sc-service = { version = "0.8.0", default-features = false, path = "../../../client/service", features = [ "wasmtime" ] }
+sc-cli = { version = "0.8.2", optional = true, path = "../../../client/cli", features = [ "wasmtime" ] }
+sc-service = { version = "0.8.2", default-features = false, path = "../../../client/service", features = [ "wasmtime" ] }
 sp-trie = { version = "2.0.0", default-features = false, path = "../../../primitives/trie", features = ["memory-tracker"] }
 
 [dev-dependencies]
@@ -132,7 +132,7 @@ substrate-build-script-utils = { version = "2.0.0", optional = true, path = "../
 substrate-frame-cli = { version = "2.0.0", optional = true, path = "../../../utils/frame/frame-utilities-cli" }
 
 [build-dependencies.sc-cli]
-version = "0.8.0"
+version = "0.8.2"
 package = "sc-cli"
 path = "../../../client/cli"
 optional = true

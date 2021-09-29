@@ -41,7 +41,7 @@ sp-trie = { version = "2.0.0", default-features = false, path = "../../primitive
 sp-transaction-pool = { version = "2.0.0", default-features = false, path = "../../primitives/transaction-pool" }
 trie-db = { version = "0.22.0", default-features = false }
 parity-util-mem = { version = "0.7.0", default-features = false, features = ["primitive-types"] }
-sc-service = { version = "0.8.0", default-features = false, optional = true, features = ["test-helpers"], path = "../../client/service" }
+sc-service = { version = "0.8.2", default-features = false, optional = true, features = ["test-helpers"], path = "../../client/service" }
 sp-state-machine = { version = "0.8.0", default-features = false, path = "../../primitives/state-machine" }
 sp-externalities = { version = "0.8.0", default-features = false, path = "../../primitives/externalities" }
 
